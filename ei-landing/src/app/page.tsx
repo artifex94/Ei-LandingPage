@@ -447,7 +447,7 @@ export default function Home() {
       </footer>
 
       {/* Floating WhatsApp */}
-      <a href="https://wa.me/1234567890" className="fixed bottom-6 right-6 z-50 bg-green-500 text-white p-4 rounded-full shadow-xl hover:bg-green-600 transition-all hover:scale-110 flex items-center justify-center group">
+      <a href="https://wa.me/+5493436575372" className="fixed bottom-6 right-6 z-50 bg-green-500 text-white p-4 rounded-full shadow-xl hover:bg-green-600 transition-all hover:scale-110 flex items-center justify-center group">
         <span className="absolute right-full mr-3 bg-white text-slate-800 px-3 py-1 rounded-lg text-sm font-bold shadow-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
           ¡Escríbenos!
         </span>
