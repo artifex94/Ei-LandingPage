@@ -352,7 +352,7 @@ export default function Home() {
                     </div>
                     <div>
                       <p className="text-sm text-slate-400">Experiencia comprobada</p>
-                      <p className="font-bold text-lg">Más de 10 años en el sector</p>
+                      <p className="font-bold text-lg">Más de 20 años en el sector</p>
                     </div>
                   </div>
                 </div>
