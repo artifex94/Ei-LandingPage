@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Shield, CheckCircle, Camera, Bell, Phone, Lock, Menu, X, Clock, Zap, ChevronRight, Star } from 'lucide-react';
+import WhatsAppForm from './WhatsAppForm';
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -359,38 +360,7 @@ export default function Home() {
               </div>
 
               <div className="p-10 lg:p-16 bg-white">
-                <form className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Nombre</label>
-                      <input type="text" className="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all" placeholder="Juan Pérez" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Teléfono</label>
-                      <input type="tel" className="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all" placeholder="11 1234 5678" />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Servicio de interés</label>
-                    <select className="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all text-slate-600">
-                      <option>Selecciona una opción</option>
-                      <option>Alarma para Hogar</option>
-                      <option>Cámaras de Seguridad</option>
-                      <option>Seguridad para Empresas</option>
-                      <option>Otro</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Mensaje (Opcional)</label>
-                    <textarea className="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all h-32 resize-none" placeholder="Cuéntanos más sobre lo que necesitas..."></textarea>
-                  </div>
-
-                  <button type="button" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/25 transition-all transform hover:-translate-y-1">
-                    ENVIAR CONSULTA
-                  </button>
-                </form>
+                <WhatsAppForm />
               </div>
             </div>
           </div>
