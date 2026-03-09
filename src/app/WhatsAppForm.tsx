@@ -19,7 +19,14 @@ const WhatsAppForm: React.FC = () => {
 
   // 3. Función para actualizar el estado cuando el usuario escribe
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
+
+    // Si el campo es el teléfono, filtramos para aceptar solo números.
+    if (name === 'telefono') {
+      value = value.replace(/[^0-9]/g, '');
+    }
+
     setFormData({
       ...formData,
       [name]: value
@@ -30,9 +37,17 @@ const WhatsAppForm: React.FC = () => {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); // Evitamos que la página se recargue
 
-    // Validación: Aseguramos que los campos obligatorios tengan datos antes de continuar
+    // Validación 1: Aseguramos que los campos obligatorios tengan datos.
     if (!formData.nombre || !formData.telefono || !formData.servicio) {
+      // El navegador ya se encarga de esto con `required`, pero es una buena segunda capa.
       return;
+    }
+
+    // Validación 2: Verificamos que el nombre tenga al menos dos palabras (nombre y apellido).
+    const palabrasEnNombre = formData.nombre.trim().split(' ').filter(p => p.length > 0);
+    if (palabrasEnNombre.length < 2) {
+      alert('Por favor, ingresa tu nombre y apellido.');
+      return; // Detenemos el envío si el nombre no es válido.
     }
 
     // Número de destino (sin el signo +)
@@ -61,7 +76,7 @@ const WhatsAppForm: React.FC = () => {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Campo: Nombre */}
         <div className="space-y-2">
-          <label htmlFor="nombre" className="text-sm font-bold text-slate-700">Nombre</label>
+          <label htmlFor="nombre" className="text-sm font-bold text-slate-700">Nombre y apellido</label>
           <input
             type="text"
             id="nombre"
