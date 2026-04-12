@@ -1,14 +1,24 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { siteConfig } from "@/config/site";
 
 // Utilizamos una fuente moderna y limpia
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Escobar Instalaciones | Seguridad y Monitoreo 24hs",
-  description: "Sistemas de seguridad inteligente, alarmas, domótica y cámaras de última generación. Protegemos lo que más te importa en instalacionescob.ar",
-  keywords: "seguridad, monitoreo, alarmas, domótica, control de acceso, Escobar Instalaciones, CCTV",
+  title: siteConfig.title,
+  description: siteConfig.description,
+  keywords: siteConfig.keywords,
+  metadataBase: new URL(siteConfig.url),
+  openGraph: {
+    title: siteConfig.title,
+    description: siteConfig.description,
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    locale: 'es_AR',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({
