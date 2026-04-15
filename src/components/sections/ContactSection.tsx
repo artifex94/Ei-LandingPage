@@ -5,9 +5,9 @@ import { siteConfig } from '@/config/site';
 
 export default function ContactSection() {
   return (
-    <section id="contacto" className="py-24 bg-slate-50 relative">
+    <section id="contacto" className="py-24 bg-slate-900 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
+        <div className="bg-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-slate-700">
           <div className="grid lg:grid-cols-2">
             <div className="p-10 lg:p-16 bg-slate-900 text-white flex flex-col justify-center relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -39,7 +39,7 @@ export default function ContactSection() {
               </div>
             </div>
 
-            <div className="p-10 lg:p-16 bg-white">
+            <div className="p-10 lg:p-16 bg-slate-800">
               <WhatsAppForm />
             </div>
           </div>

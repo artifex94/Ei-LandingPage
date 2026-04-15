@@ -20,6 +20,7 @@ export default function Navbar() {
     { name: 'Inicio', href: '#inicio' },
     { name: 'Servicios', href: '#servicios' },
     { name: 'Nosotros', href: '#nosotros' },
+    { name: 'Mi Portal', href: '#portal' },
     { name: 'Contacto', href: '#contacto' },
   ];
 

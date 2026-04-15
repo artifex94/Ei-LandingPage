@@ -1,0 +1,16 @@
+@layer base {
+  /* Font base 18px para todo el portal — WCAG 1.4.4 */
+  .portal-main {
+    font-size: 1.125rem;
+    line-height: 1.6;
+    letter-spacing: 0.015em;
+    color: #e2e8f0; /* slate-200 */
+  }
+
+  /* Focus visible — naranja de la marca, contraste garantizado */
+  .portal-main :focus-visible,
+  .portal-login :focus-visible {
+    outline: 3px solid #f97316;
+    outline-offset: 3px;
+  }
+}

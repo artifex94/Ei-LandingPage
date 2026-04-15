@@ -73,7 +73,7 @@ const WhatsAppForm: React.FC = () => {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Campo: Nombre */}
         <div className="space-y-2">
-          <label htmlFor="nombre" className="text-sm font-bold text-slate-700">Nombre y apellido</label>
+          <label htmlFor="nombre" className="text-sm font-bold text-slate-200">Nombre y apellido</label>
           <Input 
             id="nombre" 
             placeholder="Juan Pérez" 
@@ -84,7 +84,7 @@ const WhatsAppForm: React.FC = () => {
 
         {/* Campo: Teléfono */}
         <div className="space-y-2">
-          <label htmlFor="telefono" className="text-sm font-bold text-slate-700">Teléfono</label>
+          <label htmlFor="telefono" className="text-sm font-bold text-slate-200">Teléfono</label>
           <Input
             type="tel"
             id="telefono"
@@ -101,7 +101,7 @@ const WhatsAppForm: React.FC = () => {
 
       {/* Campo: Servicio de interés */}
       <div className="space-y-2">
-        <label htmlFor="servicio" className="text-sm font-bold text-slate-700">Servicio de interés</label>
+        <label htmlFor="servicio" className="text-sm font-bold text-slate-200">Servicio de interés</label>
         <Select
           id="servicio"
           error={errors.servicio?.message}
@@ -117,7 +117,7 @@ const WhatsAppForm: React.FC = () => {
 
       {/* Campo: Mensaje opcional */}
       <div className="space-y-2">
-        <label htmlFor="mensaje" className="text-sm font-bold text-slate-700">Mensaje (Opcional)</label>
+        <label htmlFor="mensaje" className="text-sm font-bold text-slate-200">Mensaje (Opcional)</label>
         <Textarea
           id="mensaje"
           placeholder="Cuéntanos más sobre lo que necesitas..."

@@ -1,0 +1,182 @@
+// Prisma schema — EscobarInstalaciones
+// url       = Supavisor (runtime producción, puerto 6543)
+// directUrl = URL directa (solo migraciones DDL, puerto 5432)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum Rol {
+  CLIENTE
+  ADMIN
+}
+
+enum CategoriaCuenta {
+  ALARMA_MONITOREO
+  DOMOTICA
+  CAMARA_CCTV
+  ANTENA_STARLINK
+  OTRO
+}
+
+enum EstadoCuenta {
+  ACTIVA
+  SUSPENDIDA_PAGO
+  EN_MANTENIMIENTO
+  BAJA_DEFINITIVA
+}
+
+enum TipoSensor {
+  SENSOR_PIR
+  CONTACTO_MAGNETICO
+  CAMARA_IP
+  TECLADO_CONTROL
+  DETECTOR_HUMO
+  MODULO_DOMOTICA
+  PANICO
+}
+
+enum EstadoBateria {
+  OPTIMA
+  ADVERTENCIA
+  CRITICA
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PROCESANDO
+  PAGADO
+  VENCIDO
+}
+
+enum MetodoPago {
+  MERCADOPAGO
+  TALO_CVU
+  EFECTIVO
+  CHEQUE
+}
+
+enum EstadoSolicitud {
+  PENDIENTE
+  EN_PROCESO
+  RESUELTA
+}
+
+enum Prioridad {
+  BAJA
+  MEDIA
+  ALTA
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODELOS
+// ─────────────────────────────────────────────────────────────
+
+model Perfil {
+  id         String   @id
+  nombre     String
+  dni        String?  @unique
+  telefono   String?  @unique
+  email      String?  @unique
+  rol        Rol      @default(CLIENTE)
+  activo     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  cuentas    Cuenta[]
+
+  @@map("perfiles")
+}
+
+model Cuenta {
+  id              String          @id @default(uuid())
+  softguard_ref   String          @unique
+  perfil_id       String
+  perfil          Perfil          @relation(fields: [perfil_id], references: [id])
+  descripcion     String
+  categoria       CategoriaCuenta
+  estado          EstadoCuenta    @default(ACTIVA)
+  costo_mensual   Decimal         @default(20000) @db.Decimal(10, 2)
+  zona_geografica String?
+  notas_tecnicas  String?
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+
+  sensores    Sensor[]
+  pagos       Pago[]
+  solicitudes SolicitudMantenimiento[]
+
+  @@index([perfil_id])
+  @@map("cuentas")
+}
+
+model Sensor {
+  id                String         @id @default(uuid())
+  cuenta_id         String
+  cuenta            Cuenta         @relation(fields: [cuenta_id], references: [id], onDelete: Cascade)
+  codigo_zona       String
+  etiqueta          String
+  tipo              TipoSensor
+  activa            Boolean        @default(true)
+  bateria           EstadoBateria?
+  alerta_mant       Boolean        @default(false)
+  ultima_activacion DateTime?
+  created_at        DateTime       @default(now())
+
+  @@unique([cuenta_id, codigo_zona])
+  @@index([cuenta_id])
+  @@map("sensores")
+}
+
+model Pago {
+  id             String      @id @default(uuid())
+  cuenta_id      String
+  cuenta         Cuenta      @relation(fields: [cuenta_id], references: [id])
+  mes            Int
+  anio           Int
+  importe        Decimal     @db.Decimal(10, 2)
+  estado         EstadoPago  @default(PENDIENTE)
+  metodo         MetodoPago?
+  ref_externa    String?     @unique
+  acreditado_en  DateTime?
+  registrado_por String?
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+
+  @@unique([cuenta_id, mes, anio])
+  @@index([cuenta_id])
+  @@map("pagos")
+}
+
+model TarifaHistorico {
+  id            String   @id @default(uuid())
+  monto         Decimal  @db.Decimal(10, 2)
+  vigente_desde DateTime
+  creado_por    String
+  created_at    DateTime @default(now())
+
+  @@map("tarifas_historico")
+}
+
+model SolicitudMantenimiento {
+  id          String          @id @default(uuid())
+  cuenta_id   String
+  cuenta      Cuenta          @relation(fields: [cuenta_id], references: [id])
+  descripcion String
+  estado      EstadoSolicitud @default(PENDIENTE)
+  prioridad   Prioridad       @default(MEDIA)
+  creada_en   DateTime        @default(now())
+  resuelta_en DateTime?
+
+  @@index([cuenta_id])
+  @@map("solicitudes_mantenimiento")
+}
