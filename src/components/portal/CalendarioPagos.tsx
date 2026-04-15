@@ -93,7 +93,7 @@ export function CalendarioPagos({ pagos, anio, cuentaId }: Props) {
   return (
     <>
       <div
-        className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6"
+        className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6"
         role="list"
         aria-label={`Calendario de pagos del año ${anio}`}
       >
@@ -114,11 +114,40 @@ export function CalendarioPagos({ pagos, anio, cuentaId }: Props) {
             .filter(Boolean)
             .join(" ");
 
+          // Celda accionable: el botón ocupa toda la celda para máxima área táctil
+          if (cfg.esAccionable && pago) {
+            return (
+              <button
+                key={numMes}
+                role="listitem"
+                onClick={() => setPagoSeleccionado({ mes: numMes, pago })}
+                className={`${cfg.bg} ${cfg.textColor} rounded-xl p-3 flex flex-col items-center gap-1 min-h-[110px] w-full focus:outline-2 focus:outline-white focus:outline-offset-2 active:opacity-80 transition-opacity`}
+                aria-label={`${ariaLabel} — Tocá para pagar`}
+              >
+                <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                  {nombreMes.slice(0, 3)}
+                </span>
+                {cfg.icono && (
+                  <span className="text-2xl leading-none font-bold" aria-hidden="true">
+                    {cfg.icono}
+                  </span>
+                )}
+                <span className="text-xs font-bold">{cfg.etiqueta}</span>
+                {importeStr && (
+                  <span className="text-xs font-semibold opacity-90">{importeStr}</span>
+                )}
+                <span className="text-xs underline underline-offset-2 mt-1 opacity-90">
+                  Pagar
+                </span>
+              </button>
+            );
+          }
+
           return (
             <div
               key={numMes}
               role="listitem"
-              className={`${cfg.bg} ${cfg.textColor} rounded-xl p-3 flex flex-col items-center gap-1 min-h-[90px]`}
+              className={`${cfg.bg} ${cfg.textColor} rounded-xl p-3 flex flex-col items-center gap-1 min-h-[110px]`}
             >
               <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
                 {nombreMes.slice(0, 3)}
@@ -140,16 +169,6 @@ export function CalendarioPagos({ pagos, anio, cuentaId }: Props) {
                 <span className="text-xs opacity-90">{importeStr}</span>
               )}
 
-              {cfg.esAccionable && pago && (
-                <button
-                  onClick={() => setPagoSeleccionado({ mes: numMes, pago })}
-                  className="mt-1 text-xs underline underline-offset-2 min-h-[36px] min-w-[36px] px-2 rounded focus:outline-2 focus:outline-white focus:outline-offset-1"
-                  aria-label={`Pagar ${nombreMes} ${anio}`}
-                >
-                  Pagar
-                </button>
-              )}
-              {/* aria-label en el contenedor para lectores de pantalla */}
               <span className="sr-only">{ariaLabel}</span>
             </div>
           );

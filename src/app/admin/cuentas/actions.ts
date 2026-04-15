@@ -71,7 +71,7 @@ const pagoManualSchema = z.object({
   mes: z.coerce.number().min(1).max(12),
   anio: z.coerce.number().min(2020),
   importe: z.coerce.number().min(0),
-  metodo: z.enum(["EFECTIVO", "CHEQUE", "MERCADOPAGO", "TALO_CVU"]),
+  metodo: z.enum(["EFECTIVO", "CHEQUE", "MERCADOPAGO", "TALO_CVU", "TRANSFERENCIA_BANCARIA"]),
 });
 
 export async function registrarPagoManual(

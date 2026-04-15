@@ -74,36 +74,59 @@ export default async function CuentaAdminPage({
         {cuenta.sensores.length === 0 ? (
           <p className="text-slate-400 text-sm">Sin sensores registrados.</p>
         ) : (
-          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-900/50 border-b border-slate-700">
-                <tr>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Zona</th>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Etiqueta</th>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Tipo</th>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Batería</th>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
-                {cuenta.sensores.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-700/40 transition-colors">
-                    <td className="px-4 py-2 text-slate-400 font-mono text-xs">{s.codigo_zona}</td>
-                    <td className="px-4 py-2 font-medium text-white">{s.etiqueta}</td>
-                    <td className="px-4 py-2 text-slate-300">{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
-                    <td className="px-4 py-2 text-slate-300">
-                      {s.bateria ? BATERIA_LABELS[s.bateria] : "—"}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${s.activa ? "bg-green-900/40 text-green-400" : "bg-slate-700 text-slate-400"}`}>
-                        {s.activa ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
+          <>
+            {/* ── Tabla — desktop ────────────────────────────────────────────── */}
+            <div className="hidden md:block bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-900/50 border-b border-slate-700">
+                  <tr>
+                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Zona</th>
+                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Etiqueta</th>
+                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Tipo</th>
+                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Batería</th>
+                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Estado</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-700">
+                  {cuenta.sensores.map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-700/40 transition-colors">
+                      <td className="px-4 py-2 text-slate-400 font-mono text-xs">{s.codigo_zona}</td>
+                      <td className="px-4 py-2 font-medium text-white">{s.etiqueta}</td>
+                      <td className="px-4 py-2 text-slate-300">{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
+                      <td className="px-4 py-2 text-slate-300">{s.bateria ? BATERIA_LABELS[s.bateria] : "—"}</td>
+                      <td className="px-4 py-2">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${s.activa ? "bg-green-900/40 text-green-400" : "bg-slate-700 text-slate-400"}`}>
+                          {s.activa ? "Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Cards — mobile ──────────────────────────────────────────────── */}
+            <div className="md:hidden space-y-2">
+              {cuenta.sensores.map((s) => (
+                <div key={s.id} className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-white">{s.etiqueta}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {TIPO_LABELS[s.tipo] ?? s.tipo} · <span className="font-mono">{s.codigo_zona}</span>
+                      </p>
+                      {s.bateria && (
+                        <p className="text-xs text-slate-400 mt-0.5">{BATERIA_LABELS[s.bateria]}</p>
+                      )}
+                    </div>
+                    <span className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${s.activa ? "bg-green-900/40 text-green-400" : "bg-slate-700 text-slate-400"}`}>
+                      {s.activa ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
 

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
-import { LogoutButton } from "@/components/ui/LogoutButton";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
 export const metadata: Metadata = {
   title: "Admin — Escobar Instalaciones",
@@ -35,42 +34,12 @@ export default async function AdminLayout({
       </a>
 
       <div className="min-h-screen flex bg-slate-900">
-        {/* Sidebar */}
-        <nav
-          aria-label="Navegación del administrador"
-          className="w-56 bg-slate-900 text-slate-100 flex flex-col py-6 px-4 shrink-0"
-        >
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-6 px-2">
-            Admin
-          </p>
-          <ul className="flex flex-col gap-1" role="list">
-            {[
-              { href: "/admin/dashboard", label: "Dashboard" },
-              { href: "/admin/clientes", label: "Clientes" },
-              { href: "/admin/cuentas", label: "Cuentas" },
-              { href: "/admin/pagos", label: "Pagos" },
-              { href: "/admin/importar", label: "Importar CSV" },
-            ].map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="block px-3 py-2 rounded-md text-sm hover:bg-slate-700 min-h-[44px] flex items-center"
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-auto pt-6 border-t border-slate-700 space-y-2">
-            <p className="text-xs text-slate-400 px-2">{perfil?.nombre}</p>
-            <LogoutButton variant="sidebar" />
-          </div>
-        </nav>
+        <AdminSidebar nombreAdmin={perfil?.nombre ?? "Admin"} />
 
         <main
           id="main-content"
           tabIndex={-1}
-          className="flex-1 p-8 overflow-auto"
+          className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto pt-16 lg:pt-8"
         >
           {children}
         </main>

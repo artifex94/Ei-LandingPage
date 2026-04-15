@@ -63,6 +63,7 @@ enum MetodoPago {
   TALO_CVU
   EFECTIVO
   CHEQUE
+  TRANSFERENCIA_BANCARIA
 }
 
 enum EstadoSolicitud {

@@ -13,8 +13,9 @@ interface Props {
 const METODOS = [
   { value: "EFECTIVO", label: "Efectivo" },
   { value: "CHEQUE", label: "Cheque" },
+  { value: "TRANSFERENCIA_BANCARIA", label: "Transferencia bancaria" },
   { value: "MERCADOPAGO", label: "MercadoPago" },
-  { value: "TALO_CVU", label: "CVU/Alias" },
+  { value: "TALO_CVU", label: "Talo (crypto)" },
 ];
 
 export function PagoManualBulkForm({ cuentaId, mes, anio, importe }: Props) {

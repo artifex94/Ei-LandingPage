@@ -17,11 +17,12 @@ export async function loginConEmail(
   if (!email || !password) return { error: "Completá todos los campos." };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) return { error: "Email o contraseña incorrectos." };
 
-  redirect("/portal/dashboard");
+  const perfil = await prisma.perfil.findUnique({ where: { id: authData.user.id } });
+  redirect(perfil?.rol === "ADMIN" ? "/admin/dashboard" : "/portal/dashboard");
 }
 
 // ─── Flujo 2: WhatsApp OTP — paso 1: enviar código ───────────────────────────
