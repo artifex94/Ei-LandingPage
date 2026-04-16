@@ -22,7 +22,7 @@ export default async function DashboardPage() {
           mes: new Date().getMonth() + 1,
           estado: { in: ["PENDIENTE", "VENCIDO"] },
         },
-        select: { id: true, estado: true, importe: true },
+        select: { id: true, estado: true, importe: true, mes: true, anio: true },
       },
     },
     orderBy: { descripcion: "asc" },

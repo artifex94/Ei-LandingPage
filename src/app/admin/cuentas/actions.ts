@@ -340,6 +340,63 @@ export async function crearSensor(
   return { ok: true };
 }
 
+// ── Override de suspensión con TTL — Mejora C (PDF PRD §3.3) ─────────────────
+
+export interface OverrideResult {
+  ok?: boolean;
+  errores?: string[];
+}
+
+export async function activarOverrideSuspension(
+  prevState: OverrideResult,
+  formData: FormData
+): Promise<OverrideResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
+
+  const cuenta_id = (formData.get("cuenta_id") as string)?.trim();
+  const ttl_horas = Number(formData.get("ttl_horas"));
+  const justificacion = (formData.get("justificacion") as string)?.trim();
+
+  if (!cuenta_id) return { errores: ["ID de cuenta requerido."] };
+  if (![24, 48, 72].includes(ttl_horas)) return { errores: ["TTL inválido (24, 48 o 72 horas)."] };
+  if (!justificacion || justificacion.length < 10) {
+    return { errores: ["La justificación debe tener al menos 10 caracteres."] };
+  }
+
+  const cuenta = await prisma.cuenta.findUnique({
+    where: { id: cuenta_id },
+    select: { estado: true, descripcion: true },
+  });
+  if (!cuenta) return { errores: ["Cuenta no encontrada."] };
+
+  const override_expira = new Date();
+  override_expira.setHours(override_expira.getHours() + ttl_horas);
+
+  await prisma.cuenta.update({
+    where: { id: cuenta_id },
+    data: {
+      override_activo: true,
+      override_expira,
+      override_justificacion: justificacion,
+    },
+  });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre,
+    accion: "OVERRIDE_SUSPENSION",
+    entidad: "cuenta",
+    entidad_id: cuenta_id,
+    state_transition: { prior_state: cuenta.estado, new_state: "ACTIVE_OVERRIDE" },
+    justification: justificacion,
+    detalle: { ttl_horas, override_expira: override_expira.toISOString() },
+  });
+
+  revalidatePath(`/admin/cuentas/${cuenta_id}`);
+  return { ok: true };
+}
+
 export async function eliminarSensor(id: string): Promise<SensorActionResult> {
   const admin = await requireAdmin();
   if (!admin) return { errores: ["Sin permisos de administrador."] };

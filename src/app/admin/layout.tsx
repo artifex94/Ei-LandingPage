@@ -24,9 +24,14 @@ export default async function AdminLayout({
   const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
   if (perfil?.rol !== "ADMIN") redirect("/portal/dashboard");
 
-  const [pendingSolicitudes, pendingMantenimiento] = await Promise.all([
+  const [pendingSolicitudes, pendingMantenimiento, cuentasEnMora] = await Promise.all([
     prisma.solicitudCambioInfo.count({ where: { estado: "PENDIENTE" } }),
     prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
+    prisma.pago.groupBy({
+      by: ["cuenta_id"],
+      where: { estado: "VENCIDO" },
+      _count: true,
+    }).then((rows) => rows.length),
   ]);
 
   return (
@@ -43,6 +48,7 @@ export default async function AdminLayout({
           nombreAdmin={perfil?.nombre ?? "Admin"}
           pendingSolicitudes={pendingSolicitudes}
           pendingMantenimiento={pendingMantenimiento}
+          cuentasEnMora={cuentasEnMora}
         />
 
         <main

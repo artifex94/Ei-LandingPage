@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { ActualizarCuentaForm } from "@/components/admin/ActualizarCuentaForm";
 import { GestionSensores } from "@/components/admin/GestionSensores";
 import { NuevaSolicitudForm } from "@/components/admin/NuevaSolicitudForm";
+import { OverrideSuspensionForm } from "@/components/admin/OverrideSuspensionForm";
 
 const MESES = [
   "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",
@@ -117,6 +118,20 @@ export default async function CuentaAdminPage({
           cuentaId={cuenta.id}
         />
       </section>
+
+      {/* Override de suspensión — solo si la cuenta está suspendida */}
+      {(cuenta.estado === "SUSPENDIDA_PAGO" || cuenta.override_activo) && (
+        <section aria-labelledby="override-heading">
+          <h2 id="override-heading" className="text-lg font-semibold text-white mb-4">
+            Gestión de suspensión
+          </h2>
+          <OverrideSuspensionForm
+            cuentaId={cuenta.id}
+            overrideActivo={cuenta.override_activo}
+            overrideExpira={cuenta.override_expira?.toISOString() ?? null}
+          />
+        </section>
+      )}
 
       {/* Solicitudes de mantenimiento */}
       <section aria-labelledby="solicitudes-heading">
