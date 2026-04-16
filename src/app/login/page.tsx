@@ -7,11 +7,18 @@ export const metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="portal-login min-h-screen flex items-center justify-center bg-slate-900 px-4 py-12">
+    <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-white focus:text-slate-900 focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:font-medium"
+      >
+        Ir al contenido principal
+      </a>
+      <main id="main-content" tabIndex={-1} className="portal-login min-h-screen flex items-center justify-center bg-slate-900 px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
-            <div className="h-10 w-10 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-orange-500/20">
+            <div aria-hidden="true" className="h-10 w-10 bg-orange-700 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-orange-500/20">
               EI
             </div>
           </div>
@@ -37,6 +44,7 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

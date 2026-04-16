@@ -27,7 +27,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <div className="flex items-center gap-2 group cursor-pointer">
-            <div className="flex items-center justify-center h-10 w-10 bg-orange-500 rounded-lg text-white font-bold text-xl shadow-lg shadow-orange-500/20 group-hover:scale-105 transition-transform">
+            <div aria-hidden="true" className="flex items-center justify-center h-10 w-10 bg-orange-700 rounded-lg text-white font-bold text-xl shadow-lg shadow-orange-500/20 group-hover:scale-105 transition-transform">
               EI
             </div>
             <div className="flex flex-col">
@@ -59,7 +59,7 @@ export default function Navbar() {
 
             <a
               href="#contacto"
-              className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-full font-bold text-sm transition-all transform hover:-translate-y-0.5 hover:shadow-lg hover:shadow-orange-500/25 flex items-center gap-2"
+              className="bg-orange-700 hover:bg-orange-800 text-white px-5 py-2.5 rounded-full font-bold text-sm transition-all transform hover:-translate-y-0.5 hover:shadow-lg hover:shadow-orange-500/25 flex items-center gap-2"
             >
               <Phone className="w-4 h-4" />
               <span>Asesor</span>
@@ -126,7 +126,7 @@ export default function Navbar() {
           <a
             href="#contacto"
             onClick={() => setIsMenuOpen(false)}
-            className="flex items-center justify-center gap-2 w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition-colors"
+            className="flex items-center justify-center gap-2 w-full bg-orange-700 text-white font-bold py-3 rounded-lg hover:bg-orange-800 transition-colors"
           >
             <Phone className="w-4 h-4" />
             Solicitar Asesor Ahora

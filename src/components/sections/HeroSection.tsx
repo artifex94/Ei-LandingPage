@@ -34,7 +34,7 @@ export default function HeroSection() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <a href="#contacto" className="px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-lg transition-all transform hover:-translate-y-1 shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2">
+              <a href="#contacto" className="px-8 py-4 bg-orange-700 hover:bg-orange-800 text-white rounded-xl font-bold text-lg transition-all transform hover:-translate-y-1 shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2">
                 Solicitar Presupuesto
                 <ChevronRight className="w-5 h-5" />
               </a>
@@ -96,7 +96,7 @@ export default function HeroSection() {
                           <div className="text-xs text-slate-400">Puerta Principal</div>
                         </div>
                       </div>
-                      <div className="px-3 py-1 bg-orange-500/20 text-orange-400 text-xs font-bold rounded-full">
+                      <div className="px-3 py-1 bg-orange-500/20 text-orange-300 text-xs font-bold rounded-full">
                         CERRADO
                       </div>
                     </div>
@@ -111,7 +111,7 @@ export default function HeroSection() {
                           <div className="text-xs text-slate-400">Jardín y Garage</div>
                         </div>
                       </div>
-                      <div className="px-3 py-1 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
+                      <div className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs font-bold rounded-full">
                         ACTIVO
                       </div>
                     </div>

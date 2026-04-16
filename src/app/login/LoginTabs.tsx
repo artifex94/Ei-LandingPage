@@ -108,7 +108,7 @@ function FormWhatsApp({ onBack }: { onBack: () => void }) {
         )}
       </button>
 
-      <button type="button" onClick={onBack} className="text-xs text-slate-500 hover:text-slate-300 transition-colors text-center">
+      <button type="button" onClick={onBack} className="text-xs text-slate-400 hover:text-slate-200 transition-colors text-center min-h-[44px]">
         ← Volver
       </button>
     </form>
@@ -144,7 +144,7 @@ function FormEmail({ onBack }: { onBack: () => void }) {
           <button
             type="submit"
             disabled={magicPending}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-orange-700 hover:bg-orange-800 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors flex items-center justify-center gap-2"
           >
             {magicPending ? <><Spinner /> Enviando…</> : "Enviarme link de acceso"}
           </button>
@@ -156,7 +156,7 @@ function FormEmail({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={() => setMostrarPassword((v) => !v)}
-          className="text-xs text-slate-500 hover:text-slate-300 transition-colors w-full text-center"
+          className="text-xs text-slate-400 hover:text-slate-200 transition-colors w-full text-center min-h-[44px]"
         >
           {mostrarPassword ? "▲ Ocultar" : "¿Tenés contraseña? Ingresar con contraseña"}
         </button>
@@ -177,7 +177,7 @@ function FormEmail({ onBack }: { onBack: () => void }) {
         )}
       </div>
 
-      <button type="button" onClick={onBack} className="text-xs text-slate-500 hover:text-slate-300 transition-colors text-center">
+      <button type="button" onClick={onBack} className="text-xs text-slate-400 hover:text-slate-200 transition-colors text-center min-h-[44px]">
         ← Volver
       </button>
     </div>
@@ -203,11 +203,11 @@ function FormDni({ onBack }: { onBack: () => void }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors flex items-center justify-center gap-2"
+        className="w-full bg-orange-700 hover:bg-orange-800 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors flex items-center justify-center gap-2"
       >
         {pending ? <><Spinner /> Ingresando…</> : "Ingresar"}
       </button>
-      <button type="button" onClick={onBack} className="text-xs text-slate-500 hover:text-slate-300 transition-colors text-center">
+      <button type="button" onClick={onBack} className="text-xs text-slate-400 hover:text-slate-200 transition-colors text-center min-h-[44px]">
         ← Volver
       </button>
     </form>
@@ -234,7 +234,7 @@ function SelectorMetodo({ onSelect }: { onSelect: (m: Metodo) => void }) {
         </span>
         <div>
           <div className="text-white font-semibold text-base leading-tight">WhatsApp</div>
-          <div className="text-slate-400 text-xs mt-0.5">Recibís un link — tocás y entrás</div>
+          <div className="text-slate-300 text-xs mt-0.5">Recibís un link — tocás y entrás</div>
         </div>
         <span className="ml-auto text-slate-500 group-hover:text-slate-300 transition-colors text-lg">›</span>
       </button>
@@ -262,7 +262,7 @@ function SelectorMetodo({ onSelect }: { onSelect: (m: Metodo) => void }) {
       <button
         type="button"
         onClick={() => onSelect("dni")}
-        className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors py-2 text-center"
+        className="w-full text-xs text-slate-400 hover:text-slate-200 transition-colors py-2 min-h-[44px] text-center"
       >
         Ingresar con DNI y contraseña
       </button>

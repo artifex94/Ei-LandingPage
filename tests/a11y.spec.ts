@@ -48,30 +48,39 @@ test.describe("Páginas públicas — a11y", () => {
 // ─── Formulario de login — interacción ───────────────────────────────────────
 
 test.describe("Login — usabilidad y a11y", () => {
-  test("campos tienen labels asociados", async ({ page }) => {
+  test("formulario email tiene label accesible", async ({ page }) => {
     await page.goto("/login");
-    const emailInput = page.getByLabel(/correo/i);
-    const passInput  = page.getByLabel(/contraseña/i);
+    // El selector muestra opciones — hace clic en "Email" para abrir el formulario
+    await page.getByRole("button", { name: /email/i }).click();
+    const emailInput = page.getByLabel(/^email$/i);
     await expect(emailInput).toBeVisible();
-    await expect(passInput).toBeVisible();
   });
 
-  test("botón de submit tiene texto accesible", async ({ page }) => {
+  test("formulario DNI tiene labels accesibles", async ({ page }) => {
     await page.goto("/login");
-    const btn = page.getByRole("button", { name: /ingresar/i });
+    // Hace clic en "Ingresar con DNI y contraseña" para abrir el formulario
+    await page.getByRole("button", { name: /dni/i }).click();
+    await expect(page.getByLabel(/dni/i)).toBeVisible();
+    await expect(page.getByLabel(/contraseña/i)).toBeVisible();
+  });
+
+  test("botón de envío en formulario email tiene texto accesible", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByRole("button", { name: /email/i }).click();
+    const btn = page.getByRole("button", { name: /enviarme link/i });
     await expect(btn).toBeVisible();
   });
 
   test("sin credenciales no navega (validación en cliente)", async ({ page }) => {
     await page.goto("/login");
-    await page.getByRole("button", { name: /ingresar/i }).click();
-    // Sigue en /login o muestra error — no redirige al portal
+    // El selector inicial no tiene botones de submit — verificamos que no navega
     await expect(page).not.toHaveURL(/\/portal/);
   });
 
-  test("tamaño mínimo de toque en botones críticos (≥ 44px)", async ({ page }) => {
+  test("tamaño mínimo de toque en botones del selector (≥ 44px)", async ({ page }) => {
     await page.goto("/login");
-    const btn = page.getByRole("button", { name: /ingresar/i });
+    // El botón WhatsApp (método principal) debe tener min-h-[64px]
+    const btn = page.getByRole("button", { name: /whatsapp/i });
     const box = await btn.boundingBox();
     expect(box).not.toBeNull();
     if (box) {

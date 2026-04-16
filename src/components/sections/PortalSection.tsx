@@ -57,13 +57,13 @@ export default function PortalSection() {
 
           <Link
             href="/portal/dashboard"
-            className="flex items-center justify-center gap-2 w-full bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl px-6 py-4 text-lg transition-all transform hover:-translate-y-0.5 shadow-lg shadow-orange-500/25"
+            className="flex items-center justify-center gap-2 w-full bg-orange-700 hover:bg-orange-800 text-white font-bold rounded-xl px-6 py-4 text-lg transition-all transform hover:-translate-y-0.5 shadow-lg shadow-orange-500/25"
           >
             Acceder a Mi Portal
             <ArrowRight className="w-5 h-5" />
           </Link>
 
-          <p className="text-center text-sm text-slate-500 mt-4">
+          <p className="text-center text-sm text-slate-400 mt-4">
             ¿Primera vez?{" "}
             <a
               href="https://wa.me/5493436575372"

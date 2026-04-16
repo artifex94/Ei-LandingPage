@@ -11,7 +11,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={isLoading || disabled}
-        className={`w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/25 transition-all transform hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 ${className}`}
+        className={`w-full bg-orange-700 hover:bg-orange-800 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/25 transition-all transform hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 ${className}`}
         {...props}
       >
         {isLoading ? (

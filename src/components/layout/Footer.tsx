@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <div className="flex items-center justify-center h-8 w-8 bg-orange-500 rounded text-white font-bold text-sm">EI</div>
+              <div aria-hidden="true" className="flex items-center justify-center h-8 w-8 bg-orange-700 rounded text-white font-bold text-sm">EI</div>
               <span className="text-lg font-bold text-white">ESCOBAR INSTALACIONES</span>
             </div>
             <p className="text-sm leading-relaxed max-w-xs">
