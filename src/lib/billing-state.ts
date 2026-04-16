@@ -37,8 +37,8 @@ export function calcularEstadoFinanciero(
     return { tipo: "ACTIVE" };
   }
 
-  // Cuenta marcada como suspendida manualmente en BD
-  if (estadoCuenta === "SUSPENDIDA_PAGO") {
+  // Cuenta dada de baja definitiva o suspendida manualmente en BD
+  if (estadoCuenta === "BAJA_DEFINITIVA" || estadoCuenta === "SUSPENDIDA_PAGO") {
     return { tipo: "SUSPENDED", dias_mora: calcDPD(pagos) };
   }
 

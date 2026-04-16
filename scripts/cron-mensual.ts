@@ -65,6 +65,73 @@ async function main() {
   console.log(`\n🗓  Cron mensual — ${MESES_ES[mes - 1]} ${anio}`);
   console.log("─".repeat(50));
 
+  // ── 0. Evaluar overrides de suspensión expirados ─────────────────────────
+
+  console.log(`\n🔒 Paso 0 — Evaluar overrides expirados`);
+
+  const overridesExpirados = await prisma.cuenta.findMany({
+    where: {
+      override_activo: true,
+      override_expira: { lt: ahora },
+    },
+    select: {
+      id: true,
+      estado: true,
+      descripcion: true,
+      pagos: {
+        where: { estado: { in: ["PENDIENTE", "VENCIDO"] } },
+        select: { id: true },
+      },
+    },
+  });
+
+  console.log(`   ${overridesExpirados.length} override(s) expirado(s)`);
+
+  for (const cuenta of overridesExpirados) {
+    const tieneDeuda = cuenta.pagos.length > 0;
+
+    if (tieneDeuda) {
+      // Aún tiene deuda → revertir a SUSPENDIDA_PAGO
+      await prisma.cuenta.update({
+        where: { id: cuenta.id },
+        data: {
+          estado:                 "SUSPENDIDA_PAGO",
+          override_activo:        false,
+          override_expira:        null,
+          override_justificacion: null,
+        },
+      });
+      console.log(`   ↩ ${cuenta.descripcion} → SUSPENDIDA_PAGO (deuda pendiente)`);
+    } else {
+      // Pagó → solo limpiar el override, dejar ACTIVA
+      await prisma.cuenta.update({
+        where: { id: cuenta.id },
+        data: {
+          override_activo:        false,
+          override_expira:        null,
+          override_justificacion: null,
+        },
+      });
+      console.log(`   ✓ ${cuenta.descripcion} → override limpiado (sin deuda)`);
+    }
+
+    // AuditLog manual (sin admin_id porque es el sistema)
+    await prisma.auditLog.create({
+      data: {
+        admin_id:         "system",
+        admin_nombre:     "Cron automático",
+        accion:           tieneDeuda ? "OVERRIDE_EXPIRED_SUSPENDED" : "OVERRIDE_EXPIRED_CLEAN",
+        entidad:          "cuenta",
+        entidad_id:       cuenta.id,
+        detalle:          JSON.stringify({ descripcion: cuenta.descripcion, deuda_pagos: cuenta.pagos.length }),
+        state_transition: JSON.stringify({
+          prior_state: tieneDeuda ? "ACTIVE_OVERRIDE" : "ACTIVE_OVERRIDE",
+          new_state:   tieneDeuda ? "SUSPENDIDA_PAGO" : cuenta.estado,
+        }),
+      },
+    });
+  }
+
   // ── 1. Crear pagos PENDIENTE para el mes actual ──────────────────────────
 
   const cuentasActivas = await prisma.cuenta.findMany({
@@ -210,6 +277,7 @@ async function main() {
 
   console.log(`\n${"─".repeat(50)}`);
   console.log(`📊 Resumen final:`);
+  console.log(`   Overrides expirados: ${overridesExpirados.length}`);
   console.log(`   Pagos creados:       ${pagosCreados}`);
   console.log(`   Pagos vencidos:      ${marcadosVencidos}`);
   console.log(`   Notificados:         ${notificados}`);
