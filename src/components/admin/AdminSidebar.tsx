@@ -6,14 +6,27 @@ import { Menu, X } from "lucide-react";
 import { LogoutButton } from "@/components/ui/LogoutButton";
 
 const NAV_ITEMS = [
-  { href: "/admin/dashboard", label: "Dashboard" },
-  { href: "/admin/clientes", label: "Clientes" },
-  { href: "/admin/cuentas", label: "Cuentas" },
-  { href: "/admin/pagos", label: "Pagos" },
-  { href: "/admin/importar", label: "Importar CSV" },
+  { href: "/admin/dashboard",          label: "Dashboard" },
+  { href: "/admin/clientes",           label: "Clientes" },
+  { href: "/admin/cuentas",            label: "Cuentas" },
+  { href: "/admin/pagos",              label: "Pagos" },
+  { href: "/admin/morosidad",          label: "Morosidad" },
+  { href: "/admin/mantenimiento",      label: "Mantenimiento" },
+  { href: "/admin/solicitudes-cambio", label: "Cambios de datos" },
+  { href: "/admin/importar",           label: "Importar CSV" },
+  { href: "/admin/higienizar",         label: "Higienizar BD" },
+  { href: "/admin/auditoria",          label: "Auditoría" },
 ];
 
-export function AdminSidebar({ nombreAdmin }: { nombreAdmin: string }) {
+export function AdminSidebar({
+  nombreAdmin,
+  pendingSolicitudes = 0,
+  pendingMantenimiento = 0,
+}: {
+  nombreAdmin: string;
+  pendingSolicitudes?: number;
+  pendingMantenimiento?: number;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -67,9 +80,19 @@ export function AdminSidebar({ nombreAdmin }: { nombreAdmin: string }) {
               <Link
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="block px-3 py-2 rounded-md text-sm text-slate-300 hover:bg-slate-700 hover:text-white min-h-[44px] flex items-center transition-colors"
+                className="px-3 py-2 rounded-md text-sm text-slate-300 hover:bg-slate-700 hover:text-white min-h-[44px] flex items-center justify-between gap-2 transition-colors"
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.href === "/admin/solicitudes-cambio" && pendingSolicitudes > 0 && (
+                  <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+                    {pendingSolicitudes}
+                  </span>
+                )}
+                {item.href === "/admin/mantenimiento" && pendingMantenimiento > 0 && (
+                  <span className="bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+                    {pendingMantenimiento}
+                  </span>
+                )}
               </Link>
             </li>
           ))}
@@ -94,9 +117,19 @@ export function AdminSidebar({ nombreAdmin }: { nombreAdmin: string }) {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="block px-3 py-2 rounded-md text-sm text-slate-300 hover:bg-slate-700 hover:text-white min-h-[44px] flex items-center transition-colors"
+                className="px-3 py-2 rounded-md text-sm text-slate-300 hover:bg-slate-700 hover:text-white min-h-[44px] flex items-center justify-between gap-2 transition-colors"
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.href === "/admin/solicitudes-cambio" && pendingSolicitudes > 0 && (
+                  <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+                    {pendingSolicitudes}
+                  </span>
+                )}
+                {item.href === "/admin/mantenimiento" && pendingMantenimiento > 0 && (
+                  <span className="bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+                    {pendingMantenimiento}
+                  </span>
+                )}
               </Link>
             </li>
           ))}

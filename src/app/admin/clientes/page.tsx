@@ -1,27 +1,38 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 
+const POR_PAGINA = 30;
+
 export default async function ClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; pagina?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, pagina: paginaStr } = await searchParams;
+  const pagina = Math.max(1, Number(paginaStr ?? 1));
 
-  const perfiles = await prisma.perfil.findMany({
-    where: q
-      ? {
-          OR: [
-            { nombre: { contains: q, mode: "insensitive" } },
-            { dni: { contains: q } },
-            { telefono: { contains: q } },
-          ],
-        }
-      : undefined,
-    include: { cuentas: { select: { id: true, estado: true } } },
-    orderBy: { nombre: "asc" },
-    take: 50,
-  });
+  const where = q
+    ? {
+        OR: [
+          { nombre: { contains: q, mode: "insensitive" as const } },
+          { dni: { contains: q } },
+          { telefono: { contains: q } },
+        ],
+      }
+    : undefined;
+
+  const [total, perfiles] = await Promise.all([
+    prisma.perfil.count({ where }),
+    prisma.perfil.findMany({
+      where,
+      include: { cuentas: { select: { id: true, estado: true } } },
+      orderBy: { nombre: "asc" },
+      skip: (pagina - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+    }),
+  ]);
+
+  const totalPaginas = Math.ceil(total / POR_PAGINA);
 
   return (
     <section aria-labelledby="clientes-heading">
@@ -29,12 +40,21 @@ export default async function ClientesPage({
         <h1 id="clientes-heading" className="text-2xl font-bold text-white">
           Clientes ({perfiles.length})
         </h1>
-        <Link
-          href="/admin/clientes/nuevo"
-          className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors shrink-0"
-        >
-          + Nuevo
-        </Link>
+        <div className="flex gap-2 shrink-0">
+          <a
+            href="/api/admin/export?tipo=clientes"
+            className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
+            title="Exportar a Excel"
+          >
+            ↓ Excel
+          </a>
+          <Link
+            href="/admin/clientes/nuevo"
+            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
+          >
+            + Nuevo
+          </Link>
+        </div>
       </div>
 
       <form method="GET" className="mb-6">
@@ -115,6 +135,33 @@ export default async function ClientesPage({
             ))}
           </div>
         </>
+      )}
+
+      {/* Paginación */}
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between gap-4 pt-4 mt-4 border-t border-slate-700">
+          <span className="text-sm text-slate-400">
+            Página {pagina} de {totalPaginas} · {total} clientes
+          </span>
+          <div className="flex gap-2">
+            {pagina > 1 && (
+              <a
+                href={`/admin/clientes?pagina=${pagina - 1}${q ? `&q=${q}` : ""}`}
+                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                ← Anterior
+              </a>
+            )}
+            {pagina < totalPaginas && (
+              <a
+                href={`/admin/clientes?pagina=${pagina + 1}${q ? `&q=${q}` : ""}`}
+                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Siguiente →
+              </a>
+            )}
+          </div>
+        </div>
       )}
     </section>
   );

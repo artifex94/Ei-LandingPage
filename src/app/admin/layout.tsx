@@ -24,6 +24,11 @@ export default async function AdminLayout({
   const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
   if (perfil?.rol !== "ADMIN") redirect("/portal/dashboard");
 
+  const [pendingSolicitudes, pendingMantenimiento] = await Promise.all([
+    prisma.solicitudCambioInfo.count({ where: { estado: "PENDIENTE" } }),
+    prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
+  ]);
+
   return (
     <>
       <a
@@ -34,7 +39,11 @@ export default async function AdminLayout({
       </a>
 
       <div className="min-h-screen flex bg-slate-900">
-        <AdminSidebar nombreAdmin={perfil?.nombre ?? "Admin"} />
+        <AdminSidebar
+          nombreAdmin={perfil?.nombre ?? "Admin"}
+          pendingSolicitudes={pendingSolicitudes}
+          pendingMantenimiento={pendingMantenimiento}
+        />
 
         <main
           id="main-content"

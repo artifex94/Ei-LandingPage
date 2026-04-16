@@ -2,22 +2,89 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
+import { SensorItem } from "@/components/portal/SensorItem";
 
-const TIPO_SENSOR_LABELS: Record<string, string> = {
-  SENSOR_PIR: "Sensor de movimiento",
-  CONTACTO_MAGNETICO: "Contacto magnético",
-  CAMARA_IP: "Cámara IP",
-  TECLADO_CONTROL: "Teclado de control",
-  DETECTOR_HUMO: "Detector de humo",
-  MODULO_DOMOTICA: "Módulo domótica",
-  PANICO: "Botón de pánico",
-};
+// ─── Panel de estado del sistema ──────────────────────────────────────────────
 
-const BATERIA_CONFIG: Record<string, { icon: string; text: string; color: string }> = {
-  OPTIMA: { icon: "●●●", text: "Batería óptima", color: "text-green-400" },
-  ADVERTENCIA: { icon: "●●○", text: "Batería baja", color: "text-yellow-400" },
-  CRITICA: { icon: "●○○", text: "Batería crítica", color: "text-red-400" },
-};
+function PanelEstado({
+  sensores,
+}: {
+  sensores: {
+    id: string;
+    activa: boolean;
+    bateria: string | null;
+    alerta_mant: boolean;
+    ultima_activacion: Date | null;
+  }[];
+}) {
+  if (sensores.length === 0) return null;
+
+  const activos = sensores.filter((s) => s.activa).length;
+  const bateriaCritica = sensores.filter((s) => s.bateria === "CRITICA").length;
+  const bateriaAdvertencia = sensores.filter((s) => s.bateria === "ADVERTENCIA").length;
+  const enMantenimiento = sensores.filter((s) => s.alerta_mant).length;
+
+  // Última activación de cualquier sensor
+  const fechas = sensores
+    .map((s) => s.ultima_activacion)
+    .filter((f): f is Date => f !== null)
+    .sort((a, b) => b.getTime() - a.getTime());
+  const ultimaActivacion = fechas[0] ?? null;
+
+  // Estado general
+  const hayProblemas = bateriaCritica > 0 || enMantenimiento > 0;
+  const hayAdvertencias = bateriaAdvertencia > 0;
+
+  const estadoLabel = hayProblemas ? "Atención requerida" : hayAdvertencias ? "Atención sugerida" : "Sin alertas";
+  const estadoCls   = hayProblemas ? "bg-red-900/30 border-red-800 text-red-400" : hayAdvertencias ? "bg-yellow-900/30 border-yellow-800 text-yellow-400" : "bg-green-900/30 border-green-800 text-green-400";
+  const estadoIcon  = hayProblemas ? "⚠" : hayAdvertencias ? "◎" : "✓";
+
+  function tiempoRelativo(fecha: Date): string {
+    const diff = Date.now() - fecha.getTime();
+    const min = Math.floor(diff / 60000);
+    if (min < 1)   return "hace instantes";
+    if (min < 60)  return `hace ${min} min`;
+    const hs = Math.floor(min / 60);
+    if (hs < 24)   return `hace ${hs}h`;
+    const dias = Math.floor(hs / 24);
+    if (dias === 1) return "ayer";
+    if (dias < 30)  return `hace ${dias} días`;
+    return fecha.toLocaleDateString("es-AR");
+  }
+
+  return (
+    <div className={`rounded-xl border px-5 py-4 ${estadoCls}`}>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <p className="font-semibold text-sm">
+          {estadoIcon} {estadoLabel}
+        </p>
+        <span className="text-xs opacity-70">
+          {activos}/{sensores.length} dispositivos activos
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs opacity-80">
+        {ultimaActivacion && (
+          <span>Última activación: {tiempoRelativo(ultimaActivacion)}</span>
+        )}
+        {bateriaCritica > 0 && (
+          <span>🔴 {bateriaCritica} batería{bateriaCritica > 1 ? "s" : ""} crítica{bateriaCritica > 1 ? "s" : ""}</span>
+        )}
+        {bateriaAdvertencia > 0 && (
+          <span>🟡 {bateriaAdvertencia} batería{bateriaAdvertencia > 1 ? "s" : ""} baja{bateriaAdvertencia > 1 ? "s" : ""}</span>
+        )}
+        {enMantenimiento > 0 && (
+          <span>🔧 {enMantenimiento} dispositivo{enMantenimiento > 1 ? "s" : ""} con alerta de mantenimiento</span>
+        )}
+        {!hayProblemas && !hayAdvertencias && (
+          <span>Todos los dispositivos funcionando correctamente</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Página ────────────────────────────────────────────────────────────────────
 
 export default async function CuentaPage({
   params,
@@ -92,6 +159,45 @@ export default async function CuentaPage({
         </div>
       </section>
 
+      {/* Panel de estado del sistema */}
+      {cuenta.sensores.length > 0 && (
+        <PanelEstado sensores={cuenta.sensores} />
+      )}
+
+      {/* Solicitudes abiertas */}
+      {cuenta.solicitudes.length > 0 && (
+        <section aria-labelledby="solicitudes-abiertas-heading">
+          <h2 id="solicitudes-abiertas-heading" className="text-lg font-semibold text-white mb-3">
+            Solicitudes en curso
+          </h2>
+          <div className="space-y-2">
+            {cuenta.solicitudes.map((s) => (
+              <div
+                key={s.id}
+                className="bg-slate-800 rounded-xl border border-slate-700 px-4 py-3 flex items-center justify-between gap-3"
+              >
+                <p className="text-slate-300 text-sm truncate">{s.descripcion}</p>
+                <span
+                  className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${
+                    s.estado === "EN_PROCESO"
+                      ? "bg-blue-900/40 text-blue-400"
+                      : "bg-amber-900/40 text-amber-400"
+                  }`}
+                >
+                  {s.estado === "EN_PROCESO" ? "En proceso" : "Pendiente"}
+                </span>
+              </div>
+            ))}
+          </div>
+          <Link
+            href="/portal/solicitudes"
+            className="text-xs text-orange-400 hover:text-orange-300 mt-2 inline-block transition-colors"
+          >
+            Ver historial completo →
+          </Link>
+        </section>
+      )}
+
       {/* Sensores */}
       <section aria-labelledby="sensores-heading">
         <h2 id="sensores-heading" className="text-lg font-semibold text-white mb-4">
@@ -102,49 +208,9 @@ export default async function CuentaPage({
           <p className="text-slate-400">No hay dispositivos registrados.</p>
         ) : (
           <ul className="space-y-3" role="list" aria-label="Lista de sensores">
-            {cuenta.sensores.map((sensor) => {
-              const batCfg = sensor.bateria ? BATERIA_CONFIG[sensor.bateria] : null;
-
-              return (
-                <li
-                  key={sensor.id}
-                  className="bg-slate-800 rounded-xl border border-slate-700 px-5 py-4 flex items-center justify-between gap-4"
-                >
-                  <div>
-                    <p className="font-medium text-white">{sensor.etiqueta}</p>
-                    <p className="text-sm text-slate-400">
-                      {TIPO_SENSOR_LABELS[sensor.tipo] ?? sensor.tipo} · {sensor.codigo_zona}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    {batCfg && (
-                      <span
-                        className={`text-sm font-medium ${batCfg.color}`}
-                        aria-label={batCfg.text}
-                        title={batCfg.text}
-                      >
-                        {batCfg.icon}
-                      </span>
-                    )}
-                    {sensor.alerta_mant && (
-                      <span className="text-xs bg-yellow-900/40 text-yellow-400 font-medium px-2 py-1 rounded-full">
-                        Mantenimiento
-                      </span>
-                    )}
-                    <span
-                      className={`text-xs font-medium px-2 py-1 rounded-full ${
-                        sensor.activa
-                          ? "bg-green-900/40 text-green-400"
-                          : "bg-slate-700 text-slate-400"
-                      }`}
-                    >
-                      {sensor.activa ? "Activo" : "Inactivo"}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
+            {cuenta.sensores.map((sensor) => (
+              <SensorItem key={sensor.id} sensor={sensor} />
+            ))}
           </ul>
         )}
       </section>
@@ -154,12 +220,20 @@ export default async function CuentaPage({
         <h2 id="mant-heading" className="text-lg font-semibold text-white mb-4">
           ¿Algo no funciona bien?
         </h2>
-        <Link
-          href={`/portal/solicitud?cuenta=${cuenta.id}`}
-          className="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-lg font-medium min-h-[48px] border border-slate-600 transition-colors"
-        >
-          Solicitar asistencia técnica
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={`/portal/solicitud?cuenta=${cuenta.id}`}
+            className="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-lg font-medium min-h-[48px] border border-slate-600 transition-colors"
+          >
+            Solicitar asistencia técnica
+          </Link>
+          <Link
+            href="/portal/solicitudes"
+            className="inline-flex items-center gap-2 text-slate-300 hover:text-white px-6 py-3 rounded-lg font-medium min-h-[48px] border border-slate-700 hover:border-slate-500 transition-colors text-sm"
+          >
+            Ver mis solicitudes
+          </Link>
+        </div>
       </section>
     </div>
   );

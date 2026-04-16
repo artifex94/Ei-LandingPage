@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { actualizarCuenta } from "@/app/admin/cuentas/actions";
 
 interface Cuenta {
@@ -9,6 +9,7 @@ interface Cuenta {
   categoria: string;
   estado: string;
   costo_mensual: number | { toNumber: () => number };
+  notas_tecnicas?: string | null;
 }
 
 const inputCls =
@@ -31,10 +32,15 @@ const ESTADOS = [
 
 export function ActualizarCuentaForm({ cuenta }: { cuenta: Cuenta }) {
   const [state, action, pending] = useActionState(actualizarCuenta, {});
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState(cuenta.estado);
+  const [confirmarBaja, setConfirmarBaja] = useState(false);
+
   const costoActual =
     typeof cuenta.costo_mensual === "number"
       ? cuenta.costo_mensual
       : cuenta.costo_mensual.toNumber();
+
+  const pidiendoBaja = estadoSeleccionado === "BAJA_DEFINITIVA" && cuenta.estado !== "BAJA_DEFINITIVA";
 
   return (
     <form action={action} className="space-y-4">
@@ -46,8 +52,8 @@ export function ActualizarCuentaForm({ cuenta }: { cuenta: Cuenta }) {
         </p>
       )}
       {state.errores && (
-        <div className="bg-red-900/40 border border-red-700 rounded-lg p-3">
-          <ul className="text-sm text-red-300 list-disc list-inside space-y-1">
+        <div className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg p-3">
+          <ul className="text-sm list-disc list-inside space-y-1">
             {state.errores.map((e, i) => (
               <li key={i}>{e}</li>
             ))}
@@ -85,7 +91,16 @@ export function ActualizarCuentaForm({ cuenta }: { cuenta: Cuenta }) {
           <label htmlFor="estado" className="block text-sm font-medium text-slate-300 mb-1">
             Estado
           </label>
-          <select id="estado" name="estado" defaultValue={cuenta.estado} className={inputCls}>
+          <select
+            id="estado"
+            name="estado"
+            value={estadoSeleccionado}
+            onChange={(e) => {
+              setEstadoSeleccionado(e.target.value);
+              setConfirmarBaja(false);
+            }}
+            className={inputCls}
+          >
             {ESTADOS.map((e) => (
               <option key={e.value} value={e.value}>{e.label}</option>
             ))}
@@ -109,9 +124,49 @@ export function ActualizarCuentaForm({ cuenta }: { cuenta: Cuenta }) {
         />
       </div>
 
+      {/* ── Bloque de confirmación de baja definitiva ────────────────────── */}
+      {pidiendoBaja && (
+        <div className="bg-red-950/40 border border-red-700/60 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-red-400 text-lg" aria-hidden="true">⚠</span>
+            <p className="text-red-300 font-semibold text-sm">
+              Estás por dar de baja definitivamente esta cuenta
+            </p>
+          </div>
+          <p className="text-red-200/70 text-xs">
+            Esta acción marca la cuenta como inactiva y queda registrada en el historial.
+            Indicá el motivo antes de confirmar.
+          </p>
+
+          <div>
+            <label htmlFor="motivo_baja" className="block text-sm font-medium text-red-300 mb-1">
+              Motivo de la baja <span aria-hidden="true">*</span>
+            </label>
+            <textarea
+              id="motivo_baja"
+              name="motivo_baja"
+              rows={2}
+              required={pidiendoBaja}
+              placeholder="Ej: Cliente solicitó cancelación del servicio. Se retiró el equipo el …"
+              className="w-full bg-slate-700 border border-red-700/60 text-white placeholder:text-slate-500 rounded-lg px-3 py-2 text-sm focus:outline-2 focus:outline-red-500 resize-none"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={confirmarBaja}
+              onChange={(e) => setConfirmarBaja(e.target.checked)}
+              className="accent-red-500 w-4 h-4"
+            />
+            <span className="text-sm text-red-200">Confirmo que quiero dar de baja esta cuenta</span>
+          </label>
+        </div>
+      )}
+
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || (pidiendoBaja && !confirmarBaja)}
         className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
       >
         {pending ? "Guardando…" : "Guardar cambios"}

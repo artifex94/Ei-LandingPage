@@ -5,24 +5,30 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
+import { registrarAudit } from "@/lib/audit";
+
+// ── Helper: verifica que el usuario es ADMIN ──────────────────────────────────
+async function requireAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
+  if (perfil?.rol !== "ADMIN") return null;
+  return perfil;
+}
+
+const CATEGORIAS = ["ALARMA_MONITOREO", "DOMOTICA", "CAMARA_CCTV", "ANTENA_STARLINK", "OTRO"] as const;
+const ESTADOS_CUENTA = ["ACTIVA", "SUSPENDIDA_PAGO", "EN_MANTENIMIENTO", "BAJA_DEFINITIVA"] as const;
 
 const actualizarCuentaSchema = z.object({
   id: z.string().min(1),
   descripcion: z.string().min(1, "La dirección es obligatoria"),
-  categoria: z.enum([
-    "ALARMA_MONITOREO",
-    "DOMOTICA",
-    "CAMARA_CCTV",
-    "ANTENA_STARLINK",
-    "OTRO",
-  ]),
-  estado: z.enum([
-    "ACTIVA",
-    "SUSPENDIDA_PAGO",
-    "EN_MANTENIMIENTO",
-    "BAJA_DEFINITIVA",
-  ]),
+  categoria: z.enum(CATEGORIAS),
+  estado: z.enum(ESTADOS_CUENTA),
   costo_mensual: z.coerce.number().min(0),
+  motivo_baja: z.string().optional(),
 });
 
 export interface CuentaActionResult {
@@ -34,16 +40,8 @@ export async function actualizarCuenta(
   prevState: CuentaActionResult,
   formData: FormData
 ): Promise<CuentaActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") {
-    return { errores: ["Sin permisos de administrador."] };
-  }
+  const admin = await requireAdmin();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
 
   const parsed = actualizarCuentaSchema.safeParse({
     id: formData.get("id"),
@@ -51,17 +49,115 @@ export async function actualizarCuenta(
     categoria: formData.get("categoria"),
     estado: formData.get("estado"),
     costo_mensual: formData.get("costo_mensual"),
+    motivo_baja: formData.get("motivo_baja"),
   });
 
   if (!parsed.success) {
     return { errores: parsed.error.issues.map((i) => i.message) };
   }
 
-  const { id, ...data } = parsed.data;
+  const { id, motivo_baja, ...data } = parsed.data;
 
-  await prisma.cuenta.update({ where: { id }, data });
+  // Cuando es baja definitiva, registrar motivo en notas_tecnicas
+  let updateData: typeof data & { notas_tecnicas?: string } = { ...data };
+  if (data.estado === "BAJA_DEFINITIVA" && motivo_baja?.trim()) {
+    const cuenta = await prisma.cuenta.findUnique({ where: { id }, select: { notas_tecnicas: true } });
+    const fechaBaja = new Date().toLocaleDateString("es-AR");
+    const notaBaja = `[BAJA ${fechaBaja} — por ${admin.nombre}] ${motivo_baja.trim()}`;
+    updateData.notas_tecnicas = cuenta?.notas_tecnicas
+      ? `${notaBaja}\n\n${cuenta.notas_tecnicas}`
+      : notaBaja;
+  }
+
+  const cuentaAntes = await prisma.cuenta.findUnique({
+    where: { id },
+    select: { estado: true, costo_mensual: true, descripcion: true },
+  });
+
+  await prisma.cuenta.update({ where: { id }, data: updateData });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre,
+    accion: data.estado === "BAJA_DEFINITIVA" && cuentaAntes?.estado !== "BAJA_DEFINITIVA"
+      ? "CUENTA_BAJA_DEFINITIVA"
+      : "CUENTA_ACTUALIZADA",
+    entidad: "cuenta",
+    entidad_id: id,
+    detalle: {
+      antes: {
+        estado: cuentaAntes?.estado,
+        costo_mensual: Number(cuentaAntes?.costo_mensual ?? 0),
+      },
+      despues: {
+        estado: data.estado,
+        costo_mensual: data.costo_mensual,
+      },
+      ...(motivo_baja ? { motivo_baja } : {}),
+    },
+  });
 
   revalidatePath(`/admin/cuentas/${id}`);
+  revalidatePath("/admin/cuentas");
+  return { ok: true };
+}
+
+// ── Crear cuenta nueva ────────────────────────────────────────────────────────
+
+const crearCuentaSchema = z.object({
+  perfil_id: z.string().min(1),
+  softguard_ref: z.string().min(1, "La referencia es obligatoria"),
+  descripcion: z.string().min(1, "La descripción es obligatoria"),
+  categoria: z.enum(CATEGORIAS),
+  costo_mensual: z.coerce.number().min(0, "El costo no puede ser negativo"),
+  calle: z.string().optional().transform((v) => v || undefined),
+  localidad: z.string().optional().transform((v) => v || undefined),
+  provincia: z.string().optional().transform((v) => v || undefined),
+});
+
+export async function crearCuenta(
+  prevState: CuentaActionResult,
+  formData: FormData
+): Promise<CuentaActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
+
+  const parsed = crearCuentaSchema.safeParse({
+    perfil_id: formData.get("perfil_id"),
+    softguard_ref: formData.get("softguard_ref"),
+    descripcion: formData.get("descripcion"),
+    categoria: formData.get("categoria"),
+    costo_mensual: formData.get("costo_mensual"),
+    calle: formData.get("calle"),
+    localidad: formData.get("localidad"),
+    provincia: formData.get("provincia"),
+  });
+
+  if (!parsed.success) {
+    return { errores: parsed.error.issues.map((i) => i.message) };
+  }
+
+  const { softguard_ref, ...rest } = parsed.data;
+
+  const existente = await prisma.cuenta.findUnique({ where: { softguard_ref } });
+  if (existente) {
+    return { errores: [`Ya existe una cuenta con la referencia "${softguard_ref}".`] };
+  }
+
+  const nueva = await prisma.cuenta.create({
+    data: { softguard_ref, estado: "ACTIVA", ...rest },
+  });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre,
+    accion: "CUENTA_CREADA",
+    entidad: "cuenta",
+    entidad_id: nueva.id,
+    detalle: { softguard_ref, descripcion: rest.descripcion, categoria: rest.categoria },
+  });
+
+  revalidatePath(`/admin/clientes/${rest.perfil_id}`);
   revalidatePath("/admin/cuentas");
   return { ok: true };
 }
@@ -78,16 +174,8 @@ export async function registrarPagoManual(
   prevState: CuentaActionResult,
   formData: FormData
 ): Promise<CuentaActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") {
-    return { errores: ["Sin permisos de administrador."] };
-  }
+  const admin = await requireAdmin();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
 
   const parsed = pagoManualSchema.safeParse({
     cuenta_id: formData.get("cuenta_id"),
@@ -113,16 +201,166 @@ export async function registrarPagoManual(
       metodo,
       estado: "PAGADO",
       acreditado_en: new Date(),
+      registrado_por: admin.nombre,
     },
     update: {
       importe,
       metodo,
       estado: "PAGADO",
       acreditado_en: new Date(),
+      registrado_por: admin.nombre,
     },
+  });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre,
+    accion: "PAGO_REGISTRADO",
+    entidad: "pago",
+    entidad_id: `${cuenta_id}-${mes}-${anio}`,
+    detalle: { cuenta_id, mes, anio, importe, metodo },
   });
 
   revalidatePath("/admin/pagos");
   revalidatePath(`/admin/clientes`);
+  return { ok: true };
+}
+
+// ── CRUD Sensores ─────────────────────────────────────────────────────────────
+
+const TIPOS_SENSOR = [
+  "SENSOR_PIR", "CONTACTO_MAGNETICO", "CAMARA_IP",
+  "TECLADO_CONTROL", "DETECTOR_HUMO", "MODULO_DOMOTICA", "PANICO",
+] as const;
+
+export interface SensorActionResult {
+  ok?: boolean;
+  errores?: string[];
+}
+
+const actualizarSensorSchema = z.object({
+  id: z.string().min(1),
+  etiqueta: z.string().min(1, "La etiqueta es obligatoria"),
+  tipo: z.enum(TIPOS_SENSOR),
+  activa: z.enum(["true", "false"]).transform((v) => v === "true"),
+  bateria: z.enum(["OPTIMA", "ADVERTENCIA", "CRITICA"]).optional().nullable()
+    .transform((v) => v || null),
+});
+
+export async function actualizarSensor(
+  prevState: SensorActionResult,
+  formData: FormData
+): Promise<SensorActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
+
+  const parsed = actualizarSensorSchema.safeParse({
+    id: formData.get("id"),
+    etiqueta: formData.get("etiqueta"),
+    tipo: formData.get("tipo"),
+    activa: formData.get("activa"),
+    bateria: formData.get("bateria") || null,
+  });
+
+  if (!parsed.success) {
+    return { errores: parsed.error.issues.map((i) => i.message) };
+  }
+
+  const { id, ...data } = parsed.data;
+  const sensor = await prisma.sensor.findUnique({
+    where: { id },
+    select: { cuenta: { select: { id: true } } },
+  });
+  if (!sensor) return { errores: ["Sensor no encontrado."] };
+
+  await prisma.sensor.update({ where: { id }, data });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre,
+    accion: "SENSOR_ACTUALIZADO",
+    entidad: "sensor",
+    entidad_id: id,
+    detalle: { cuenta_id: sensor.cuenta.id, ...data },
+  });
+
+  revalidatePath(`/admin/cuentas/${sensor.cuenta.id}`);
+  return { ok: true };
+}
+
+const crearSensorSchema = z.object({
+  cuenta_id: z.string().min(1),
+  codigo_zona: z.string().min(1, "El código de zona es obligatorio"),
+  etiqueta: z.string().min(1, "La etiqueta es obligatoria"),
+  tipo: z.enum(TIPOS_SENSOR),
+  bateria: z.enum(["OPTIMA", "ADVERTENCIA", "CRITICA"]).optional().nullable()
+    .transform((v) => v || null),
+});
+
+export async function crearSensor(
+  prevState: SensorActionResult,
+  formData: FormData
+): Promise<SensorActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
+
+  const parsed = crearSensorSchema.safeParse({
+    cuenta_id: formData.get("cuenta_id"),
+    codigo_zona: formData.get("codigo_zona"),
+    etiqueta: formData.get("etiqueta"),
+    tipo: formData.get("tipo"),
+    bateria: formData.get("bateria") || null,
+  });
+
+  if (!parsed.success) {
+    return { errores: parsed.error.issues.map((i) => i.message) };
+  }
+
+  const { cuenta_id, codigo_zona, ...rest } = parsed.data;
+
+  const existente = await prisma.sensor.findUnique({
+    where: { cuenta_id_codigo_zona: { cuenta_id, codigo_zona } },
+  });
+  if (existente) {
+    return { errores: [`Ya existe un sensor con la zona "${codigo_zona}" en esta cuenta.`] };
+  }
+
+  const nuevo = await prisma.sensor.create({ data: { cuenta_id, codigo_zona, ...rest } });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre,
+    accion: "SENSOR_CREADO",
+    entidad: "sensor",
+    entidad_id: nuevo.id,
+    detalle: { cuenta_id, codigo_zona, tipo: rest.tipo, etiqueta: rest.etiqueta },
+  });
+
+  revalidatePath(`/admin/cuentas/${cuenta_id}`);
+  return { ok: true };
+}
+
+export async function eliminarSensor(id: string): Promise<SensorActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
+
+  const sensor = await prisma.sensor.findUnique({
+    where: { id },
+    select: { cuenta_id: true, etiqueta: true, codigo_zona: true },
+  });
+  if (!sensor) return { errores: ["Sensor no encontrado."] };
+
+  await prisma.sensor.delete({ where: { id } });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre,
+    accion: "SENSOR_ELIMINADO",
+    entidad: "sensor",
+    entidad_id: id,
+    detalle: { cuenta_id: sensor.cuenta_id, etiqueta: sensor.etiqueta, codigo_zona: sensor.codigo_zona },
+  });
+
+  revalidatePath(`/admin/cuentas/${sensor.cuenta_id}`);
   return { ok: true };
 }

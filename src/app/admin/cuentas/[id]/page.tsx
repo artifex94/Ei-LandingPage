@@ -2,6 +2,20 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { ActualizarCuentaForm } from "@/components/admin/ActualizarCuentaForm";
+import { GestionSensores } from "@/components/admin/GestionSensores";
+import { NuevaSolicitudForm } from "@/components/admin/NuevaSolicitudForm";
+
+const MESES = [
+  "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+];
+
+const ESTADO_PAGO_COLORES: Record<string, string> = {
+  PAGADO: "bg-green-900/40 text-green-400",
+  VENCIDO: "bg-orange-900/40 text-orange-400",
+  PROCESANDO: "bg-blue-900/40 text-blue-400",
+  PENDIENTE: "bg-amber-900/40 text-amber-400",
+};
 
 export default async function CuentaAdminPage({
   params,
@@ -13,7 +27,7 @@ export default async function CuentaAdminPage({
   const cuenta = await prisma.cuenta.findUnique({
     where: { id },
     include: {
-      perfil: true,
+      perfil: { select: { id: true, nombre: true, telefono: true } },
       sensores: { orderBy: { codigo_zona: "asc" } },
       solicitudes: {
         where: { estado: { not: "RESUELTA" } },
@@ -28,33 +42,46 @@ export default async function CuentaAdminPage({
 
   if (!cuenta) notFound();
 
-  const TIPO_LABELS: Record<string, string> = {
-    SENSOR_PIR: "Movimiento PIR",
-    CONTACTO_MAGNETICO: "Contacto magnético",
-    CAMARA_IP: "Cámara IP",
-    TECLADO_CONTROL: "Teclado",
-    DETECTOR_HUMO: "Detector de humo",
-    MODULO_DOMOTICA: "Módulo domótica",
-    PANICO: "Botón de pánico",
-  };
-
-  const BATERIA_LABELS: Record<string, string> = {
-    OPTIMA: "✓ Óptima",
-    ADVERTENCIA: "⚠ Baja",
-    CRITICA: "● Crítica",
-  };
-
   return (
     <div className="space-y-8 max-w-3xl">
       <nav aria-label="Ruta de navegación">
         <ol className="flex items-center gap-2 text-sm text-slate-400">
-          <li><Link href="/admin/cuentas" className="hover:text-white transition-colors">Cuentas</Link></li>
+          <li>
+            <Link href="/admin/cuentas" className="hover:text-white transition-colors">
+              Cuentas
+            </Link>
+          </li>
           <li aria-hidden="true">/</li>
           <li className="text-white font-medium truncate max-w-xs">{cuenta.descripcion}</li>
         </ol>
       </nav>
 
-      <h1 className="text-2xl font-bold text-white">{cuenta.descripcion}</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-white">{cuenta.descripcion}</h1>
+        <div className="flex flex-wrap items-center gap-3 mt-1">
+          <p className="text-sm text-slate-400">
+            Cliente:{" "}
+            <Link
+              href={`/admin/clientes/${cuenta.perfil.id}`}
+              className="text-orange-400 hover:text-orange-300 transition-colors"
+            >
+              {cuenta.perfil.nombre}
+            </Link>
+            {" · "}Ref: <span className="font-mono">{cuenta.softguard_ref}</span>
+          </p>
+          {cuenta.perfil.telefono && (
+            <a
+              href={`https://wa.me/${cuenta.perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${cuenta.perfil.nombre.split(" ")[0]}, te contactamos por el servicio "${cuenta.descripcion}" de Escobar Instalaciones.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 bg-green-700 hover:bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <span aria-hidden="true">📱</span>
+              WhatsApp
+            </a>
+          )}
+        </div>
+      </div>
 
       {/* Editar cuenta */}
       <section aria-labelledby="editar-heading">
@@ -62,83 +89,48 @@ export default async function CuentaAdminPage({
           Datos de la cuenta
         </h2>
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-5">
-          <ActualizarCuentaForm cuenta={cuenta} />
+          <ActualizarCuentaForm cuenta={{
+            id: cuenta.id,
+            descripcion: cuenta.descripcion,
+            categoria: cuenta.categoria,
+            estado: cuenta.estado,
+            costo_mensual: Number(cuenta.costo_mensual),
+            notas_tecnicas: cuenta.notas_tecnicas,
+          }} />
         </div>
       </section>
 
-      {/* Sensores */}
+      {/* Gestión de sensores */}
       <section aria-labelledby="sensores-heading">
         <h2 id="sensores-heading" className="text-lg font-semibold text-white mb-4">
           Sensores ({cuenta.sensores.length})
         </h2>
-        {cuenta.sensores.length === 0 ? (
-          <p className="text-slate-400 text-sm">Sin sensores registrados.</p>
-        ) : (
-          <>
-            {/* ── Tabla — desktop ────────────────────────────────────────────── */}
-            <div className="hidden md:block bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-900/50 border-b border-slate-700">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Zona</th>
-                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Etiqueta</th>
-                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Tipo</th>
-                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Batería</th>
-                    <th className="text-left px-4 py-2 font-semibold text-slate-300">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700">
-                  {cuenta.sensores.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-700/40 transition-colors">
-                      <td className="px-4 py-2 text-slate-400 font-mono text-xs">{s.codigo_zona}</td>
-                      <td className="px-4 py-2 font-medium text-white">{s.etiqueta}</td>
-                      <td className="px-4 py-2 text-slate-300">{TIPO_LABELS[s.tipo] ?? s.tipo}</td>
-                      <td className="px-4 py-2 text-slate-300">{s.bateria ? BATERIA_LABELS[s.bateria] : "—"}</td>
-                      <td className="px-4 py-2">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${s.activa ? "bg-green-900/40 text-green-400" : "bg-slate-700 text-slate-400"}`}>
-                          {s.activa ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* ── Cards — mobile ──────────────────────────────────────────────── */}
-            <div className="md:hidden space-y-2">
-              {cuenta.sensores.map((s) => (
-                <div key={s.id} className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-white">{s.etiqueta}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {TIPO_LABELS[s.tipo] ?? s.tipo} · <span className="font-mono">{s.codigo_zona}</span>
-                      </p>
-                      {s.bateria && (
-                        <p className="text-xs text-slate-400 mt-0.5">{BATERIA_LABELS[s.bateria]}</p>
-                      )}
-                    </div>
-                    <span className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${s.activa ? "bg-green-900/40 text-green-400" : "bg-slate-700 text-slate-400"}`}>
-                      {s.activa ? "Activo" : "Inactivo"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+        <GestionSensores
+          sensores={cuenta.sensores.map((s) => ({
+            id: s.id,
+            codigo_zona: s.codigo_zona,
+            etiqueta: s.etiqueta,
+            tipo: s.tipo,
+            activa: s.activa,
+            bateria: s.bateria,
+          }))}
+          cuentaId={cuenta.id}
+        />
       </section>
 
-      {/* Solicitudes abiertas */}
-      {cuenta.solicitudes.length > 0 && (
-        <section aria-labelledby="solicitudes-heading">
-          <h2 id="solicitudes-heading" className="text-lg font-semibold text-white mb-4">
-            Solicitudes abiertas
-          </h2>
-          <ul className="space-y-3">
+      {/* Solicitudes de mantenimiento */}
+      <section aria-labelledby="solicitudes-heading">
+        <h2 id="solicitudes-heading" className="text-lg font-semibold text-white mb-4">
+          Solicitudes de mantenimiento{cuenta.solicitudes.length > 0 ? ` (${cuenta.solicitudes.length} abiertas)` : ""}
+        </h2>
+
+        {cuenta.solicitudes.length > 0 && (
+          <ul className="space-y-3 mb-4">
             {cuenta.solicitudes.map((s) => (
-              <li key={s.id} className="bg-yellow-900/20 border border-yellow-800 rounded-xl p-4">
+              <li
+                key={s.id}
+                className="bg-yellow-900/20 border border-yellow-800 rounded-xl p-4"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm text-slate-200">{s.descripcion}</p>
                   <span className="text-xs font-semibold bg-yellow-900/40 text-yellow-400 px-2 py-0.5 rounded-full shrink-0">
@@ -151,6 +143,57 @@ export default async function CuentaAdminPage({
               </li>
             ))}
           </ul>
+        )}
+
+        <NuevaSolicitudForm cuentaId={cuenta.id} />
+      </section>
+
+      {/* Últimos 12 pagos */}
+      {cuenta.pagos.length > 0 && (
+        <section aria-labelledby="pagos-heading">
+          <h2 id="pagos-heading" className="text-lg font-semibold text-white mb-4">
+            Últimos pagos
+          </h2>
+          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900/50 border-b border-slate-700">
+                <tr>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Período</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Estado</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Importe</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Método</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Registrado por</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700">
+                {cuenta.pagos.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-700/30 transition-colors">
+                    <td className="px-4 py-2 text-slate-300">
+                      {MESES[p.mes]} {p.anio}
+                    </td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          ESTADO_PAGO_COLORES[p.estado] ?? "bg-slate-700 text-slate-300"
+                        }`}
+                      >
+                        {p.estado}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-white font-medium">
+                      ${Number(p.importe).toLocaleString("es-AR")}
+                    </td>
+                    <td className="px-4 py-2 text-slate-400 text-xs">
+                      {p.metodo ?? "—"}
+                    </td>
+                    <td className="px-4 py-2 text-slate-400 text-xs">
+                      {p.registrado_por ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
     </div>

@@ -67,3 +67,15 @@ CREATE POLICY "tarifas_select_autenticados" ON tarifas_historico
 -- NOTA: Los Server Actions del admin usan service_role key que bypasea
 -- RLS por diseño de Supabase. No hace falta política ADMIN específica.
 -- ═══════════════════════════════════════════════════════════════════════
+
+-- ─── SOLICITUDES DE CAMBIO DE INFO ───────────────────────────────────────────
+
+ALTER TABLE solicitudes_cambio_info ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "cambio_info_propio_select" ON solicitudes_cambio_info
+  FOR SELECT USING (auth.uid()::text = perfil_id);
+
+CREATE POLICY "cambio_info_propio_insert" ON solicitudes_cambio_info
+  FOR INSERT WITH CHECK (auth.uid()::text = perfil_id);
+
+-- No UPDATE / DELETE para clientes. Admins usan service_role que bypasea RLS.

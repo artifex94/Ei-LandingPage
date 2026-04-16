@@ -4,8 +4,20 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
+import { enviarWhatsApp } from "@/lib/twilio";
 
-// ─── Flujo 1: Email + contraseña ─────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function normalizarTelefono(raw: string): string | null {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return digits;
+  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
+  if (digits.length === 13 && digits.startsWith("549")) return digits.slice(3);
+  if (digits.length === 12 && digits.startsWith("54")) return digits.slice(2);
+  return null;
+}
+
+// ─── Flujo 1: Email + contraseña (para el admin) ─────────────────────────────
 
 export async function loginConEmail(
   _prev: { error: string } | null,
@@ -25,57 +37,90 @@ export async function loginConEmail(
   redirect(perfil?.rol === "ADMIN" ? "/admin/dashboard" : "/portal/dashboard");
 }
 
-// ─── Flujo 2: WhatsApp OTP — paso 1: enviar código ───────────────────────────
+// ─── Flujo 2: Magic link por email ───────────────────────────────────────────
 
-export async function enviarOtpWhatsApp(
-  _prev: { error: string; step?: string } | null,
+export async function enviarMagicLinkEmail(
+  _prev: { error: string; ok?: boolean } | null,
   formData: FormData
-): Promise<{ error: string; step?: string } | null> {
-  const telefono = formData.get("telefono") as string;
+): Promise<{ error: string; ok?: boolean } | null> {
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  if (!email) return { error: "Ingresá tu email." };
 
-  if (!telefono) return { error: "Ingresá tu número de teléfono." };
-
-  // Verificar que el teléfono existe antes de gastar el OTP
-  const perfil = await prisma.perfil.findUnique({ where: { telefono } });
+  // Solo para usuarios existentes
+  const perfil = await prisma.perfil.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
   if (!perfil) {
-    return { error: "Ese número no está registrado. Contactá a Escobar Instalaciones." };
+    return { error: "Ese email no está registrado. Contactá a Escobar Instalaciones." };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
-    phone: telefono,
-    options: { channel: "whatsapp" },
+    email: perfil.email ?? email,
+    options: { shouldCreateUser: false },
   });
 
-  if (error) return { error: "No se pudo enviar el código. Intentá de nuevo." };
+  if (error) return { error: "No se pudo enviar el link. Intentá de nuevo." };
 
-  return { error: "", step: "verify" };
+  return { error: "", ok: true };
 }
 
-// ─── Flujo 2: WhatsApp OTP — paso 2: verificar código ────────────────────────
+// ─── Flujo 3: WhatsApp — magic link enviado por Twilio ────────────────────────
+//
+// Ventaja sobre OTP: el cliente solo toca un link en WhatsApp, sin escribir código.
+// El magic link lo genera Supabase (expira en 1h) y lo entregamos por Twilio.
 
-export async function verificarOtpWhatsApp(
-  _prev: { error: string } | null,
+export async function enviarLinkWhatsApp(
+  _prev: { error: string; ok?: boolean } | null,
   formData: FormData
-): Promise<{ error: string } | null> {
-  const telefono = formData.get("telefono") as string;
-  const token = formData.get("token") as string;
+): Promise<{ error: string; ok?: boolean } | null> {
+  const telefonoRaw = (formData.get("telefono") as string) ?? "";
 
-  if (!telefono || !token) return { error: "Completá todos los campos." };
+  const telefono = normalizarTelefono(telefonoRaw);
+  if (!telefono) {
+    return { error: "Ingresá un número argentino válido (ej: 3436 575372 o +5493436575372)." };
+  }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({
-    phone: telefono,
-    token,
-    type: "sms",
+  // Buscar perfil por teléfono normalizado
+  const perfil = await prisma.perfil.findFirst({
+    where: { telefono },
+    select: { id: true, email: true, nombre: true },
   });
 
-  if (error) return { error: "Código inválido o expirado." };
+  if (!perfil?.email) {
+    return {
+      error: "Ese número no está registrado. Contactá a Escobar Instalaciones.",
+    };
+  }
 
-  redirect("/portal/dashboard");
+  // Generar magic link con Supabase Admin (no envía email, solo devuelve la URL)
+  const adminClient = createAdminClient();
+  const { data, error: linkError } = await adminClient.auth.admin.generateLink({
+    type: "magiclink",
+    email: perfil.email,
+  });
+
+  if (linkError || !data?.properties?.action_link) {
+    console.error("generateLink error:", linkError);
+    return { error: "No se pudo generar el link. Intentá de nuevo." };
+  }
+
+  const nombre = perfil.nombre?.split(" ")[0] ?? "";
+  const saludo = nombre ? `Hola ${nombre}! ` : "Hola! ";
+  const mensaje =
+    `${saludo}Tocá este link para ingresar a tu portal de Escobar Instalaciones 🔐\n\n` +
+    `${data.properties.action_link}\n\n` +
+    `_El link es personal y expira en 1 hora._`;
+
+  const enviado = await enviarWhatsApp(telefono, mensaje);
+  if (!enviado) {
+    return { error: "No se pudo enviar el mensaje. Verificá el número o usá tu email." };
+  }
+
+  return { error: "", ok: true };
 }
 
-// ─── Flujo 3: DNI + contraseña ────────────────────────────────────────────────
+// ─── Flujo 4: DNI + contraseña (legacy) ──────────────────────────────────────
 
 export async function loginConDni(
   _prev: { error: string } | null,
@@ -86,19 +131,13 @@ export async function loginConDni(
 
   if (!dni || !password) return { error: "Completá todos los campos." };
 
-  // El perfil existe con DNI? Solo si existe podemos armar el email interno
   const perfil = await prisma.perfil.findUnique({ where: { dni } });
-  if (!perfil) {
-    return { error: "DNI o contraseña incorrectos." };
-  }
+  if (!perfil) return { error: "DNI o contraseña incorrectos." };
 
   const emailInterno = `dni_${dni}@${process.env.ADMIN_EMAIL_DOMAIN}`;
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: emailInterno,
-    password,
-  });
+  const { error } = await supabase.auth.signInWithPassword({ email: emailInterno, password });
 
   if (error) return { error: "DNI o contraseña incorrectos." };
 

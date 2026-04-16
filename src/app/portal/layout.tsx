@@ -54,6 +54,22 @@ export default function PortalLayout({
                   </Link>
                 </li>
                 <li>
+                  <Link
+                    href="/portal/solicitudes"
+                    className="text-slate-300 hover:text-white min-h-[44px] flex items-center transition-colors"
+                  >
+                    Asistencia
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/portal/perfil"
+                    className="text-slate-300 hover:text-white min-h-[44px] flex items-center transition-colors"
+                  >
+                    Mi perfil
+                  </Link>
+                </li>
+                <li>
                   <LogoutButton />
                 </li>
               </ul>

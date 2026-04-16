@@ -328,7 +328,7 @@ export function PagoModal({ pago, cuentaId, nombreMes, onClose }: Props) {
           {error && (
             <div
               role="alert"
-              className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm mb-4"
+              className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg px-4 py-3 text-sm mb-4"
             >
               {error}
             </div>

@@ -95,6 +95,13 @@ export default async function PagosAdminPage({
           >
             Ver
           </button>
+          <a
+            href={`/api/admin/export?tipo=pagos&mes=${mes}&anio=${anio}`}
+            className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[40px] flex items-center text-sm transition-colors"
+            title="Exportar a Excel"
+          >
+            ↓ Excel
+          </a>
         </form>
       </div>
 

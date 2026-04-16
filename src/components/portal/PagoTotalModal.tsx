@@ -107,7 +107,7 @@ export function PagoTotalModal({ deudas, onClose }: Props) {
             aria-describedby="confirm-mp-desc"
           >
             <Dialog.Title className="text-xl font-bold text-white mb-4">
-              ¿Confirmar pago total?
+              ¿Confirmar pago?
             </Dialog.Title>
             <p id="confirm-mp-desc" className="text-slate-300 text-base mb-2">
               Vas a ser redirigido a Mercado Pago para pagar:
@@ -133,7 +133,7 @@ export function PagoTotalModal({ deudas, onClose }: Props) {
               </button>
             </div>
             {error && (
-              <div role="alert" className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm mt-4">
+              <div role="alert" className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg px-4 py-3 text-sm mt-4">
                 {error}
               </div>
             )}
@@ -329,14 +329,14 @@ export function PagoTotalModal({ deudas, onClose }: Props) {
           aria-describedby="pago-total-desc"
         >
           <Dialog.Title className="text-xl font-bold text-white mb-1">
-            Pagar todas las deudas
+            Regularizar tus pagos
           </Dialog.Title>
           <p id="pago-total-desc" className="text-slate-400 text-sm mb-5">
-            {deudas.length} pago{deudas.length !== 1 ? "s" : ""} pendiente{deudas.length !== 1 ? "s" : ""}
+            {deudas.length} {deudas.length === 1 ? "pago por atender" : "pagos por atender"}
           </p>
 
           {error && (
-            <div role="alert" className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm mb-4">
+            <div role="alert" className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg px-4 py-3 text-sm mb-4">
               {error}
             </div>
           )}

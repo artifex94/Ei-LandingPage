@@ -23,41 +23,60 @@ const CATEGORIA_LABELS: Record<string, string> = {
   OTRO:             "Otro",
 };
 
+const POR_PAGINA = 40;
+
 export default async function CuentasAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; q?: string }>;
+  searchParams: Promise<{ estado?: string; q?: string; pagina?: string }>;
 }) {
-  const { estado, q } = await searchParams;
+  const { estado, q, pagina: paginaStr } = await searchParams;
+  const pagina = Math.max(1, Number(paginaStr ?? 1));
 
-  const cuentas = await prisma.cuenta.findMany({
-    where: {
-      ...(estado ? { estado: estado as never } : {}),
-      ...(q
-        ? {
-            OR: [
-              { descripcion: { contains: q, mode: "insensitive" } },
-              { softguard_ref: { contains: q } },
-              { perfil: { nombre: { contains: q, mode: "insensitive" } } },
-            ],
-          }
-        : {}),
-    },
-    include: {
-      perfil: { select: { nombre: true } },
-      _count: { select: { sensores: true } },
-    },
-    orderBy: { descripcion: "asc" },
-    take: 100,
-  });
+  const where = {
+    ...(estado ? { estado: estado as never } : {}),
+    ...(q
+      ? {
+          OR: [
+            { descripcion: { contains: q, mode: "insensitive" as const } },
+            { softguard_ref: { contains: q } },
+            { perfil: { nombre: { contains: q, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
+  };
 
+  const [total, cuentas] = await Promise.all([
+    prisma.cuenta.count({ where }),
+    prisma.cuenta.findMany({
+      where,
+      include: {
+        perfil: { select: { nombre: true } },
+        _count: { select: { sensores: true } },
+      },
+      orderBy: { descripcion: "asc" },
+      skip: (pagina - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+    }),
+  ]);
+
+  const totalPaginas = Math.ceil(total / POR_PAGINA);
   const estados = ["ACTIVA", "SUSPENDIDA_PAGO", "EN_MANTENIMIENTO", "BAJA_DEFINITIVA"];
 
   return (
     <section aria-labelledby="cuentas-heading">
-      <h1 id="cuentas-heading" className="text-2xl font-bold text-white mb-6">
-        Cuentas ({cuentas.length})
-      </h1>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <h1 id="cuentas-heading" className="text-2xl font-bold text-white">
+          Cuentas ({cuentas.length})
+        </h1>
+        <a
+          href="/api/admin/export?tipo=cuentas"
+          className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors shrink-0"
+          title="Exportar a Excel"
+        >
+          ↓ Excel
+        </a>
+      </div>
 
       <form method="GET" className="flex flex-wrap gap-3 mb-6">
         <input
@@ -151,6 +170,33 @@ export default async function CuentasAdminPage({
             ))}
           </div>
         </>
+      )}
+
+      {/* Paginación */}
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between gap-4 pt-4 mt-4 border-t border-slate-700">
+          <span className="text-sm text-slate-400">
+            Página {pagina} de {totalPaginas} · {total} cuentas
+          </span>
+          <div className="flex gap-2">
+            {pagina > 1 && (
+              <a
+                href={`/admin/cuentas?pagina=${pagina - 1}${estado ? `&estado=${estado}` : ""}${q ? `&q=${q}` : ""}`}
+                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                ← Anterior
+              </a>
+            )}
+            {pagina < totalPaginas && (
+              <a
+                href={`/admin/cuentas?pagina=${pagina + 1}${estado ? `&estado=${estado}` : ""}${q ? `&q=${q}` : ""}`}
+                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Siguiente →
+              </a>
+            )}
+          </div>
+        </div>
       )}
     </section>
   );

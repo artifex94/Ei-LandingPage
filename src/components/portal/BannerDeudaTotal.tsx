@@ -24,23 +24,23 @@ export function BannerDeudaTotal({ deudas }: Props) {
   return (
     <>
       <div
-        role="alert"
-        className="bg-red-900/30 border border-red-700 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        aria-label={`${deudas.length === 1 ? "Hay un pago por regularizar" : `Hay ${deudas.length} pagos por regularizar`}`}
+        className="bg-orange-950/30 border border-orange-700/50 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <p className="text-red-300 font-bold text-lg leading-tight">
-            Tenés {deudas.length} pago{deudas.length !== 1 ? "s" : ""} pendiente{deudas.length !== 1 ? "s" : ""}
+          <p className="text-orange-300 font-bold text-lg leading-tight">
+            {deudas.length === 1 ? "Hay un pago por atender" : `Hay ${deudas.length} pagos por atender`}
           </p>
-          <p className="text-red-400 text-sm mt-1">
-            Total adeudado:{" "}
+          <p className="text-orange-400/80 text-sm mt-1">
+            Total a regularizar:{" "}
             <strong className="text-white text-xl font-bold">{totalStr}</strong>
           </p>
         </div>
         <button
           onClick={() => setModalAbierto(true)}
-          className="w-full sm:w-auto shrink-0 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl px-6 py-4 min-h-[60px] text-lg transition-colors"
+          className="w-full sm:w-auto shrink-0 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl px-6 py-4 min-h-[60px] text-lg transition-colors"
         >
-          Pagar todo ahora
+          Regularizar pagos
         </button>
       </div>
 

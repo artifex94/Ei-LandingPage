@@ -35,7 +35,7 @@ interface EstadoConfig {
 
 const ESTADO_CONFIG: Record<EstadoPago | "SIN_DATOS", EstadoConfig> = {
   VENCIDO: {
-    bg: "bg-red-700",
+    bg: "bg-orange-600",
     textColor: "text-white",
     icono: "⚠",
     iconoAriaLabel: "Triángulo de advertencia",
