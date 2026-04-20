@@ -2,7 +2,8 @@ import Link from "next/link";
 import { LoginTabs } from "./LoginTabs";
 
 export const metadata = {
-  title: "Ingresar — Escobar Instalaciones",
+  title: "Ingresar",
+  robots: { index: false, follow: false },
 };
 
 export default function LoginPage() {

@@ -11,9 +11,11 @@
  * Configurar en Vercel Cron (vercel.json) o cron-job.org para ejecutar el día 1 de cada mes.
  */
 
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { enviarWhatsApp } from "@/lib/twilio";
+import { prepararBorradoresFactura } from "@/lib/facturacion/preparar-borradores";
 
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -21,10 +23,19 @@ const MESES_ES = [
 ];
 
 export async function POST(req: NextRequest) {
-  // ── Autenticación ─────────────────────────────────────────────────────────
-  const auth = req.headers.get("authorization");
-  const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (!process.env.CRON_SECRET || auth !== expected) {
+  // ── Autenticación — comparación timing-safe para evitar timing oracle ──────
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const auth = req.headers.get("authorization") ?? "";
+  const expected = `Bearer ${cronSecret}`;
+  const authBuf = Buffer.from(auth, "utf8");
+  const expBuf  = Buffer.from(expected, "utf8");
+  const valido  =
+    authBuf.length === expBuf.length &&
+    crypto.timingSafeEqual(authBuf, expBuf);
+  if (!valido) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -33,28 +44,22 @@ export async function POST(req: NextRequest) {
   const anio = ahora.getFullYear();
 
   // ── 1. Generar pagos PENDIENTE para el mes actual ─────────────────────────
-  const cuentasActivas = await prisma.cuenta.findMany({
-    where: { estado: "ACTIVA" },
-    select: { id: true, costo_mensual: true },
-  });
+  const [cuentasActivas, tarifaRow] = await Promise.all([
+    prisma.cuenta.findMany({ where: { estado: "ACTIVA" }, select: { id: true, costo_mensual: true } }),
+    prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" } }),
+  ]);
+  const tarifaEstandar = tarifaRow?.monto ?? 15000;
 
-  let pagosCreados = 0;
-  for (const cuenta of cuentasActivas) {
-    try {
-      const existing = await prisma.pago.findUnique({
-        where: { cuenta_id_mes_anio: { cuenta_id: cuenta.id, mes, anio } },
-        select: { id: true },
-      });
-      if (!existing) {
-        await prisma.pago.create({
-          data: { cuenta_id: cuenta.id, mes, anio, importe: cuenta.costo_mensual, estado: "PENDIENTE" },
-        });
-        pagosCreados++;
-      }
-    } catch (e) {
-      console.error("Error creando pago:", e);
-    }
-  }
+  const { count: pagosCreados } = await prisma.pago.createMany({
+    data: cuentasActivas.map((cuenta) => ({
+      cuenta_id: cuenta.id,
+      mes,
+      anio,
+      importe: cuenta.costo_mensual ?? tarifaEstandar,
+      estado: "PENDIENTE" as const,
+    })),
+    skipDuplicates: true,
+  });
 
   // ── 2. Marcar como VENCIDO los PENDIENTE de meses anteriores ─────────────
   // Considera vencido cualquier pago PENDIENTE cuyo mes/año ya pasó
@@ -121,8 +126,8 @@ export async function POST(req: NextRequest) {
     if (lineasDeuda.length === 0) continue;
 
     const nombre = perfil.nombre.split(" ")[0];
-    const tieneVencidos = perfilesConDeuda.some((p) =>
-      p.cuentas.some((c) => c.pagos.some((pg) => pg.estado === "VENCIDO"))
+    const tieneVencidos = perfil.cuentas.some((c) =>
+      c.pagos.some((pg) => pg.estado === "VENCIDO")
     );
 
     const mensaje =
@@ -135,7 +140,12 @@ export async function POST(req: NextRequest) {
     if (ok) notificados++; else erroresEnvio++;
   }
 
-  console.log(`[cron] mes=${mes}/${anio} pagosCreados=${pagosCreados} vencidos=${marcadosVencidos} notificados=${notificados} errores=${erroresEnvio}`);
+  // ── 4. Preparar borradores de factura para el mes actual ─────────────────
+  const periodoDesde = new Date(anio, mes - 1, 1);
+  const periodoHasta = new Date(anio, mes, 0); // último día del mes
+  const resultFacturas = await prepararBorradoresFactura(periodoDesde, periodoHasta, "cron");
+
+  console.log(`[cron] mes=${mes}/${anio} pagosCreados=${pagosCreados} vencidos=${marcadosVencidos} notificados=${notificados} errores=${erroresEnvio} facturasBorradores=${resultFacturas.creadas} facturasOmitidas=${resultFacturas.omitidas}`);
 
   return NextResponse.json({
     ok: true,
@@ -144,5 +154,7 @@ export async function POST(req: NextRequest) {
     marcadosVencidos,
     notificados,
     erroresEnvio,
+    facturasBorradores: resultFacturas.creadas,
+    facturasOmitidas: resultFacturas.omitidas,
   });
 }

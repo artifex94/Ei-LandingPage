@@ -19,6 +19,9 @@ async function main() {
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
   const prisma = new PrismaClient({ adapter });
 
+  const tarifaRow = await prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" } });
+  const tarifaEstandar = tarifaRow?.monto ?? 15000;
+
   // Traer todas las cuentas activas
   const cuentas = await prisma.cuenta.findMany({
     where: { estado: { not: "BAJA_DEFINITIVA" } },
@@ -40,7 +43,7 @@ async function main() {
             cuenta_id: cuenta.id,
             mes,
             anio: ANIO,
-            importe: cuenta.costo_mensual,
+            importe: cuenta.costo_mensual ?? tarifaEstandar,
             estado: "PAGADO",
             metodo: METODO,
             acreditado_en: new Date(`${ANIO}-${String(mes).padStart(2, "0")}-01`),

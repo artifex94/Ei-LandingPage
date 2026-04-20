@@ -65,6 +65,24 @@ export async function importarCsvSoftguard(
   if (!archivo || archivo.size === 0) {
     return { ok: 0, errores: ["No se recibió ningún archivo."] };
   }
+  // Validación de tipo en servidor — el atributo `accept` del input es solo UX,
+  // puede bypassarse con herramientas como curl o Burp.
+  const MIME_CSV_PERMITIDOS = new Set([
+    "text/csv",
+    "text/plain",
+    "application/csv",
+    "application/vnd.ms-excel",
+  ]);
+  const extension = archivo.name.split(".").pop()?.toLowerCase();
+  if (extension !== "csv" || !MIME_CSV_PERMITIDOS.has(archivo.type)) {
+    return { ok: 0, errores: ["Solo se aceptan archivos .csv."] };
+  }
+  // Límite de 5MB — un CSV de Softguard con 500 cuentas y zonas no supera 1MB.
+  // Previene DoS por agotamiento de memoria.
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+  if (archivo.size > MAX_SIZE_BYTES) {
+    return { ok: 0, errores: ["El archivo supera el límite de 5MB."] };
+  }
 
   const buffer = Buffer.from(await archivo.arrayBuffer());
   const resultado: ImportResult = { ok: 0, errores: [] };
@@ -102,8 +120,8 @@ export async function importarCsvSoftguard(
         });
       } else {
         const emailInterno = dni
-          ? `dni_${dni}@${process.env.ADMIN_EMAIL_DOMAIN}`
-          : `cuenta_${codigo_cuenta}@${process.env.ADMIN_EMAIL_DOMAIN}`;
+          ? `dni_${dni}@${process.env.ADMIN_EMAIL_DOMAIN!}`
+          : `cuenta_${codigo_cuenta}@${process.env.ADMIN_EMAIL_DOMAIN!}`;
 
         // Crear usuario en Supabase Auth
         const { data: authData, error: authError } =
@@ -114,16 +132,32 @@ export async function importarCsvSoftguard(
           });
 
         if (authError) {
-          // Si el usuario ya existe, buscar por email
-          const { data: existing } = await adminAuth.auth.admin.listUsers();
-          const found = existing?.users?.find((u) => u.email === emailInterno);
-          if (found) {
-            perfilId = found.id;
+          // Usuario Auth ya existe — buscar perfil en BD por email (camino rápido)
+          const perfilPorEmail = await prisma.perfil.findFirst({
+            where: { email: emailInterno },
+            select: { id: true },
+          });
+          if (perfilPorEmail) {
+            perfilId = perfilPorEmail.id;
           } else {
-            resultado.errores.push(
-              `Error auth para ${codigo_cuenta}: ${authError.message}`
-            );
-            continue;
+            // Auth existe pero no hay Perfil — obtener el ID de Auth y crear el perfil
+            const { data: page1 } = await adminAuth.auth.admin.listUsers({ page: 1, perPage: 1000 });
+            const found = page1?.users?.find((u) => u.email === emailInterno);
+            if (!found) {
+              resultado.errores.push(`Error auth para ${codigo_cuenta}: ${authError.message}`);
+              continue;
+            }
+            perfilId = found.id;
+            await prisma.perfil.create({
+              data: {
+                id: perfilId,
+                nombre,
+                ...(dni && { dni }),
+                ...(telefono && { telefono }),
+                email: emailInterno,
+                rol: "CLIENTE",
+              },
+            });
           }
         } else {
           perfilId = authData.user.id;

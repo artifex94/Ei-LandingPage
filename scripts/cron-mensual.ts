@@ -134,10 +134,15 @@ async function main() {
 
   // ── 1. Crear pagos PENDIENTE para el mes actual ──────────────────────────
 
-  const cuentasActivas = await prisma.cuenta.findMany({
-    where: { estado: "ACTIVA" },
-    select: { id: true, costo_mensual: true, softguard_ref: true },
-  });
+  const [cuentasActivas, tarifaRow] = await Promise.all([
+    prisma.cuenta.findMany({
+      where: { estado: "ACTIVA" },
+      select: { id: true, costo_mensual: true, softguard_ref: true },
+    }),
+    prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" } }),
+  ]);
+
+  const tarifaEstandar = tarifaRow?.monto ?? 15000;
 
   console.log(`\n📋 Paso 1 — Generar pagos para ${MESES_ES[mes - 1]} ${anio}`);
   console.log(`   ${cuentasActivas.length} cuentas activas`);
@@ -157,7 +162,7 @@ async function main() {
           cuenta_id: cuenta.id,
           mes,
           anio,
-          importe:  cuenta.costo_mensual,
+          importe:  cuenta.costo_mensual ?? tarifaEstandar,
           estado:   "PENDIENTE",
         },
       });
@@ -273,6 +278,63 @@ async function main() {
     await new Promise((r) => setTimeout(r, 300));
   }
 
+  // ── 4. Preparar borradores de factura para el mes actual ────────────────
+
+  console.log(`\n🧾 Paso 4 — Borradores de factura (${MESES_ES[mes - 1]} ${anio})`);
+
+  const periodoDesde = new Date(anio, mes - 1, 1);
+  const periodoHasta = new Date(anio, mes, 0);
+
+  const tarifaRowFact = await prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" } });
+  const tarifaBase = tarifaRowFact?.monto ?? 15000;
+
+  const perfilesFact = await prisma.perfil.findMany({
+    where: {
+      activo: true,
+      requiere_factura: true,
+      cuentas: { some: { estado: "ACTIVA" } },
+    },
+    include: {
+      cuentas: {
+        where: { estado: "ACTIVA" },
+        select: { id: true, descripcion: true, costo_mensual: true },
+      },
+    },
+  });
+
+  let borradoresCreados = 0;
+  let borradoresOmitidos = 0;
+
+  for (const perfil of perfilesFact) {
+    const existente = await prisma.factura.findFirst({
+      where: { perfil_id: perfil.id, periodo_desde: periodoDesde, estado: { in: ["BORRADOR", "EMITIDA_MANUAL", "EMITIDA_WSFE"] } },
+    });
+    if (existente) { borradoresOmitidos++; continue; }
+
+    const items = perfil.cuentas.map((c) => {
+      const precio = c.costo_mensual ?? tarifaBase;
+      return { cuenta_id: c.id, descripcion: "mantenimiento y servicio de alarma", cantidad: 1, precio_unit: precio, subtotal: precio };
+    });
+    const subtotal = items.reduce((s, it) => s + Number(it.subtotal), 0);
+    const fechaVto = new Date(anio, mes - 1, 10);
+
+    await prisma.factura.create({
+      data: {
+        perfil_id: perfil.id, tipo: "FACTURA_C",
+        cuit_emisor: "20385573503", razon_social_emisor: "ESCOBAR RAMIRO ANIBAL",
+        cuit_receptor: perfil.cuit ?? null, razon_social_receptor: perfil.razon_social ?? perfil.nombre,
+        condicion_iva_receptor: perfil.condicion_iva ?? "RESPONSABLE_INSCRIPTO",
+        periodo_desde: periodoDesde, periodo_hasta: periodoHasta,
+        fecha_vto_pago: fechaVto, subtotal, iva: 0, total: subtotal,
+        estado: "BORRADOR", generada_por: "system",
+        items: { create: items },
+      },
+    });
+    borradoresCreados++;
+  }
+
+  console.log(`   ✓ Creados: ${borradoresCreados}  |  Omitidos: ${borradoresOmitidos}`);
+
   // ── Resumen ──────────────────────────────────────────────────────────────
 
   console.log(`\n${"─".repeat(50)}`);
@@ -283,6 +345,7 @@ async function main() {
   console.log(`   Notificados:         ${notificados}`);
   console.log(`   Sin teléfono:        ${sinTelefono}`);
   console.log(`   Errores de envío:    ${erroresEnvio}`);
+  console.log(`   Borradores fact.:    ${borradoresCreados}`);
   console.log(`${"─".repeat(50)}\n`);
 
   await prisma.$disconnect();

@@ -1,10 +1,18 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
 import { enviarWhatsApp } from "@/lib/twilio";
+
+async function getAppUrl(): Promise<string> {
+  const h = await headers();
+  const host = h.get("host") ?? "localhost:3000";
+  const proto = host.startsWith("localhost") ? "http" : "https";
+  return `${proto}://${host}`;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,7 +42,9 @@ export async function loginConEmail(
   if (error) return { error: "Email o contraseña incorrectos." };
 
   const perfil = await prisma.perfil.findUnique({ where: { id: authData.user.id } });
-  redirect(perfil?.rol === "ADMIN" ? "/admin/dashboard" : "/portal/dashboard");
+  if (perfil?.rol === "ADMIN") redirect("/admin/dashboard");
+  if (perfil?.rol === "TECNICO") redirect("/tecnico/dashboard");
+  redirect("/portal/dashboard");
 }
 
 // ─── Flujo 2: Magic link por email ───────────────────────────────────────────
@@ -54,10 +64,14 @@ export async function enviarMagicLinkEmail(
     return { error: "Ese email no está registrado. Contactá a Escobar Instalaciones." };
   }
 
+  const appUrl = await getAppUrl();
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: perfil.email ?? email,
-    options: { shouldCreateUser: false },
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${appUrl}/auth/callback`,
+    },
   });
 
   if (error) return { error: "No se pudo enviar el link. Intentá de nuevo." };
@@ -95,9 +109,13 @@ export async function enviarLinkWhatsApp(
 
   // Generar magic link con Supabase Admin (no envía email, solo devuelve la URL)
   const adminClient = createAdminClient();
+  const appUrl = await getAppUrl();
   const { data, error: linkError } = await adminClient.auth.admin.generateLink({
     type: "magiclink",
     email: perfil.email,
+    options: {
+      redirectTo: `${appUrl}/auth/callback`,
+    },
   });
 
   if (linkError || !data?.properties?.action_link) {
@@ -132,9 +150,16 @@ export async function loginConDni(
   if (!dni || !password) return { error: "Completá todos los campos." };
 
   const perfil = await prisma.perfil.findUnique({ where: { dni } });
-  if (!perfil) return { error: "DNI o contraseña incorrectos." };
 
-  const emailInterno = `dni_${dni}@${process.env.ADMIN_EMAIL_DOMAIN}`;
+  if (!perfil) {
+    // Delay artificial para igualar el tiempo de respuesta con el caso en que
+    // el perfil SÍ existe pero la contraseña es incorrecta (timing oracle).
+    // Sin este delay, un atacante puede enumerar DNIs válidos midiendo latencia.
+    await new Promise((r) => setTimeout(r, 300));
+    return { error: "DNI o contraseña incorrectos." };
+  }
+
+  const emailInterno = `dni_${dni}@${process.env.ADMIN_EMAIL_DOMAIN!}`;
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email: emailInterno, password });
@@ -160,8 +185,18 @@ export async function altaClienteConDni(data: {
   telefono?: string;
   passwordInicial: string;
 }): Promise<{ error: string; perfilId?: string }> {
+  // Verificar que el llamador está autenticado y es ADMIN antes de usar
+  // el adminClient (que bypasea RLS). Sin esta guardia, cualquier cliente
+  // autenticado podría invocar esta Server Action directamente.
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado." };
+
+  const perfilCaller = await prisma.perfil.findUnique({ where: { id: user.id } });
+  if (perfilCaller?.rol !== "ADMIN") return { error: "Sin permisos de administrador." };
+
   const adminClient = createAdminClient();
-  const emailInterno = `dni_${data.dni}@${process.env.ADMIN_EMAIL_DOMAIN}`;
+  const emailInterno = `dni_${data.dni}@${process.env.ADMIN_EMAIL_DOMAIN!}`;
 
   const { data: authData, error } = await adminClient.auth.admin.createUser({
     email: emailInterno,

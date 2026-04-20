@@ -137,7 +137,7 @@ export default async function AuditoriaPage({
           <div className="flex gap-2">
             {pagina > 1 && (
               <a
-                href={`/admin/auditoria?pagina=${pagina - 1}${accionFiltro ? `&accion=${accionFiltro}` : ""}`}
+                href={`/admin/auditoria?pagina=${pagina - 1}${accionFiltro ? `&accion=${encodeURIComponent(accionFiltro)}` : ""}`}
                 className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 ← Anterior
@@ -145,7 +145,7 @@ export default async function AuditoriaPage({
             )}
             {pagina < totalPaginas && (
               <a
-                href={`/admin/auditoria?pagina=${pagina + 1}${accionFiltro ? `&accion=${accionFiltro}` : ""}`}
+                href={`/admin/auditoria?pagina=${pagina + 1}${accionFiltro ? `&accion=${encodeURIComponent(accionFiltro)}` : ""}`}
                 className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 Siguiente →

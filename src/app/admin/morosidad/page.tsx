@@ -13,24 +13,44 @@ function waLink(telefono: string, nombre: string, deuda: string) {
 }
 
 export default async function MorosidadPage() {
-  // Cuentas con 2+ pagos VENCIDO
+  const ahora = new Date();
+  const mesActual  = ahora.getMonth() + 1;
+  const anioActual = ahora.getFullYear();
+
+  // Un pago se considera vencido si:
+  //   a) su estado es "VENCIDO" (cron ya lo transitó), O
+  //   b) su estado es "PENDIENTE" y corresponde a un mes anterior al actual
+  //      (cron aún no corrió pero el período ya pasó).
+  const filtroPagoVencido = {
+    OR: [
+      { estado: "VENCIDO" as const },
+      {
+        estado: "PENDIENTE" as const,
+        OR: [
+          { anio: { lt: anioActual } },
+          { anio: anioActual, mes: { lt: mesActual } },
+        ],
+      },
+    ],
+  };
+
   const cuentasVencidas = await prisma.cuenta.findMany({
     where: {
       estado: { not: "BAJA_DEFINITIVA" },
-      pagos: { some: { estado: "VENCIDO" } },
+      pagos: { some: filtroPagoVencido },
     },
     include: {
       perfil: { select: { id: true, nombre: true, telefono: true, email: true } },
       pagos: {
-        where: { estado: "VENCIDO" },
+        where: filtroPagoVencido,
         orderBy: [{ anio: "asc" }, { mes: "asc" }],
       },
     },
     orderBy: { descripcion: "asc" },
   });
 
-  // Filtrar solo las que tienen 2+ pagos vencidos
-  const morosas = cuentasVencidas.filter((c) => c.pagos.length >= 2);
+  // Mostrar cuentas con 1+ pago vencido/pendiente de meses anteriores
+  const morosas = cuentasVencidas.filter((c) => c.pagos.length >= 1);
 
   // Agrupar por cliente
   const porCliente = new Map<string, {
@@ -55,7 +75,7 @@ export default async function MorosidadPage() {
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-white">Morosidad</h1>
         <span className="text-sm text-slate-400">
-          {morosas.length} cuenta{morosas.length !== 1 ? "s" : ""} con 2+ meses vencidos
+          {morosas.length} cuenta{morosas.length !== 1 ? "s" : ""} con pagos vencidos
         </span>
       </div>
 

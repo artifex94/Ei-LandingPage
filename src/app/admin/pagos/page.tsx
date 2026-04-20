@@ -24,8 +24,12 @@ export default async function PagosAdminPage({
 }) {
   const sp = await searchParams;
   const ahora = new Date();
-  const mes = Number(sp.mes) || ahora.getMonth() + 1;
-  const anio = Number(sp.anio) || ahora.getFullYear();
+  const mesRaw  = Number(sp.mes)  || ahora.getMonth() + 1;
+  const anioRaw = Number(sp.anio) || ahora.getFullYear();
+  // Clamp para prevenir valores fuera de rango que lleguen al WHERE de Prisma.
+  // Consistente con la validación de /api/admin/export.
+  const mes  = Math.min(12, Math.max(1, mesRaw));
+  const anio = Math.min(2100, Math.max(2020, anioRaw));
 
   // Transferencias bancarias pendientes de confirmar — siempre visibles
   const transferenciasPendientes = await prisma.pago.findMany({
@@ -85,7 +89,7 @@ export default async function PagosAdminPage({
             defaultValue={anio}
             className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm min-h-[40px]"
           >
-            {[2024, 2025, 2026, 2027].map((a) => (
+            {Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - 1 + i).map((a) => (
               <option key={a} value={a}>{a}</option>
             ))}
           </select>

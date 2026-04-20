@@ -11,15 +11,21 @@ export default async function ClientesPage({
   const { q, pagina: paginaStr } = await searchParams;
   const pagina = Math.max(1, Number(paginaStr ?? 1));
 
+  const whereBase = { rol: "CLIENTE" as const };
   const where = q
     ? {
-        OR: [
-          { nombre: { contains: q, mode: "insensitive" as const } },
-          { dni: { contains: q } },
-          { telefono: { contains: q } },
+        AND: [
+          whereBase,
+          {
+            OR: [
+              { nombre: { contains: q, mode: "insensitive" as const } },
+              { dni: { contains: q } },
+              { telefono: { contains: q } },
+            ],
+          },
         ],
       }
-    : undefined;
+    : whereBase;
 
   const [total, perfiles] = await Promise.all([
     prisma.perfil.count({ where }),
@@ -146,7 +152,7 @@ export default async function ClientesPage({
           <div className="flex gap-2">
             {pagina > 1 && (
               <a
-                href={`/admin/clientes?pagina=${pagina - 1}${q ? `&q=${q}` : ""}`}
+                href={`/admin/clientes?pagina=${pagina - 1}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
                 className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 ← Anterior
@@ -154,7 +160,7 @@ export default async function ClientesPage({
             )}
             {pagina < totalPaginas && (
               <a
-                href={`/admin/clientes?pagina=${pagina + 1}${q ? `&q=${q}` : ""}`}
+                href={`/admin/clientes?pagina=${pagina + 1}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
                 className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 Siguiente →

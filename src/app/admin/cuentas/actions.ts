@@ -355,11 +355,11 @@ export async function activarOverrideSuspension(
   if (!admin) return { errores: ["Sin permisos de administrador."] };
 
   const cuenta_id = (formData.get("cuenta_id") as string)?.trim();
-  const ttl_horas = Number(formData.get("ttl_horas"));
+  const ttl_horas = parseInt(formData.get("ttl_horas") as string, 10);
   const justificacion = (formData.get("justificacion") as string)?.trim();
 
   if (!cuenta_id) return { errores: ["ID de cuenta requerido."] };
-  if (![24, 48, 72].includes(ttl_horas)) return { errores: ["TTL inválido (24, 48 o 72 horas)."] };
+  if (isNaN(ttl_horas) || ![24, 48, 72].includes(ttl_horas)) return { errores: ["TTL inválido (24, 48 o 72 horas)."] };
   if (!justificacion || justificacion.length < 10) {
     return { errores: ["La justificación debe tener al menos 10 caracteres."] };
   }

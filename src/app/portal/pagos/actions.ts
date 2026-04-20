@@ -174,8 +174,8 @@ export async function avisarTransferencia(
     return { error: "Pago no encontrado." };
   }
 
-  // Código de referencia único derivado del ID del pago
-  const refCode = `EI-${pago.id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+  // Código de referencia único derivado del ID del pago (12 hex chars = ~280 billones de combinaciones)
+  const refCode = `EI-${pago.id.replace(/-/g, "").slice(0, 12).toUpperCase()}`;
 
   await prisma.pago.update({
     where: { id: pago.id },
@@ -192,10 +192,18 @@ export async function avisarTransferencia(
 
 // ─── Pago total (todas las deudas juntas) ──────────────────────────────────
 
+// Límite máximo de pagos por operación "pagar todo".
+// Previene array bomb: un cliente autenticado no puede enviar 10.000 UUIDs
+// para causar una query findMany sin límite.
+const MAX_PAGOS_BULK = 50;
+
 export async function crearPreferenciaTodoMP(
   pagoIds: string[]
 ): Promise<{ checkoutUrl: string } | { error: string }> {
   if (!pagoIds.length) return { error: "No hay pagos seleccionados." };
+  if (pagoIds.length > MAX_PAGOS_BULK) {
+    return { error: `No podés seleccionar más de ${MAX_PAGOS_BULK} pagos a la vez.` };
+  }
 
   const supabase = await createClient();
   const {
@@ -260,6 +268,9 @@ export async function avisarTransferenciaTodo(
   pagoIds: string[]
 ): Promise<{ ok: boolean; refCodes: string[] } | { error: string }> {
   if (!pagoIds.length) return { error: "No hay pagos seleccionados." };
+  if (pagoIds.length > MAX_PAGOS_BULK) {
+    return { error: `No podés seleccionar más de ${MAX_PAGOS_BULK} pagos a la vez.` };
+  }
 
   const supabase = await createClient();
   const {
@@ -278,7 +289,7 @@ export async function avisarTransferenciaTodo(
 
   const refCodes: string[] = [];
   for (const p of pagos) {
-    const refCode = `EI-${p.id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+    const refCode = `EI-${p.id.replace(/-/g, "").slice(0, 12).toUpperCase()}`;
     refCodes.push(refCode);
     await prisma.pago.update({
       where: { id: p.id },

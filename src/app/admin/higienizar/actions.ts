@@ -231,6 +231,10 @@ export async function analizarXLS(formData: FormData): Promise<ResultadoAnalisis
   if (!archivo) {
     return { correcciones: [], estadisticas: { total: 0, excluidos: [], sin_email: 0, correcciones_por_campo: {} }, error: "No se recibió ningún archivo." };
   }
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+  if (archivo.size > MAX_SIZE_BYTES) {
+    return { correcciones: [], estadisticas: { total: 0, excluidos: [], sin_email: 0, correcciones_por_campo: {} }, error: "El archivo supera el límite de 5MB." };
+  }
 
   let rows: Record<string, string>[];
   try {
@@ -394,6 +398,19 @@ export interface ResultadoAplicacion {
   errores: Array<{ softguard_ref: string; campo: string; error: string }>;
 }
 
+// Campos del modelo Cuenta que pueden ser actualizados masivamente.
+// Lista explícita para prevenir mass assignment: un cliente comprometido
+// no puede enviar campo="estado" o campo="costo_mensual" arbitrariamente.
+const CAMPOS_CUENTA_ACTUALIZABLES = new Set<string>([
+  "calle",
+  "localidad",
+  "provincia",
+  "codigo_postal",
+]);
+
+// Campos del modelo Perfil que pueden ser actualizados masivamente.
+const CAMPOS_PERFIL_ACTUALIZABLES = new Set<string>(["nombre", "telefono"]);
+
 export async function aplicarCorreccionesSeleccionadas(
   correcciones: Correccion[]
 ): Promise<ResultadoAplicacion> {
@@ -404,7 +421,7 @@ export async function aplicarCorreccionesSeleccionadas(
 
   for (const c of correcciones) {
     try {
-      if (c.campo === "nombre" || c.campo === "telefono") {
+      if (CAMPOS_PERFIL_ACTUALIZABLES.has(c.campo)) {
         // Campos en Perfil — buscar por softguard_ref a través de Cuenta
         const cuenta = await prisma.cuenta.findUnique({
           where: { softguard_ref: c.softguard_ref },
@@ -450,8 +467,10 @@ export async function aplicarCorreccionesSeleccionadas(
           where: { id: cuenta.perfil_id },
           data: { tipo_titular: c.valor_propuesto as "RESIDENCIAL" | "COMERCIAL" | "OFICINAS" | "VEHICULO" },
         });
-      } else {
+      } else if (CAMPOS_CUENTA_ACTUALIZABLES.has(c.campo)) {
         // Campos en Cuenta: calle, localidad, provincia, codigo_postal
+        // Whitelist explícita — cualquier otro campo enviado desde el cliente
+        // es rechazado para prevenir mass assignment.
         const existe = await prisma.cuenta.findUnique({ where: { softguard_ref: c.softguard_ref } });
         if (!existe) {
           errores.push({ softguard_ref: c.softguard_ref, campo: c.campo, error: "Cuenta no importada — omitir" });
@@ -460,6 +479,12 @@ export async function aplicarCorreccionesSeleccionadas(
         await prisma.cuenta.update({
           where: { softguard_ref: c.softguard_ref },
           data: { [c.campo]: c.valor_propuesto || null },
+        });
+      } else {
+        errores.push({
+          softguard_ref: c.softguard_ref,
+          campo: c.campo,
+          error: `Campo "${c.campo}" no está permitido para actualización masiva`,
         });
       }
       aplicadas++;

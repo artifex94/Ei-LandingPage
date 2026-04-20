@@ -18,6 +18,14 @@ datasource db {
 enum Rol {
   CLIENTE
   ADMIN
+  TECNICO
+}
+
+enum EstadoTarea {
+  PENDIENTE
+  EN_CURSO
+  COMPLETADA
+  CANCELADA
 }
 
 enum CategoriaCuenta {
@@ -91,6 +99,90 @@ enum EstadoCambioInfo {
   RECHAZADO
 }
 
+// ── Fase 3: Órdenes de Trabajo ───────────────────────────────
+
+enum TipoOT {
+  INSTALACION
+  CORRECTIVO
+  PREVENTIVO
+  RETIRO
+}
+
+enum EstadoOT {
+  SOLICITADA
+  ASIGNADA
+  EN_RUTA
+  EN_SITIO
+  COMPLETADA
+  CANCELADA
+}
+
+// ── Fase 2: Facturación ───────────────────────────────────────
+
+enum TipoComprobante {
+  FACTURA_C        // COD. 011 — monotributista (único tipo vigente)
+  NOTA_CREDITO_C
+}
+
+enum EstadoFactura {
+  BORRADOR          // generado por el cron, pendiente de emitir en ARCA
+  EMITIDA_MANUAL    // Ramiro emitió en ARCA y subió el PDF
+  EMITIDA_WSFE      // emitida con CAE desde el portal (Fase 5)
+  ANULADA
+}
+
+enum CondicionIVA {
+  RESPONSABLE_INSCRIPTO
+  MONOTRIBUTISTA
+  EXENTO
+  CONSUMIDOR_FINAL
+  NO_RESPONSABLE
+}
+
+// ── Fase 1: Empleados ─────────────────────────────────────────
+enum RolEmpleado {
+  ADMIN_GENERAL
+  MONITOR
+  TECNICO
+  ADMINISTRATIVO
+}
+
+enum FranjaTurno {
+  MANANA
+  TARDE
+  NOCHE
+}
+
+enum EstadoTurno {
+  PROGRAMADO
+  EN_CURSO
+  COMPLETADO
+  AUSENTE
+  REEMPLAZADO
+}
+
+enum EstadoSolicitudTurno {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  CANCELADA
+}
+
+enum TipoAusencia {
+  VACACIONES
+  ENFERMEDAD
+  PERSONAL
+  FERIADO
+}
+
+// ── Fase 1: Vehículo ──────────────────────────────────────────
+enum EstadoReserva {
+  RESERVADA
+  EN_USO
+  COMPLETADA
+  CANCELADA
+}
+
 // ─────────────────────────────────────────────────────────────
 // MODELOS
 // ─────────────────────────────────────────────────────────────
@@ -110,6 +202,17 @@ model Perfil {
 
   cuentas            Cuenta[]
   solicitudes_cambio SolicitudCambioInfo[]
+  empleado           Empleado?
+  facturas           Factura[]
+  ordenes_trabajo    OrdenTrabajo[]
+  tareas_asignadas   TareaAgendada[]      @relation("TareasTecnico")
+  disponibilidad     DisponibilidadTecnico[] @relation("DisponibilidadTecnico")
+
+  // ── Fase 2: datos fiscales del receptor ──────────────────────
+  cuit               String?              // CUIT del titular (para Factura C)
+  condicion_iva      CondicionIVA?        // condición del receptor
+  razon_social       String?              // razón social si difiere del nombre
+  requiere_factura   Boolean @default(false) // false = solo recibo; true = emitir Factura C en ARCA
 
   @@map("perfiles")
 }
@@ -122,7 +225,7 @@ model Cuenta {
   descripcion     String
   categoria       CategoriaCuenta
   estado          EstadoCuenta    @default(ACTIVA)
-  costo_mensual   Decimal         @default(20000) @db.Decimal(10, 2)
+  costo_mensual   Decimal?        @db.Decimal(10, 2)  // null = usa tarifa estándar vigente
   zona_geografica String?
   notas_tecnicas  String?
   calle           String?
@@ -136,9 +239,14 @@ model Cuenta {
   created_at      DateTime        @default(now())
   updated_at      DateTime        @updatedAt
 
-  sensores    Sensor[]
-  pagos       Pago[]
-  solicitudes SolicitudMantenimiento[]
+  sensores        Sensor[]
+  pagos           Pago[]
+  ordenes_trabajo OrdenTrabajo[]
+  solicitudes     SolicitudMantenimiento[]
+  tareas          TareaAgendada[]
+  eventos_alarma  EventoAlarma[]
+  camaras         CamaraCliente[]
+  notificaciones  NotificacionCliente[]
 
   @@index([perfil_id])
   @@map("cuentas")
@@ -176,6 +284,11 @@ model Pago {
   registrado_por String?
   created_at     DateTime    @default(now())
   updated_at     DateTime    @updatedAt
+
+  factura_id         String?
+  factura            Factura? @relation(fields: [factura_id], references: [id])
+  imputado_softguard Boolean  @default(false)
+  imputado_en        DateTime?
 
   @@unique([cuenta_id, mes, anio])
   @@index([cuenta_id])
@@ -243,4 +356,366 @@ model SolicitudCambioInfo {
   @@index([perfil_id])
   @@index([estado])
   @@map("solicitudes_cambio_info")
+}
+
+// ─────────────────────────────────────────────────────────────
+// FASE 2 — FACTURACIÓN AFIP/ARCA
+// ─────────────────────────────────────────────────────────────
+
+model Factura {
+  id                      String          @id @default(uuid())
+  numero_oficial          String?         @unique          // "00001-00000048" al emitir
+  tipo                    TipoComprobante @default(FACTURA_C)
+  perfil_id               String
+  perfil                  Perfil          @relation(fields: [perfil_id], references: [id])
+  // Datos del emisor (snapshot al momento de emitir)
+  cuit_emisor             String          @default("20385573503")
+  razon_social_emisor     String          @default("ESCOBAR RAMIRO ANIBAL")
+  // Datos del receptor (snapshot)
+  cuit_receptor           String?
+  razon_social_receptor   String?
+  domicilio_receptor      String?
+  condicion_iva_receptor  CondicionIVA    @default(RESPONSABLE_INSCRIPTO)
+  // Período facturado
+  periodo_desde           DateTime        @db.Date
+  periodo_hasta           DateTime        @db.Date
+  fecha_emision           DateTime?
+  fecha_vto_pago          DateTime?
+  // Importes (monotributo: iva siempre 0, total = subtotal)
+  subtotal                Decimal         @db.Decimal(12, 2)
+  iva                     Decimal         @db.Decimal(12, 2) @default(0)
+  total                   Decimal         @db.Decimal(12, 2)
+  estado                  EstadoFactura   @default(BORRADOR)
+  // Datos post-emisión
+  cae                     String?
+  cae_vencimiento         DateTime?
+  pdf_url                 String?
+  arca_observaciones      String?
+  generada_por            String          // admin_id (o "system" si fue el cron)
+  emitida_por             String?         // admin_id que subió el PDF
+  created_at              DateTime        @default(now())
+  updated_at              DateTime        @updatedAt
+
+  items  FacturaItem[]
+  pagos  Pago[]
+
+  @@index([perfil_id, periodo_desde])
+  @@index([estado])
+  @@map("facturas")
+}
+
+model FacturaItem {
+  id           String   @id @default(uuid())
+  factura_id   String
+  factura      Factura  @relation(fields: [factura_id], references: [id], onDelete: Cascade)
+  cuenta_id    String?
+  descripcion  String   @default("mantenimiento y servicio de alarma")
+  cantidad     Int      @default(1)
+  precio_unit  Decimal  @db.Decimal(10, 2)
+  subtotal     Decimal  @db.Decimal(10, 2)
+
+  @@index([factura_id])
+  @@map("factura_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// FASE 1 — EMPLEADOS, TURNOS Y VEHÍCULO
+// ─────────────────────────────────────────────────────────────
+
+model Empleado {
+  id               String      @id @default(uuid())
+  perfil_id        String      @unique
+  perfil           Perfil      @relation(fields: [perfil_id], references: [id])
+  rol_empleado     RolEmpleado
+  puede_monitorear Boolean     @default(false)
+  puede_instalar   Boolean     @default(false)
+  puede_facturar   Boolean     @default(false)
+  activo           Boolean     @default(true)
+  color_calendario String?     // hex para distinguir en el calendario UI
+  created_at       DateTime    @default(now())
+
+  turnos                Turno[]
+  ausencias             Ausencia[]
+  solicitudes_turno     SolicitudCambioTurno[] @relation("solicitante")
+  reemplazos_propuestos SolicitudCambioTurno[] @relation("reemplazo_propuesto")
+  reservas_vehiculo     ReservaVehiculo[]
+  ordenes_trabajo       OrdenTrabajo[]
+
+  @@map("empleados")
+}
+
+model Turno {
+  id          String      @id @default(uuid())
+  empleado_id String
+  empleado    Empleado    @relation(fields: [empleado_id], references: [id])
+  fecha       DateTime    @db.Date
+  franja      FranjaTurno
+  estado      EstadoTurno @default(PROGRAMADO)
+  checkin_at  DateTime?
+  checkout_at DateTime?
+  reemplaza_a String?     // turno_id del turno original que este cubre
+  notas       String?
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  solicitudes_cambio SolicitudCambioTurno[]
+
+  @@unique([empleado_id, fecha, franja])
+  @@index([fecha, franja])
+  @@map("turnos")
+}
+
+model SolicitudCambioTurno {
+  id             String               @id @default(uuid())
+  solicitante_id String
+  solicitante    Empleado             @relation("solicitante", fields: [solicitante_id], references: [id])
+  turno_id       String
+  turno          Turno                @relation(fields: [turno_id], references: [id])
+  motivo         String
+  reemplazo_id   String?
+  reemplazo      Empleado?            @relation("reemplazo_propuesto", fields: [reemplazo_id], references: [id])
+  estado         EstadoSolicitudTurno @default(PENDIENTE)
+  resuelto_por   String?
+  resuelto_en    DateTime?
+  notas_admin    String?
+  created_at     DateTime             @default(now())
+
+  @@index([turno_id])
+  @@index([solicitante_id])
+  @@map("solicitudes_cambio_turno")
+}
+
+model Ausencia {
+  id          String       @id @default(uuid())
+  empleado_id String
+  empleado    Empleado     @relation(fields: [empleado_id], references: [id])
+  desde       DateTime     @db.Date
+  hasta       DateTime     @db.Date
+  tipo        TipoAusencia
+  aprobada    Boolean      @default(false)
+  notas       String?
+  created_at  DateTime     @default(now())
+
+  @@index([empleado_id])
+  @@map("ausencias")
+}
+
+model Vehiculo {
+  id                    String    @id @default(uuid())
+  patente               String    @unique
+  marca                 String
+  modelo                String
+  anio                  Int
+  km_actual             Int       @default(0)
+  proximo_service_km    Int?
+  proximo_service_fecha DateTime?
+  observaciones         String?
+  activo                Boolean   @default(true)
+  created_at            DateTime  @default(now())
+
+  reservas ReservaVehiculo[]
+
+  @@map("vehiculos")
+}
+
+model ReservaVehiculo {
+  id          String        @id @default(uuid())
+  vehiculo_id String
+  vehiculo    Vehiculo      @relation(fields: [vehiculo_id], references: [id])
+  empleado_id String
+  empleado    Empleado      @relation(fields: [empleado_id], references: [id])
+  ot_id       String?
+  ot          OrdenTrabajo? @relation(fields: [ot_id], references: [id])
+  desde       DateTime
+  hasta       DateTime
+  km_inicial  Int?
+  km_final    Int?
+  estado      EstadoReserva @default(RESERVADA)
+  notas       String?
+  created_at  DateTime      @default(now())
+
+  @@index([vehiculo_id, desde])
+  @@map("reservas_vehiculo")
+}
+
+model OrdenTrabajo {
+  id                      String     @id @default(uuid())
+  numero                  Int        @unique @default(autoincrement())
+  cuenta_id               String?
+  cuenta                  Cuenta?    @relation(fields: [cuenta_id], references: [id])
+  perfil_id               String?
+  perfil                  Perfil?    @relation(fields: [perfil_id], references: [id])
+  tipo                    TipoOT
+  descripcion             String
+  prioridad               Prioridad  @default(MEDIA)
+  estado                  EstadoOT   @default(SOLICITADA)
+  tecnico_id              String?
+  tecnico                 Empleado?  @relation(fields: [tecnico_id], references: [id])
+  fecha_visita            DateTime?
+  hora_salida             DateTime?
+  hora_llegada            DateTime?
+  hora_fin                DateTime?
+  materiales_usados       String?    // JSON array
+  costo_estimado          Decimal?   @db.Decimal(10, 2)
+  costo_final             Decimal?   @db.Decimal(10, 2)
+  conformidad_firmada     Boolean    @default(false)
+  firma_cliente_url       String?    // canvas firmado por el cliente, subido a Storage
+  fotos_urls              String?    // JSON array de URLs
+  notas_admin             String?
+  notas_tecnico           String?
+  st_softguard_numero     Int?       // espejo del Nº en SoftGuard ST si se promovió
+  gps_salida_lat          Decimal?   @db.Decimal(9, 6)
+  gps_salida_lng          Decimal?   @db.Decimal(9, 6)
+  gps_checkin_lat         Decimal?   @db.Decimal(9, 6)
+  gps_checkin_lng         Decimal?   @db.Decimal(9, 6)
+  gps_checkout_lat        Decimal?   @db.Decimal(9, 6)
+  gps_checkout_lng        Decimal?   @db.Decimal(9, 6)
+  satisfaccion_cliente    Int?       // 1..5
+  satisfaccion_comentario String?
+  created_at              DateTime   @default(now())
+  updated_at              DateTime   @updatedAt
+
+  reservas_vehiculo ReservaVehiculo[]
+  tarea             TareaAgendada?    @relation("OTTarea")
+
+  @@index([estado])
+  @@index([tecnico_id, fecha_visita])
+  @@map("ordenes_trabajo")
+}
+
+// ─────────────────────────────────────────────────────────────
+// FASE 4 — EVENTOS DE ALARMA (proyección desde SoftGuard)
+// ─────────────────────────────────────────────────────────────
+
+// Estados nativos de SoftGuard (TEC218 MultiMonitor + TEC228 IPR)
+enum EstadoEventoSync {
+  NUEVO
+  EN_PROCESO
+  EN_ESPERA
+  EN_PROCESO_DESDE_ESPERA
+  EN_PROCESO_MULTIPLE
+  PROCESADO
+  PROCESADO_NO_ALERTA
+  PROCESADO_MODO_PRUEBA
+  PROCESADO_MODO_OFF
+}
+
+model EventoAlarma {
+  id                 String           @id @default(uuid())
+  cuenta_id          String?
+  cuenta             Cuenta?          @relation(fields: [cuenta_id], references: [id])
+  softguard_ref      String
+  fecha_evento       DateTime
+  codigo             String
+  descripcion        String
+  zona               String?
+  prioridad          Int?
+  operador_softguard String?
+  estado             EstadoEventoSync
+  resolucion         String?
+  notificado_cliente Boolean          @default(false)
+  raw                String?
+
+  synced_at DateTime @default(now())
+
+  @@unique([softguard_ref, fecha_evento, codigo])
+  @@index([cuenta_id, fecha_evento])
+  @@map("eventos_alarma")
+}
+
+// ─────────────────────────────────────────────────────────────
+// FASE 6 — CÁMARAS Y NOTIFICACIONES (proyección SoftGuard)
+// ─────────────────────────────────────────────────────────────
+
+model CamaraCliente {
+  id               String  @id @default(uuid())
+  cuenta_id        String
+  cuenta           Cuenta  @relation(fields: [cuenta_id], references: [id])
+  softguard_cam_id Int
+  etiqueta         String
+  modelo           String?
+  protocolo        String?
+  activa           Boolean @default(true)
+
+  synced_at DateTime @default(now())
+
+  @@unique([cuenta_id, softguard_cam_id])
+  @@map("camaras_cliente")
+}
+
+enum OrigenNotificacion {
+  SOFTGUARD
+  PORTAL
+}
+
+enum EstadoNotificacion {
+  ENVIADA
+  FALLIDA
+  PENDIENTE
+}
+
+model NotificacionCliente {
+  id             String             @id @default(uuid())
+  cuenta_id      String?
+  cuenta         Cuenta?            @relation(fields: [cuenta_id], references: [id])
+  perfil_id      String
+  origen         OrigenNotificacion
+  canal          String
+  destino        String
+  asunto         String?
+  cuerpo_resumen String
+  estado         EstadoNotificacion
+  fecha_envio    DateTime
+  ref_externa    String?
+
+  synced_at DateTime @default(now())
+
+  @@index([perfil_id, fecha_envio])
+  @@index([cuenta_id, fecha_envio])
+  @@map("notificaciones_cliente")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AGENDA DE TÉCNICOS
+// ─────────────────────────────────────────────────────────────
+
+model TareaAgendada {
+  id            String        @id @default(uuid())
+  titulo        String
+  descripcion   String?
+  fecha         DateTime      @db.Date
+  hora_inicio   String?
+  hora_fin      String?
+  estado        EstadoTarea   @default(PENDIENTE)
+  prioridad     Prioridad     @default(MEDIA)
+  tecnico_id    String
+  tecnico       Perfil        @relation("TareasTecnico", fields: [tecnico_id], references: [id])
+  cuenta_id     String?
+  cuenta        Cuenta?       @relation(fields: [cuenta_id], references: [id])
+  ot_id         String?       @unique
+  ot            OrdenTrabajo? @relation("OTTarea", fields: [ot_id], references: [id])
+  notas_tecnico String?
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+
+  @@index([tecnico_id])
+  @@index([fecha])
+  @@map("tareas_agendadas")
+}
+
+// ── Disponibilidad técnico ─────────────────────────────────────────────────────
+// Franjas horarias en las que el técnico está disponible para recibir tareas.
+// Si no hay registros para una fecha → se asume disponibilidad default 06:00-22:00.
+
+model DisponibilidadTecnico {
+  id         String   @id @default(cuid())
+  tecnico_id String
+  tecnico    Perfil   @relation("DisponibilidadTecnico", fields: [tecnico_id], references: [id])
+  fecha      DateTime @db.Date
+  desde      String   // "06:00" — HH:MM 24h
+  hasta      String   // "22:00" — HH:MM 24h (exclusivo)
+
+  @@unique([tecnico_id, fecha, desde])
+  @@index([tecnico_id, fecha])
+  @@map("disponibilidad_tecnico")
 }

@@ -17,8 +17,18 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const tipo = searchParams.get("tipo") ?? "clientes";
-  const mes = Number(searchParams.get("mes") ?? new Date().getMonth() + 1);
-  const anio = Number(searchParams.get("anio") ?? new Date().getFullYear());
+
+  const mesRaw  = Number(searchParams.get("mes")  ?? new Date().getMonth() + 1);
+  const anioRaw = Number(searchParams.get("anio") ?? new Date().getFullYear());
+
+  // Validar rangos para evitar NaN o valores fuera de rango en el where de Prisma
+  if (!Number.isInteger(mesRaw)  || mesRaw  < 1 || mesRaw  > 12)
+    return NextResponse.json({ error: "Mes inválido (1–12)." }, { status: 400 });
+  if (!Number.isInteger(anioRaw) || anioRaw < 2020 || anioRaw > 2100)
+    return NextResponse.json({ error: "Año inválido." }, { status: 400 });
+
+  const mes  = mesRaw;
+  const anio = anioRaw;
 
   let rows: Record<string, unknown>[] = [];
   let nombre = "";
@@ -33,6 +43,7 @@ export async function GET(req: NextRequest) {
         },
       },
       orderBy: { nombre: "asc" },
+      take: 10_000,
     });
 
     rows = clientes.map((c) => ({
@@ -52,6 +63,7 @@ export async function GET(req: NextRequest) {
     const cuentas = await prisma.cuenta.findMany({
       include: { perfil: { select: { nombre: true, telefono: true, email: true } } },
       orderBy: { descripcion: "asc" },
+      take: 10_000,
     });
 
     rows = cuentas.map((c) => ({

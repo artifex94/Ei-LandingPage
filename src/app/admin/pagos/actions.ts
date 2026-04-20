@@ -26,14 +26,27 @@ export async function confirmarTransferencia(
   const pagoId = formData.get("pago_id") as string;
   if (!pagoId) return { error: "ID de pago inválido." };
 
-  await prisma.pago.update({
-    where: { id: pagoId },
-    data: {
-      estado: "PAGADO",
-      acreditado_en: new Date(),
-      registrado_por: perfil.nombre ?? "Admin",
-    },
-  });
+  try {
+    await prisma.pago.update({
+      where: { id: pagoId },
+      data: {
+        estado: "PAGADO",
+        acreditado_en: new Date(),
+        registrado_por: perfil.nombre ?? "Admin",
+      },
+    });
+  } catch (e: unknown) {
+    // P2025: registro no encontrado
+    if (
+      typeof e === "object" &&
+      e !== null &&
+      "code" in e &&
+      (e as { code: string }).code === "P2025"
+    ) {
+      return { error: "Pago no encontrado." };
+    }
+    throw e;
+  }
 
   revalidatePath("/admin/pagos");
   return { ok: true };

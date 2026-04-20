@@ -16,17 +16,33 @@ if (!env.success) {
 
 export const siteConfig = {
   name: "Escobar Instalaciones",
-  title: "Escobar Instalaciones | Seguridad y Monitoreo 24hs",
-  description: "Sistemas de seguridad inteligente, alarmas, domótica y cámaras de última generación. Protegemos lo que más te importa en instalacionescob.ar",
-  keywords: "seguridad, monitoreo, alarmas, domótica, control de acceso, Escobar Instalaciones, CCTV",
-  url: "https://instalacionescob.ar", // URL real del proyecto
+  title: "Escobar Instalaciones | Seguridad y Monitoreo 24hs — Victoria, Entre Ríos",
+  description:
+    "Empresa de seguridad en Victoria, Entre Ríos. Instalamos y monitoreamos alarmas, cámaras CCTV, domótica y control de acceso. Atención 24 hs, respuesta inmediata.",
+  keywords: [
+    "empresa de seguridad Victoria Entre Ríos",
+    "alarmas Victoria Entre Ríos",
+    "monitoreo 24 horas Victoria",
+    "cámaras CCTV Entre Ríos",
+    "domótica Victoria",
+    "control de acceso Entre Ríos",
+    "instalación alarmas Argentina",
+    "seguridad hogar Victoria ER",
+    "Escobar Instalaciones",
+    "sistema de seguridad Entre Ríos",
+  ].join(", "),
+  url: "https://instalacionescob.ar",
+  ogImage: "https://instalacionescob.ar/opengraph-image",
   contact: {
-    phoneDisplay: "+54 9 34 3657-5372",
+    phoneDisplay: "+54 9 343 657-5372",
+    phoneE164: "+5493436575372",
     whatsappNumber: env.data.NEXT_PUBLIC_WHATSAPP_NUMBER,
     email: "admin@instalacionescob.ar",
     location: "Victoria, Entre Ríos, Argentina",
+    latitude: -32.6267,
+    longitude: -60.1553,
   },
   links: {
-    // Aquí podemos agregar redes sociales más adelante: instagram, facebook, etc.
+    // instagram: "https://instagram.com/escobarinstalaciones",
   },
 };

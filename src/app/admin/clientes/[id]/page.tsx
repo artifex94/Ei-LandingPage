@@ -65,7 +65,7 @@ export default async function ClienteDetallePage({
     },
   });
 
-  if (!perfil) notFound();
+  if (!perfil || perfil.rol !== "CLIENTE") notFound();
 
   const anio = new Date().getFullYear();
   const mes = new Date().getMonth() + 1;
@@ -172,7 +172,9 @@ export default async function ClienteDetallePage({
                     <span className="text-slate-400">
                       Tarifa mensual:{" "}
                       <strong className="text-white">
-                        ${Number(cuenta.costo_mensual).toLocaleString("es-AR")}
+                        {cuenta.costo_mensual != null
+                          ? `$${Number(cuenta.costo_mensual).toLocaleString("es-AR")}`
+                          : "tarifa estándar"}
                       </strong>
                     </span>
                     {solicitudesAbiertas > 0 && (

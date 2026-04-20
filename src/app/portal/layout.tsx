@@ -4,8 +4,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { calcularEstadoFinanciero, peorEstadoFinanciero } from "@/lib/billing-state";
-import { LogoutButton } from "@/components/ui/LogoutButton";
-import { PagoRequeridoModal } from "@/components/portal/PagoRequeridoModal";
+import { PagoRequeridoGuard } from "@/components/portal/PagoRequeridoGuard";
+import { PortalNav } from "@/components/portal/PortalNav";
 import "./portal.css";
 
 export const metadata: Metadata = {
@@ -18,35 +18,47 @@ export default async function PortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // ── Auth guard (segunda línea de defensa, la primera es middleware.ts) ────────
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // ── Billing state — consultar cuentas activas con pagos impagos ───────────────
-  const cuentas = await prisma.cuenta.findMany({
-    where: {
-      perfil_id: user.id,
-      estado: { not: "BAJA_DEFINITIVA" },
-    },
-    select: {
-      id: true,
-      estado: true,
-      pagos: {
-        where: { estado: { in: ["PENDIENTE", "VENCIDO", "PROCESANDO"] } },
-        select: { estado: true, mes: true, anio: true, importe: true },
-      },
-    },
+  // Segunda línea de defensa: el middleware ya debería haber redirigido,
+  // pero si por algún motivo llega un ADMIN o TECNICO aquí, los enviamos
+  // a su área correspondiente sin ejecutar la lógica de cliente.
+  const rolCheck = await prisma.perfil.findUnique({
+    where: { id: user.id },
+    select: { rol: true },
   });
+  if (rolCheck?.rol === "ADMIN")   redirect("/admin/dashboard");
+  if (rolCheck?.rol === "TECNICO") redirect("/tecnico/mi-dia");
+
+  const [cuentas, empleado] = await Promise.all([
+    prisma.cuenta.findMany({
+      where: {
+        perfil_id: user.id,
+        estado: { not: "BAJA_DEFINITIVA" },
+      },
+      select: {
+        id: true,
+        estado: true,
+        override_activo: true,
+        override_expira: true,
+        pagos: {
+          where: { estado: { in: ["PENDIENTE", "VENCIDO", "PROCESANDO"] } },
+          select: { estado: true, mes: true, anio: true, importe: true },
+        },
+      },
+    }),
+    prisma.empleado.findFirst({ where: { perfil_id: user.id }, select: { id: true } }),
+  ]);
 
   const estados = cuentas.map((c) =>
-    calcularEstadoFinanciero(c.estado, c.pagos)
+    calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira)
   );
   const peorEstado = peorEstadoFinanciero(estados);
 
-  // Deuda total para el modal de suspensión
   const deudaTotal =
     peorEstado.tipo === "SUSPENDED"
       ? cuentas.reduce(
@@ -61,7 +73,6 @@ export default async function PortalLayout({
 
   return (
     <>
-      {/* Skip-to-content — WCAG 2.4.1 */}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-white focus:text-slate-900 focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:text-lg focus:font-medium"
@@ -69,70 +80,19 @@ export default async function PortalLayout({
         Ir al contenido principal
       </a>
 
-      {/* Hard Paywall Modal — solo cuando el servicio está suspendido */}
       {peorEstado.tipo === "SUSPENDED" && (
-        <PagoRequeridoModal deudaTotal={deudaTotal} />
+        <PagoRequeridoGuard deudaTotal={deudaTotal} />
       )}
 
       <div className="min-h-screen bg-slate-900 flex flex-col">
-        <header className="bg-slate-800 border-b border-slate-700 px-4 py-3">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <Link
-              href="/portal/dashboard"
-              className="flex items-center gap-2 group"
-            >
-              <div className="h-8 w-8 bg-orange-500 rounded-md flex items-center justify-center text-white font-bold text-sm shadow shadow-orange-500/20 group-hover:scale-105 transition-transform">
-                EI
-              </div>
-              <span className="text-base font-semibold text-white">Escobar Instalaciones</span>
-            </Link>
-            <nav aria-label="Navegación principal del portal">
-              <ul className="flex gap-6 text-sm" role="list">
-                <li>
-                  <Link
-                    href="/portal/dashboard"
-                    className="text-slate-300 hover:text-white min-h-[44px] flex items-center transition-colors"
-                  >
-                    Mis servicios
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/portal/pagos"
-                    className="text-slate-300 hover:text-white min-h-[44px] flex items-center transition-colors"
-                  >
-                    Pagos
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/portal/solicitudes"
-                    className="text-slate-300 hover:text-white min-h-[44px] flex items-center transition-colors"
-                  >
-                    Asistencia
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/portal/perfil"
-                    className="text-slate-300 hover:text-white min-h-[44px] flex items-center transition-colors"
-                  >
-                    Mi perfil
-                  </Link>
-                </li>
-                <li>
-                  <LogoutButton />
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </header>
+        <PortalNav isEmpleado={!!empleado} />
 
-        {/* Banner de mora — estado GRACE_PERIOD (ámbar sticky) */}
+        {/* Banner mora — ámbar */}
         {peorEstado.tipo === "GRACE_PERIOD" && (
           <div
             role="alert"
-            className="bg-amber-900/80 border-b border-amber-700 px-4 py-2.5 text-center text-sm text-amber-200"
+            className="bg-amber-900/80 border-b border-amber-700 px-4 py-2.5 text-center text-sm text-amber-200
+                       lg:mt-0 mt-14"
           >
             <span aria-hidden="true">⚠ </span>
             Tenés un pago vencido hace{" "}
@@ -144,11 +104,12 @@ export default async function PortalLayout({
           </div>
         )}
 
-        {/* Banner de pago en revisión (azul) */}
+        {/* Banner pago en revisión — azul */}
         {peorEstado.tipo === "PAYMENT_IN_REVIEW" && (
           <div
             role="status"
-            className="bg-blue-900/60 border-b border-blue-700 px-4 py-2.5 text-center text-sm text-blue-200"
+            className="bg-blue-900/60 border-b border-blue-700 px-4 py-2.5 text-center text-sm text-blue-200
+                       lg:mt-0 mt-14"
           >
             <span aria-hidden="true">🔄 </span>
             Tu pago está siendo verificado. En breve se actualizará el estado de tu servicio.
@@ -158,12 +119,15 @@ export default async function PortalLayout({
         <main
           id="main-content"
           tabIndex={-1}
-          className="portal-main flex-1 max-w-4xl mx-auto w-full px-4 py-8"
+          className="portal-main flex-1 max-w-4xl mx-auto w-full px-4 py-8
+                     pt-[calc(3.5rem+2rem)] lg:pt-8
+                     pb-[calc(4.5rem+env(safe-area-inset-bottom)+1rem)] lg:pb-8"
         >
           {children}
         </main>
 
-        <footer className="bg-slate-800 border-t border-slate-700 px-4 py-4 text-sm text-slate-400 text-center">
+        {/* Footer solo en desktop — en mobile lo reemplaza el bottom nav */}
+        <footer className="hidden lg:block bg-slate-800 border-t border-slate-700 px-4 py-4 text-sm text-slate-400 text-center">
           Escobar Instalaciones — Soporte:{" "}
           <a
             href="https://wa.me/5493436575372"

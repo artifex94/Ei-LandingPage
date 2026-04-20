@@ -27,7 +27,12 @@ export async function POST(req: Request) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const evento = JSON.parse(body);
+  let evento: { type?: string; data?: { external_id?: string } };
+  try {
+    evento = JSON.parse(body);
+  } catch {
+    return new Response("Bad Request", { status: 400 });
+  }
 
   if (evento.type === "payment.completed") {
     const externalId = evento.data?.external_id;
