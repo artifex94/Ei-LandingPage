@@ -1,5 +1,62 @@
 @import "tailwindcss";
 
+/* ── Animaciones LED (PWM simulado) ─────────────────────────────────────── */
+/* industrial-800 = slate-900 (#0f172a)   industrial-700 = slate-800 (#1e293b) */
+/* industrial-600 = slate-700 (#334155)   tactical-500   = #F17720             */
+
+@keyframes led-alert {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(241, 119, 32, 0.8); }
+  70%      { box-shadow: 0 0 0 8px rgba(241, 119, 32, 0); }
+}
+@keyframes led-warn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+  70%      { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); }
+}
+@keyframes led-idle {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6); }
+  70%      { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+}
+@keyframes led-ok {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+  70%      { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+}
+@keyframes led-crit {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.9); }
+  70%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
+/* ── Utilities LED ──────────────────────────────────────────────────────── */
+@utility animate-led-alert {
+  animation: led-alert 1.5s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite;
+}
+@utility animate-led-warn {
+  animation: led-warn 2s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite;
+}
+@utility animate-led-idle {
+  animation: led-idle 3.5s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite;
+}
+@utility animate-led-ok {
+  animation: led-ok 3.5s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite;
+}
+@utility animate-led-crit {
+  animation: led-crit 1s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite;
+}
+
+/* ── Curvas de Bézier mecánicas ─────────────────────────────────────────── */
+@utility ease-mech-press {
+  transition-timing-function: cubic-bezier(0.2, 0.0, 0.0, 1.0);
+}
+@utility ease-mech-snap {
+  transition-timing-function: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+}
+
+/* ── Font mono override (JetBrains Mono via next/font) ──────────────────── */
+@layer base {
+  :root {
+    --font-mono: var(--font-jetbrains), ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  }
+}
+
 /* ── Weather card animations ─────────────────────────────────────────────── */
 
 @keyframes rain-fall {

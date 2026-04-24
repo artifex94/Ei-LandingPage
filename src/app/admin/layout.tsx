@@ -54,7 +54,7 @@ export default async function AdminLayout({
         Ir al contenido principal
       </a>
 
-      <div className="min-h-screen flex bg-slate-900">
+      <div className="min-h-screen flex bg-industrial-900">
         <AdminSidebar
           nombreAdmin={perfil?.nombre ?? "Admin"}
           pendingSolicitudes={pendingSolicitudes}

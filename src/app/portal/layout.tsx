@@ -84,34 +84,34 @@ export default async function PortalLayout({
         <PagoRequeridoGuard deudaTotal={deudaTotal} />
       )}
 
-      <div className="min-h-screen bg-slate-900 flex flex-col">
+      <div className="min-h-screen bg-industrial-900 flex flex-col">
         <PortalNav isEmpleado={!!empleado} />
 
-        {/* Banner mora — ámbar */}
+        {/* Banner mora — naranja táctico */}
         {peorEstado.tipo === "GRACE_PERIOD" && (
           <div
             role="alert"
-            className="bg-amber-900/80 border-b border-amber-700 px-4 py-2.5 text-center text-sm text-amber-200
+            className="bg-tactical-500/10 border-b border-tactical-500/30 px-4 py-2.5 text-center text-sm text-tactical-400
                        lg:mt-0 mt-14"
           >
-            <span aria-hidden="true">⚠ </span>
+            <span aria-hidden="true" className="mr-1">▲</span>
             Tenés un pago vencido hace{" "}
             <strong>{peorEstado.dias_mora} día{peorEstado.dias_mora !== 1 ? "s" : ""}</strong>.
             Tu servicio puede suspenderse.{" "}
-            <Link href="/portal/pagos" className="underline font-semibold hover:text-white transition-colors">
+            <Link href="/portal/pagos" className="underline font-semibold hover:text-tactical-300 transition-colors">
               Regularizá ahora →
             </Link>
           </div>
         )}
 
-        {/* Banner pago en revisión — azul */}
+        {/* Banner pago en revisión — azul estructural */}
         {peorEstado.tipo === "PAYMENT_IN_REVIEW" && (
           <div
             role="status"
-            className="bg-blue-900/60 border-b border-blue-700 px-4 py-2.5 text-center text-sm text-blue-200
+            className="bg-blue-500/10 border-b border-blue-500/30 px-4 py-2.5 text-center text-sm text-blue-400
                        lg:mt-0 mt-14"
           >
-            <span aria-hidden="true">🔄 </span>
+            <span aria-hidden="true" className="mr-1">●</span>
             Tu pago está siendo verificado. En breve se actualizará el estado de tu servicio.
           </div>
         )}
@@ -126,15 +126,17 @@ export default async function PortalLayout({
           {children}
         </main>
 
-        {/* Footer solo en desktop — en mobile lo reemplaza el bottom nav */}
-        <footer className="hidden lg:block bg-slate-800 border-t border-slate-700 px-4 py-4 text-sm text-slate-400 text-center">
-          Escobar Instalaciones — Soporte:{" "}
-          <a
-            href="https://wa.me/5493436575372"
-            className="text-orange-400 underline hover:text-orange-300"
-          >
-            343-657-5372
-          </a>
+        {/* Footer solo en desktop */}
+        <footer className="hidden lg:block bg-industrial-800 border-t border-industrial-700 px-4 py-4 text-center">
+          <span className="text-xs text-slate-600 font-mono tracking-wide">
+            Escobar Instalaciones — Soporte:{" "}
+            <a
+              href="https://wa.me/5493436575372"
+              className="text-tactical-500 hover:text-tactical-400 transition-colors"
+            >
+              343-657-5372
+            </a>
+          </span>
         </footer>
       </div>
     </>

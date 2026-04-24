@@ -91,15 +91,24 @@ export default async function ClienteDetallePage({
           <h1 id="perfil-heading" className="text-2xl font-bold text-white">
             {perfil.nombre}
           </h1>
-          <span
-            className={`text-xs font-semibold px-2 py-1 rounded-full ${
-              perfil.activo
-                ? "bg-green-900/40 text-green-400"
-                : "bg-slate-700 text-slate-400"
-            }`}
-          >
-            {perfil.activo ? "Activo" : "Inactivo"}
-          </span>
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                perfil.activo
+                  ? "bg-green-900/40 text-green-400"
+                  : "bg-slate-700 text-slate-400"
+              }`}
+            >
+              {perfil.activo ? "Activo" : "Inactivo"}
+            </span>
+            <Link
+              href={`/admin/vista-cliente/${perfil.id}`}
+              className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-600 transition-colors"
+              title="Ver el portal exactamente como lo ve el cliente"
+            >
+              Ver portal
+            </Link>
+          </div>
         </div>
 
         {/* WhatsApp rápido */}

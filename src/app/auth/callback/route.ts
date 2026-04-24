@@ -4,7 +4,10 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma/client";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  // Detrás de Passenger el request.url llega como localhost:3000.
+  // NEXT_PUBLIC_APP_URL tiene siempre la URL canónica de producción.
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
   const code = searchParams.get("code");
 
   if (!code) {

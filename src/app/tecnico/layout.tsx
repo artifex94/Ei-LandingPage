@@ -27,13 +27,21 @@ export default async function TecnicoLayout({ children }: { children: React.Reac
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
+    <div className="min-h-screen bg-industrial-900 flex flex-col">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="bg-slate-800 border-b border-slate-700 px-4 py-3 sticky top-0 z-40">
+      <header className="bg-industrial-800 border-b border-industrial-700 px-4 py-3 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto w-full px-4 flex items-center justify-between">
-          <Link href="/tecnico/mi-dia" className="flex items-center gap-2">
-            <div className="h-7 w-7 bg-orange-700 rounded-md flex items-center justify-center text-white font-bold text-xs">EI</div>
-            <span className="text-sm font-semibold text-white">Panel Técnico</span>
+          <Link href="/tecnico/mi-dia" className="flex items-center gap-2.5">
+            <div
+              className="h-7 w-7 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-bold text-xs
+                         border border-tactical-600 border-b-[2px] shadow-[0_0_8px_rgba(241,119,32,0.2)]"
+            >
+              EI
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-white block leading-tight">Panel Técnico</span>
+              <span className="text-[9px] text-slate-600 font-mono tracking-widest uppercase">Escobar Instalaciones</span>
+            </div>
           </Link>
           <div className="flex items-center gap-3">
             <LogoutButton />
@@ -45,7 +53,7 @@ export default async function TecnicoLayout({ children }: { children: React.Reac
       <TecnicoTabNav />
 
       {/* ── Contenido ───────────────────────────────────────────────────────── */}
-      <main className="flex-1 px-4 lg:px-8 py-5 max-w-2xl lg:max-w-7xl mx-auto w-full pb-24 lg:pb-8">
+      <main className="flex-1 px-4 lg:px-8 py-5 max-w-2xl lg:max-w-7xl mx-auto w-full pb-24 lg:pb-8 text-slate-300">
         {children}
       </main>
 

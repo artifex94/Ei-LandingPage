@@ -11,13 +11,18 @@ import {
 // ─── Estilos compartidos ───────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full bg-slate-700 border border-slate-600 text-white placeholder:text-slate-400 rounded-lg px-4 py-3 text-base focus:outline-2 focus:outline-orange-500 min-h-[48px]";
+  "w-full bg-industrial-900 border border-industrial-600 text-slate-200 placeholder:text-slate-600 font-mono rounded-sm px-4 py-3 text-sm focus:outline-2 focus:outline-tactical-500 min-h-[48px] transition-colors duration-150";
 
-const labelCls = "block text-sm font-medium text-slate-300 mb-1";
+const labelCls =
+  "block text-[10px] font-bold text-slate-500 mb-1.5 tracking-widest uppercase font-mono";
 
 function AlertError({ msg }: { msg: string }) {
   return (
-    <div role="alert" className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
+    <div
+      role="alert"
+      className="bg-red-950/60 border border-red-800/60 text-red-400 rounded-sm px-4 py-3 text-sm font-mono"
+    >
+      <span className="text-red-500 mr-2">▲</span>
       {msg}
     </div>
   );
@@ -25,7 +30,11 @@ function AlertError({ msg }: { msg: string }) {
 
 function AlertOk({ msg }: { msg: string }) {
   return (
-    <div role="status" className="bg-green-900/40 border border-green-700 text-green-300 rounded-lg px-4 py-3 text-sm">
+    <div
+      role="status"
+      className="bg-blue-950/60 border border-blue-800/60 text-blue-400 rounded-sm px-4 py-3 text-sm font-mono"
+    >
+      <span className="text-blue-500 mr-2">✓</span>
       {msg}
     </div>
   );
@@ -34,7 +43,7 @@ function AlertOk({ msg }: { msg: string }) {
 function Spinner() {
   return (
     <svg
-      className="animate-spin h-5 w-5 text-current"
+      className="animate-spin h-4 w-4 text-current"
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
@@ -45,6 +54,15 @@ function Spinner() {
     </svg>
   );
 }
+
+// Botón de acción mecánico — press-down 3D
+const mechBtnCls = `
+  w-full inline-flex items-center justify-center gap-2
+  font-bold tracking-widest uppercase text-sm
+  rounded-sm px-6 py-3.5 min-h-[48px] select-none
+  transition-all duration-150 ease-mech-press
+  disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:border-b-[5px]
+`;
 
 // ─── Ícono WhatsApp ────────────────────────────────────────────────────────────
 
@@ -65,10 +83,10 @@ function FormWhatsApp({ onBack }: { onBack: () => void }) {
   if (state?.ok) {
     return (
       <div className="flex flex-col gap-4">
-        <AlertOk msg="✓ Te enviamos un link a tu WhatsApp. Tocalo para ingresar." />
-        <p className="text-xs text-slate-400 text-center">
-          El link expira en 1 hora. Si no llega, revisá que el número esté bien o{" "}
-          <button className="text-orange-400 underline" onClick={() => window.location.reload()}>
+        <AlertOk msg="Te enviamos un link a tu WhatsApp. Tocalo para ingresar." />
+        <p className="text-xs text-slate-600 text-center font-mono">
+          El link expira en 1 hora. Si no llega,{" "}
+          <button className="text-tactical-500 hover:text-tactical-400 underline" onClick={() => window.location.reload()}>
             intentá de nuevo
           </button>.
         </p>
@@ -81,7 +99,9 @@ function FormWhatsApp({ onBack }: { onBack: () => void }) {
       {state?.error && <AlertError msg={state.error} />}
 
       <div>
-        <label htmlFor="wsp-telefono" className={labelCls}>Número de WhatsApp</label>
+        <label htmlFor="wsp-telefono" className={labelCls}>
+          Número de WhatsApp
+        </label>
         <input
           id="wsp-telefono"
           name="telefono"
@@ -91,24 +111,28 @@ function FormWhatsApp({ onBack }: { onBack: () => void }) {
           className={inputCls}
           placeholder="3436 575372"
         />
-        <p className="text-xs text-slate-400 mt-1">
-          El mismo número que tenés registrado con Escobar Instalaciones.
+        <p className="text-[10px] text-slate-600 mt-1.5 font-mono">
+          El número registrado con Escobar Instalaciones.
         </p>
       </div>
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors flex items-center justify-center gap-2"
+        className={`${mechBtnCls} bg-emerald-700 text-white border border-emerald-600 border-b-[5px] border-b-emerald-900 hover:bg-emerald-600 active:border-b-[1px] active:translate-y-[4px] active:bg-emerald-800`}
       >
         {pending ? (
           <><Spinner /> Enviando…</>
         ) : (
-          <><IcoWhatsApp /> Enviarme link por WhatsApp</>
+          <><IcoWhatsApp /> Enviar link por WhatsApp</>
         )}
       </button>
 
-      <button type="button" onClick={onBack} className="text-xs text-slate-400 hover:text-slate-200 transition-colors text-center min-h-[44px]">
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors text-center min-h-[44px] font-mono tracking-widest uppercase"
+      >
         ← Volver
       </button>
     </form>
@@ -125,7 +149,7 @@ function FormEmail({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col gap-6">
       {magicState?.ok ? (
-        <AlertOk msg="✓ Revisá tu email. Te enviamos un link para ingresar." />
+        <AlertOk msg="Revisá tu email. Te enviamos un link para ingresar." />
       ) : (
         <form action={magicAction} className="flex flex-col gap-4">
           {magicState?.error && <AlertError msg={magicState.error} />}
@@ -144,32 +168,46 @@ function FormEmail({ onBack }: { onBack: () => void }) {
           <button
             type="submit"
             disabled={magicPending}
-            className="w-full bg-orange-700 hover:bg-orange-800 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors flex items-center justify-center gap-2"
+            className={`${mechBtnCls} bg-tactical-500 text-white border border-tactical-600 border-b-[5px] border-b-tactical-600 hover:bg-tactical-400 active:border-b-[1px] active:translate-y-[4px] active:bg-tactical-600`}
           >
-            {magicPending ? <><Spinner /> Enviando…</> : "Enviarme link de acceso"}
+            {magicPending ? <><Spinner /> Enviando…</> : "Enviar link de acceso"}
           </button>
         </form>
       )}
 
-      {/* Acceso con contraseña — solo admin */}
+      {/* Acceso con contraseña */}
       <div>
         <button
           type="button"
           onClick={() => setMostrarPassword((v) => !v)}
-          className="text-xs text-slate-400 hover:text-slate-200 transition-colors w-full text-center min-h-[44px]"
+          className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors w-full text-center min-h-[44px] font-mono tracking-widest uppercase"
         >
           {mostrarPassword ? "▲ Ocultar" : "¿Tenés contraseña? Ingresar con contraseña"}
         </button>
 
         {mostrarPassword && (
-          <form action={passAction} className="flex flex-col gap-4 mt-4">
+          <form action={passAction} className="flex flex-col gap-3 mt-3">
             {passState?.error && <AlertError msg={passState.error} />}
-            <input name="email" type="email" autoComplete="email" required className={inputCls} placeholder="Email" />
-            <input name="password" type="password" autoComplete="current-password" required className={inputCls} placeholder="Contraseña" />
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              className={inputCls}
+              placeholder="Email"
+            />
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              className={inputCls}
+              placeholder="Contraseña"
+            />
             <button
               type="submit"
               disabled={passPending}
-              className="w-full bg-slate-600 hover:bg-slate-500 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors flex items-center justify-center gap-2"
+              className={`${mechBtnCls} bg-industrial-700 text-slate-300 border border-industrial-600 border-b-[5px] border-b-industrial-950 hover:bg-industrial-600 active:border-b-[1px] active:translate-y-[4px]`}
             >
               {passPending ? <><Spinner /> Ingresando…</> : "Ingresar"}
             </button>
@@ -177,7 +215,11 @@ function FormEmail({ onBack }: { onBack: () => void }) {
         )}
       </div>
 
-      <button type="button" onClick={onBack} className="text-xs text-slate-400 hover:text-slate-200 transition-colors text-center min-h-[44px]">
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors text-center min-h-[44px] font-mono tracking-widest uppercase"
+      >
         ← Volver
       </button>
     </div>
@@ -194,75 +236,96 @@ function FormDni({ onBack }: { onBack: () => void }) {
       {state?.error && <AlertError msg={state.error} />}
       <div>
         <label htmlFor="dni-input" className={labelCls}>Número de DNI</label>
-        <input id="dni-input" name="dni" type="text" inputMode="numeric" required className={inputCls} placeholder="12345678" />
+        <input
+          id="dni-input"
+          name="dni"
+          type="text"
+          inputMode="numeric"
+          required
+          className={inputCls}
+          placeholder="12345678"
+        />
       </div>
       <div>
         <label htmlFor="dni-password" className={labelCls}>Contraseña</label>
-        <input id="dni-password" name="password" type="password" autoComplete="current-password" required className={inputCls} />
+        <input
+          id="dni-password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          className={inputCls}
+        />
       </div>
       <button
         type="submit"
         disabled={pending}
-        className="w-full bg-orange-700 hover:bg-orange-800 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors flex items-center justify-center gap-2"
+        className={`${mechBtnCls} bg-tactical-500 text-white border border-tactical-600 border-b-[5px] border-b-tactical-600 hover:bg-tactical-400 active:border-b-[1px] active:translate-y-[4px] active:bg-tactical-600`}
       >
         {pending ? <><Spinner /> Ingresando…</> : "Ingresar"}
       </button>
-      <button type="button" onClick={onBack} className="text-xs text-slate-400 hover:text-slate-200 transition-colors text-center min-h-[44px]">
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors text-center min-h-[44px] font-mono tracking-widest uppercase"
+      >
         ← Volver
       </button>
     </form>
   );
 }
 
-// ─── Selector de método (pantalla inicial) ────────────────────────────────────
+// ─── Selector de método ────────────────────────────────────────────────────────
 
 type Metodo = "whatsapp" | "email" | "dni";
 
 function SelectorMetodo({ onSelect }: { onSelect: (m: Metodo) => void }) {
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-slate-300 text-sm text-center mb-1">¿Cómo querés ingresar?</p>
+    <div className="flex flex-col gap-2.5">
+      <p className="text-[10px] text-slate-600 text-center mb-2 font-mono tracking-widest uppercase">
+        Seleccioná método de acceso
+      </p>
 
       {/* WhatsApp — método principal */}
       <button
         type="button"
         onClick={() => onSelect("whatsapp")}
-        className="w-full flex items-center gap-4 bg-green-600/20 hover:bg-green-600/30 border border-green-600/40 hover:border-green-500 rounded-xl px-5 py-4 text-left transition-all group min-h-[64px]"
+        className="w-full flex items-center gap-4 bg-industrial-900/80 hover:bg-industrial-900 border border-industrial-600 hover:border-emerald-700/60 rounded-sm px-5 py-4 text-left transition-all duration-150 ease-mech-press group min-h-[64px]"
       >
-        <span className="text-green-400 group-hover:scale-110 transition-transform">
-          <IcoWhatsApp className="w-7 h-7" />
+        <span className="text-emerald-500 flex-shrink-0">
+          <IcoWhatsApp className="w-6 h-6" />
         </span>
-        <div>
-          <div className="text-white font-semibold text-base leading-tight">WhatsApp</div>
-          <div className="text-slate-300 text-xs mt-0.5">Recibís un link — tocás y entrás</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-slate-200 font-semibold text-sm leading-tight">WhatsApp</div>
+          <div className="text-slate-600 text-[10px] mt-0.5 font-mono">Recibís un link — tocás y entrás</div>
         </div>
-        <span className="ml-auto text-slate-500 group-hover:text-slate-300 transition-colors text-lg">›</span>
+        <span className="text-slate-700 group-hover:text-slate-500 transition-colors text-sm font-mono">›</span>
       </button>
 
       {/* Email */}
       <button
         type="button"
         onClick={() => onSelect("email")}
-        className="w-full flex items-center gap-4 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 hover:border-slate-500 rounded-xl px-5 py-4 text-left transition-all group min-h-[64px]"
+        className="w-full flex items-center gap-4 bg-industrial-900/80 hover:bg-industrial-900 border border-industrial-600 hover:border-tactical-500/40 rounded-sm px-5 py-4 text-left transition-all duration-150 ease-mech-press group min-h-[64px]"
       >
-        <span className="text-orange-400 group-hover:scale-110 transition-transform">
-          <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-            <rect x="2" y="4" width="20" height="16" rx="2" />
+        <span className="text-tactical-500 flex-shrink-0">
+          <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <rect x="2" y="4" width="20" height="16" rx="1" />
             <path d="m2 7 10 7 10-7" />
           </svg>
         </span>
-        <div>
-          <div className="text-white font-semibold text-base leading-tight">Email</div>
-          <div className="text-slate-400 text-xs mt-0.5">Te mandamos un link a tu correo</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-slate-200 font-semibold text-sm leading-tight">Email</div>
+          <div className="text-slate-600 text-[10px] mt-0.5 font-mono">Link de acceso a tu correo</div>
         </div>
-        <span className="ml-auto text-slate-500 group-hover:text-slate-300 transition-colors text-lg">›</span>
+        <span className="text-slate-700 group-hover:text-slate-500 transition-colors text-sm font-mono">›</span>
       </button>
 
-      {/* DNI — acceso alternativo, más discreto */}
+      {/* DNI — discreto */}
       <button
         type="button"
         onClick={() => onSelect("dni")}
-        className="w-full text-xs text-slate-400 hover:text-slate-200 transition-colors py-2 min-h-[44px] text-center"
+        className="w-full text-[10px] text-slate-600 hover:text-slate-400 transition-colors py-2 min-h-[44px] text-center font-mono tracking-widest uppercase"
       >
         Ingresar con DNI y contraseña
       </button>
@@ -276,23 +339,22 @@ export function LoginTabs() {
   const [metodo, setMetodo] = useState<Metodo | null>(null);
 
   const titulos: Record<Metodo, string> = {
-    whatsapp: "Ingresar por WhatsApp",
-    email: "Ingresar por Email",
-    dni: "Ingresar con DNI",
+    whatsapp: "Acceso por WhatsApp",
+    email:    "Acceso por Email",
+    dni:      "Acceso con DNI",
   };
 
   return (
     <div>
       {metodo !== null && (
-        <h2 className="text-lg font-semibold text-white mb-6 text-center">
+        <h2 className="text-xs font-bold text-slate-500 mb-6 text-center font-mono tracking-widest uppercase">
           {titulos[metodo]}
         </h2>
       )}
-
-      {metodo === null && <SelectorMetodo onSelect={setMetodo} />}
-      {metodo === "whatsapp" && <FormWhatsApp onBack={() => setMetodo(null)} />}
-      {metodo === "email" && <FormEmail onBack={() => setMetodo(null)} />}
-      {metodo === "dni" && <FormDni onBack={() => setMetodo(null)} />}
+      {metodo === null      && <SelectorMetodo onSelect={setMetodo} />}
+      {metodo === "whatsapp" && <FormWhatsApp   onBack={() => setMetodo(null)} />}
+      {metodo === "email"    && <FormEmail       onBack={() => setMetodo(null)} />}
+      {metodo === "dni"      && <FormDni         onBack={() => setMetodo(null)} />}
     </div>
   );
 }

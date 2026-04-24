@@ -81,6 +81,13 @@ export default async function CuentaAdminPage({
               WhatsApp
             </a>
           )}
+          <Link
+            href={`/admin/vista-cliente/${cuenta.perfil.id}?tab=cuenta&cuentaId=${cuenta.id}`}
+            className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-600 transition-colors"
+            title="Ver esta cuenta exactamente como la ve el cliente"
+          >
+            Ver portal del cliente
+          </Link>
         </div>
       </div>
 

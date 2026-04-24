@@ -1,111 +1,115 @@
 -- ============================================================
 -- Script DDL — Vistas read-only para el Portal EI
--- Ejecutar en SQL Server con un usuario que tenga permisos
--- de creación de vistas (ej: sa o dbo del esquema SoftGuard).
+-- Base de datos destino: [_Datos] (SoftGuard SQL Server)
 --
--- IMPORTANTE: Los nombres de tabla/columna son estimaciones basadas
--- en los manuales TEC223 (Cuentas) y TEC233 (MoneyGuard).
--- Verificar y ajustar contra el schema real antes de ejecutar.
+-- Prerrequisito: usuario EI_PORTAL_RO ya existe con db_datareader
+-- (CREATE LOGIN / CREATE USER ejecutados previamente por sysadmin)
+--
+-- Ejecutar con usuario que tenga permisos de CREATE VIEW en _Datos.
 -- ============================================================
 
--- ──────────────────────────────────────────────────────────────
--- 0. Usuario read-only para el portal
--- ──────────────────────────────────────────────────────────────
--- Ejecutar como sysadmin una sola vez:
---
--- CREATE LOGIN EI_PORTAL_RO WITH PASSWORD = '<password_fuerte>';
--- USE [NombreBaseSoftGuard];
--- CREATE USER EI_PORTAL_RO FOR LOGIN EI_PORTAL_RO;
--- ALTER ROLE db_datareader ADD MEMBER EI_PORTAL_RO;
--- GRANT SELECT ON SCHEMA::dbo TO EI_PORTAL_RO;
--- ──────────────────────────────────────────────────────────────
+USE [_Datos]
+GO
 
 -- ──────────────────────────────────────────────────────────────
 -- 1. vw_ei_cuentas_resumen
---    Fuente: tabla Cuentas (TEC223). Ajustar nombres de columna.
+--    Fuentes: m_cuentas, m_CuentasXtraInfo, m_status
 -- ──────────────────────────────────────────────────────────────
 CREATE OR ALTER VIEW dbo.vw_ei_cuentas_resumen AS
 SELECT
-    -- ref CHAR(4) — identificador único de la cuenta (ej: '0042')
-    RTRIM(c.ABONADO)                    AS softguard_ref,
+    -- Identificador interno (INT) — usar para JOINs rápidos
+    c.cue_iid                                                AS iid,
+
+    -- Identificador de línea/dealer (CHAR 3)
+    RTRIM(c.cue_clinea)                                      AS linea,
+
+    -- Número de cuenta (el "softguard_ref" que guarda el portal)
+    RTRIM(c.cue_ncuenta)                                     AS softguard_ref,
 
     -- Datos del titular
-    RTRIM(c.NOMBRE)                     AS nombre_titular,
-    RTRIM(c.DIRECCION)                  AS direccion,
-    RTRIM(c.LOCALIDAD)                  AS localidad,
-    RTRIM(c.TELEFONO)                   AS telefono,
+    RTRIM(c.cue_cnombre)                                     AS nombre_titular,
+    RTRIM(c.cue_ccalle)                                      AS direccion,
+    RTRIM(c.cue_clocalidad)                                  AS localidad,
+    RTRIM(c.cue_cprovincia)                                  AS provincia,
+    RTRIM(c.cue_ctelefono)                                   AS telefono,
+    ISNULL(RTRIM(c.cue_cemail), '')                          AS email,
 
-    -- Estado operativo
-    RTRIM(c.SITUACION)                  AS situacion,
+    -- Fechas de alta y de servicio
+    c.cue_dfechaalta                                         AS fecha_alta,
+    c.cue_dservicio                                          AS fecha_servicio,
 
-    -- Flag de autorización para AWCC / portal (campo "Acceso Web" en Módulo Cuentas)
-    CASE WHEN c.ACCESO_WEB = 1 THEN 1 ELSE 0 END AS acceso_web,
+    -- 1 = cuenta efectiva/activa en el sistema
+    c.cue_nEfectiva                                          AS activa,
 
-    -- Relación con dealer y organización MoneyGuard
-    c.DEALER                            AS dealer_id,
-    c.ORGANIZACION                      AS org_id,
+    -- Estado del motor DSS (0=inactivo, 1=activo, 2=prueba)
+    ISNULL(xi.cue_iEngineStatus, 0)                          AS engine_status,
 
-    -- Último evento registrado (para mostrar "último contacto")
-    (
-        SELECT TOP 1 e.FECHA
-        FROM Eventos e
-        WHERE e.ABONADO = c.ABONADO
-        ORDER BY e.FECHA DESC
-    )                                   AS ultimo_evento_fecha,
-    (
-        SELECT TOP 1 RTRIM(e.CODIGO)
-        FROM Eventos e
-        WHERE e.ABONADO = c.ABONADO
-        ORDER BY e.FECHA DESC
-    )                                   AS ultimo_evento_codigo,
+    -- Última alarma recibida (actualizada por DSS en XtraInfo)
+    ISNULL(RTRIM(xi.cue_cUltimaAlarmaRecibida), '')          AS ultima_alarma_codigo,
+    xi.cue_dFechaUltimaAlarmaRecibida                        AS ultima_alarma_fecha,
 
-    -- Activa si la situación es "Habilitada"
-    CASE WHEN c.SITUACION = 'Habilitada' THEN 1 ELSE 0 END AS activa
+    -- Estado operativo del panel según m_status
+    ISNULL(sta.sta_nestado, 0)                               AS estado_panel,
+    sta.sta_dfechautimaalarma                                AS estado_panel_fecha
 
-FROM dbo.Cuentas c
-WHERE c.ABONADO IS NOT NULL;
+FROM dbo.m_cuentas c
+LEFT JOIN dbo.m_CuentasXtraInfo xi ON xi.cue_iidCuenta = c.cue_iid
+LEFT JOIN dbo.m_status          sta ON sta.sta_iidcuenta = c.cue_iid
+WHERE c.cue_iid IS NOT NULL
+  -- Excluir líneas de sistema SoftGuard/MercadoPago (prefijo '_')
+  AND RTRIM(c.cue_clinea) NOT LIKE '!_%' ESCAPE '!'
+  -- Excluir pseudo-cuenta 0000 "EVENTOS DEL RECEPTOR"
+  AND RTRIM(c.cue_ncuenta) != '0000';
 GO
 
 -- ──────────────────────────────────────────────────────────────
 -- 2. vw_ei_eventos_recientes
---    Fuente: tabla Eventos (TEC218, TEC228). Ajustar nombres.
+--    Fuente: EventosTimeLine (últimos 30 días)
+--    Nota: SoftGuard archiva por mes en EventosTimeLine{YYYYMM}.
+--    Esta vista consulta solo la tabla "corriente" (datos recientes).
 -- ──────────────────────────────────────────────────────────────
 CREATE OR ALTER VIEW dbo.vw_ei_eventos_recientes AS
 SELECT
-    e.ID_EVENTO                         AS id_evento,
-    RTRIM(e.ABONADO)                    AS softguard_ref,
-    e.FECHA                             AS fecha_evento,
-    RTRIM(e.CODIGO)                     AS codigo,
-    RTRIM(e.DESCRIPCION)                AS descripcion,
-    RTRIM(e.ZONA)                       AS zona,
-    e.PRIORIDAD                         AS prioridad,
-    RTRIM(e.OPERADOR)                   AS operador,
-    -- Estado nativo — uno de los 9 valores del TEC218 MultiMonitor
-    RTRIM(e.ESTADO)                     AS estado_nativo,
-    RTRIM(e.RESOLUCION)                 AS resolucion
-FROM dbo.Eventos e
-WHERE e.FECHA >= DATEADD(day, -30, GETDATE());
+    etl.etl_idKey                                            AS id_evento,
+    etl.etl_iCuenta                                          AS iid_cuenta,
+    ISNULL(RTRIM(c.cue_ncuenta), '')                         AS softguard_ref,
+    etl.etl_tFechaHora                                       AS fecha_evento,
+    ISNULL(RTRIM(etl.etl_cAccion), '')                       AS accion,
+    etl.etl_cObservacion                                     AS observacion,
+    etl.etl_iAccionCode                                      AS accion_code,
+    etl.etl_iOperador                                        AS operador_id
+FROM dbo.EventosTimeLine etl
+LEFT JOIN dbo.m_cuentas c ON c.cue_iid = etl.etl_iCuenta
+WHERE etl.etl_tFechaHora >= DATEADD(day, -30, GETDATE());
 GO
 
 -- ──────────────────────────────────────────────────────────────
 -- 3. vw_ei_ot_estado
---    Fuente: tabla OT / Servicio Técnico (TEC181). Ajustar nombres.
+--    Fuente: m_st_cabecera (órdenes de Servicio Técnico)
 -- ──────────────────────────────────────────────────────────────
 CREATE OR ALTER VIEW dbo.vw_ei_ot_estado AS
 SELECT
-    ot.NUMERO                           AS ot_numero,
-    RTRIM(ot.ABONADO)                   AS softguard_ref,
-    RTRIM(ot.TIPO)                      AS tipo,
-    RTRIM(ot.DESCRIPCION)               AS descripcion,
-    RTRIM(ot.ESTADO)                    AS estado,
-    RTRIM(ot.TECNICO)                   AS tecnico,
-    ot.FECHA_CREACION                   AS fecha_creacion,
-    ot.FECHA_CIERRE                     AS fecha_cierre
-FROM dbo.OrdenesServicio ot;
+    ot.stc_iid                                               AS ot_id,
+    ot.stc_iid_cuenta                                        AS iid_cuenta,
+    ISNULL(RTRIM(c.cue_ncuenta), '')                         AS softguard_ref,
+    ot.stc_inumero                                           AS ot_numero,
+    RTRIM(ot.stc_ctipo_servicio)                             AS tipo_servicio,
+    ot.stc_mobservaciones                                    AS descripcion,
+    -- 0=pendiente, 1=en curso, 2=cerrada (confirmar con Ramiro según datos reales)
+    ot.stc_nestado                                           AS estado,
+    RTRIM(ot.stc_ctecnico_1)                                 AS tecnico_1,
+    RTRIM(ot.stc_ctecnico_2)                                 AS tecnico_2,
+    ot.stc_dfecha_creacion                                   AS fecha_creacion,
+    ot.stc_dfecha_cierre                                     AS fecha_cierre,
+    ot.stc_dfecha_desde_1                                    AS fecha_programada,
+    ot.stc_yValor                                            AS valor,
+    ot.stc_dfecha_modificacion                               AS fecha_modificacion
+FROM dbo.m_st_cabecera ot
+LEFT JOIN dbo.m_cuentas c ON c.cue_iid = ot.stc_iid_cuenta;
 GO
 
 -- ──────────────────────────────────────────────────────────────
--- 4. Permisos de SELECT sobre las vistas al usuario del portal
+-- 4. Permisos de SELECT sobre las vistas
 -- ──────────────────────────────────────────────────────────────
 GRANT SELECT ON dbo.vw_ei_cuentas_resumen    TO EI_PORTAL_RO;
 GRANT SELECT ON dbo.vw_ei_eventos_recientes  TO EI_PORTAL_RO;
@@ -113,9 +117,9 @@ GRANT SELECT ON dbo.vw_ei_ot_estado          TO EI_PORTAL_RO;
 GO
 
 -- ──────────────────────────────────────────────────────────────
--- Verificación rápida
+-- 5. Verificación rápida (correr después de crear las vistas)
 -- ──────────────────────────────────────────────────────────────
-SELECT TOP 5 * FROM dbo.vw_ei_cuentas_resumen;
-SELECT COUNT(*) AS total_eventos FROM dbo.vw_ei_eventos_recientes;
-SELECT COUNT(*) AS total_ot FROM dbo.vw_ei_ot_estado;
+SELECT TOP 5 * FROM dbo.vw_ei_cuentas_resumen  ORDER BY iid;
+SELECT COUNT(*) AS total_eventos_30d            FROM dbo.vw_ei_eventos_recientes;
+SELECT COUNT(*) AS total_ot                     FROM dbo.vw_ei_ot_estado;
 GO

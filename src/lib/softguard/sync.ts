@@ -1,44 +1,30 @@
 /**
  * Jobs de sincronización SoftGuard → portal.
  *
- * syncCuentas()    — cada 6 h: upsert de Cuenta y Perfil desde vw_ei_cuentas_resumen
- * syncEventos()    — cada 5 min: trae últimos eventos a EventoAlarma
- * syncEstadoOT()   — cada 30 min: actualiza st_softguard_numero en OrdenTrabajo
+ * syncCuentas()  — cada 6 h: upsert de Cuenta desde vw_ei_cuentas_resumen
+ * syncEventos()  — cada 5 min: trae eventos de vw_ei_eventos_recientes a EventoAlarma
+ * syncEstadoOT() — cada 30 min: actualiza st_softguard_numero en OrdenTrabajo
  *
- * En modo mock (SOFTGUARD_MOCK=true o sin credenciales) retornan resultados vacíos sin error.
+ * Mapeo de campos reales (schema _Datos):
+ *   vw_ei_cuentas_resumen  → m_cuentas + m_CuentasXtraInfo + m_status
+ *   vw_ei_eventos_recientes → EventosTimeLine (datos corrientes, últimos 30 d)
+ *   vw_ei_ot_estado         → m_st_cabecera
  */
 
 import { prisma } from "@/lib/prisma/client";
 import { withSoftguardConnection } from "./client";
 import type { SgCuentaResumen, SgEventoReciente } from "./schema";
 
-// ── Estado→enum mapping (9 estados nativos SoftGuard → EstadoEventoSync) ─────
-
-const ESTADO_MAP: Record<string, string> = {
-  "Nuevo":                    "NUEVO",
-  "Pendiente":                "NUEVO",
-  "En Proceso":               "EN_PROCESO",
-  "Espera":                   "EN_ESPERA",
-  "En Proceso desde Espera":  "EN_PROCESO_DESDE_ESPERA",
-  "En Proceso Múltiple":      "EN_PROCESO_MULTIPLE",
-  "Procesado":                "PROCESADO",
-  "Procesado No Alerta":      "PROCESADO_NO_ALERTA",
-  "Procesado Modo Prueba":    "PROCESADO_MODO_PRUEBA",
-  "Procesado Modo Off":       "PROCESADO_MODO_OFF",
-};
-
-function mapEstado(raw: string): string {
-  return ESTADO_MAP[raw] ?? "PROCESADO";
-}
-
 // ── syncCuentas ───────────────────────────────────────────────────────────────
 
 export async function syncCuentas(): Promise<{ upserted: number; errors: number; mock: boolean }> {
   const result = await withSoftguardConnection(
     async (pool) => {
-      const res = await pool.request().query<SgCuentaResumen>(
-        "SELECT * FROM vw_ei_cuentas_resumen ORDER BY softguard_ref"
-      );
+      const res = await pool
+        .request()
+        .query<SgCuentaResumen>(
+          "SELECT * FROM dbo.vw_ei_cuentas_resumen ORDER BY softguard_ref"
+        );
       return res.recordset;
     },
     () => [] as SgCuentaResumen[]
@@ -57,8 +43,8 @@ export async function syncCuentas(): Promise<{ upserted: number; errors: number;
   for (const sg of result.data) {
     try {
       await prisma.cuenta.updateMany({
-        where:  { softguard_ref: sg.softguard_ref },
-        data:   { zona_geografica: sg.localidad ?? undefined },
+        where: { softguard_ref: sg.softguard_ref },
+        data:  { zona_geografica: sg.localidad || undefined },
       });
       upserted++;
     } catch {
@@ -74,12 +60,14 @@ export async function syncCuentas(): Promise<{ upserted: number; errors: number;
 export async function syncEventos(): Promise<{ synced: number; errors: number; mock: boolean }> {
   const result = await withSoftguardConnection(
     async (pool) => {
-      const res = await pool.request().query<SgEventoReciente & { estado_raw: string }>(
-        `SELECT TOP 500 * FROM vw_ei_eventos_recientes ORDER BY fecha_evento DESC`
-      );
+      const res = await pool
+        .request()
+        .query<SgEventoReciente>(
+          "SELECT TOP 500 * FROM dbo.vw_ei_eventos_recientes ORDER BY fecha_evento DESC"
+        );
       return res.recordset;
     },
-    () => [] as (SgEventoReciente & { estado_raw: string })[]
+    () => [] as SgEventoReciente[]
   );
 
   if (!result.ok) {
@@ -95,34 +83,41 @@ export async function syncEventos(): Promise<{ synced: number; errors: number; m
   for (const ev of result.data) {
     try {
       const cuenta = await prisma.cuenta.findFirst({
-        where: { softguard_ref: ev.softguard_ref },
+        where:  { softguard_ref: ev.softguard_ref },
         select: { id: true },
       });
+
+      // Mapeo real: accion_code → codigo (String), accion → descripcion
+      // Unique key: (softguard_ref, fecha_evento, codigo)
+      const codigoKey = ev.accion_code.toString();
 
       await prisma.eventoAlarma.upsert({
         where: {
           softguard_ref_fecha_evento_codigo: {
             softguard_ref: ev.softguard_ref,
             fecha_evento:  ev.fecha_evento,
-            codigo:        ev.codigo,
+            codigo:        codigoKey,
           },
         },
         create: {
           cuenta_id:          cuenta?.id ?? null,
           softguard_ref:      ev.softguard_ref,
           fecha_evento:       ev.fecha_evento,
-          codigo:             ev.codigo,
-          descripcion:        ev.descripcion,
-          zona:               ev.zona ?? null,
-          prioridad:          ev.prioridad ?? null,
-          operador_softguard: ev.operador ?? null,
-          estado:             mapEstado(ev.estado_raw ?? "Procesado") as never,
-          resolucion:         ev.resolucion ?? null,
+          codigo:             codigoKey,
+          descripcion:        ev.accion,
+          zona:               null,
+          prioridad:          ev.accion_code,
+          operador_softguard: ev.operador_id?.toString() ?? null,
+          // Sin estado_nativo en el schema real — defaultear a PROCESADO
+          estado:             "PROCESADO" as never,
+          resolucion:         ev.observacion ?? null,
+          raw:                ev.id_evento.toString(),
         },
         update: {
-          estado:    mapEstado(ev.estado_raw ?? "Procesado") as never,
-          resolucion: ev.resolucion ?? null,
-          synced_at: new Date(),
+          descripcion:        ev.accion,
+          operador_softguard: ev.operador_id?.toString() ?? null,
+          resolucion:         ev.observacion ?? null,
+          synced_at:          new Date(),
         },
       });
       synced++;
@@ -137,16 +132,13 @@ export async function syncEventos(): Promise<{ synced: number; errors: number; m
 // ── syncEstadoOT ──────────────────────────────────────────────────────────────
 
 export async function syncEstadoOT(): Promise<{ updated: number; mock: boolean }> {
-  // Solo actualiza OTs que tienen st_softguard_numero (ya promovidas a SoftGuard)
   const otsConRef = await prisma.ordenTrabajo.findMany({
-    where: { st_softguard_numero: { not: null }, estado: { notIn: ["COMPLETADA", "CANCELADA"] } },
+    where:  { st_softguard_numero: { not: null }, estado: { notIn: ["COMPLETADA", "CANCELADA"] } },
     select: { id: true, st_softguard_numero: true },
   });
 
   if (otsConRef.length === 0) return { updated: 0, mock: false };
 
-  // Por ahora solo registra que la sync corrió — la lógica completa depende
-  // de la vista vw_ei_ot_estado que se crea en SoftGuard SQL Server
   const result = await withSoftguardConnection(
     async () => otsConRef.length,
     () => 0

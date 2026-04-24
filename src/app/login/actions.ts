@@ -8,6 +8,11 @@ import { prisma } from "@/lib/prisma/client";
 import { enviarWhatsApp } from "@/lib/twilio";
 
 async function getAppUrl(): Promise<string> {
+  // En producción detrás de Passenger el header host llega como localhost:3000.
+  // NEXT_PUBLIC_APP_URL tiene siempre la URL canónica correcta.
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
   const proto = host.startsWith("localhost") ? "http" : "https";
