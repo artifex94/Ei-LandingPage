@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+
+  <!-- Anillo orbital — capa base -->
+  <ellipse cx="242" cy="270" rx="200" ry="148"
+    fill="none" stroke="#F17720" stroke-width="32"
+    transform="rotate(-27 242 270)"/>
+
+  <!-- Letras EI — itálica bold, capa superior -->
+  <g fill="#F17720" transform="translate(45,0) skewX(-9)">
+
+    <!-- E: columna vertical -->
+    <rect x="84"  y="110" width="50"  height="290"/>
+    <!-- E: barra superior -->
+    <rect x="84"  y="110" width="185" height="52"/>
+    <!-- E: barra central (más corta) -->
+    <rect x="84"  y="230" width="162" height="50"/>
+    <!-- E: barra inferior -->
+    <rect x="84"  y="348" width="185" height="52"/>
+
+    <!-- I: trazo vertical -->
+    <rect x="302" y="110" width="52"  height="185"/>
+    <!-- I: gancho inferior (curva estilo J) -->
+    <path d="
+      M302,295 H354
+      Q420,295 420,370
+      Q420,448 352,455
+      Q282,462 270,425
+      L270,402
+      Q285,437 345,430
+      Q390,424 390,370
+      Q390,310 354,295
+      H302 Z
+    "/>
+
+  </g>
+
+</svg>
