@@ -62,7 +62,7 @@ export function ConfiguracionForm({ tarifaActual }: { tarifaActual: number }) {
                 name="monto"
                 type="number"
                 min="1"
-                step="100"
+                step="1"
                 defaultValue={tarifaActual}
                 required
                 className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
