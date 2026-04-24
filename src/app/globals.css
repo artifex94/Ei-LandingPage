@@ -50,6 +50,10 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.9); }
   70%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
 }
+@keyframes led-violencia {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.85); }
+  70%      { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0); }
+}
 
 /* ── Utilities LED ──────────────────────────────────────────────────────── */
 @utility animate-led-alert {
@@ -66,6 +70,9 @@
 }
 @utility animate-led-crit {
   animation: led-crit 1s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite;
+}
+@utility animate-led-violencia {
+  animation: led-violencia 1.2s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite;
 }
 
 /* ── Curvas de Bézier mecánicas ─────────────────────────────────────────── */

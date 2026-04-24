@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { CalendarioPagos, type PagoPlano } from "@/components/portal/CalendarioPagos";
 import { BannerDeudaTotal } from "@/components/portal/BannerDeudaTotal";
+import { getEventosHeatmap } from "@/lib/actions/eventos";
 
 export default async function PagosPage({
   searchParams,
@@ -57,6 +58,13 @@ export default async function PagosPage({
     }
   }
 
+  // Heatmap de eventos de alarma — en paralelo para todas las cuentas
+  const eventosHeatmapPorCuenta = await Promise.all(
+    cuentas.map((c) =>
+      getEventosHeatmap(c.id, anio).catch(() => [])
+    )
+  );
+
   return (
     <section aria-labelledby="pagos-heading">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -102,15 +110,21 @@ export default async function PagosPage({
         <p className="text-slate-400 text-lg">No tenés servicios activos.</p>
       ) : (
         <div className="space-y-10">
-          {cuentas.map((cuenta) => (
+          {cuentas.map((cuenta, i) => (
             <div key={cuenta.id}>
-              <h2 className="text-lg font-semibold text-white mb-4">
-                {cuenta.descripcion}
-              </h2>
+              <div className="flex items-baseline gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-white">
+                  {cuenta.descripcion}
+                </h2>
+                <span className="text-xs text-slate-500 font-mono hidden sm:inline">
+                  Actividad del sistema de alarma · {anio}
+                </span>
+              </div>
               <CalendarioPagos
                 pagos={cuenta.pagos.map((p) => ({ ...p, importe: Number(p.importe) }))}
                 anio={anio}
                 cuentaId={cuenta.id}
+                eventosHeatmap={eventosHeatmapPorCuenta[i]}
               />
             </div>
           ))}
