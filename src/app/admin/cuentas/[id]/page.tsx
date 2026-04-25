@@ -103,6 +103,10 @@ export default async function CuentaAdminPage({
             categoria: cuenta.categoria,
             estado: cuenta.estado,
             costo_mensual: Number(cuenta.costo_mensual),
+            calle: cuenta.calle,
+            localidad: cuenta.localidad,
+            provincia: cuenta.provincia,
+            codigo_postal: cuenta.codigo_postal,
             notas_tecnicas: cuenta.notas_tecnicas,
           }} />
         </div>

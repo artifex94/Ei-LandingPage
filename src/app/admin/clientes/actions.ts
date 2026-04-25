@@ -160,3 +160,53 @@ export async function actualizarCliente(
   revalidatePath("/admin/clientes");
   return { ok: true };
 }
+
+// ── Eliminar cliente ───────────────────────────────────────────────────────────
+
+export async function eliminarCliente(
+  prevState: ClienteActionResult,
+  formData: FormData
+): Promise<ClienteActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
+
+  const id = (formData.get("id") as string ?? "").trim();
+  if (!id) return { errores: ["ID inválido."] };
+
+  const perfil = await prisma.perfil.findUnique({
+    where: { id },
+    select: {
+      nombre: true,
+      _count: { select: { cuentas: true, solicitudes_cambio: true } },
+    },
+  });
+
+  if (!perfil) return { errores: ["Cliente no encontrado."] };
+
+  if (perfil._count.cuentas > 0) {
+    return {
+      errores: [
+        `Este cliente tiene ${perfil._count.cuentas} cuenta(s) registrada(s). Dalo de baja en cada cuenta antes de eliminar el perfil, o desactivá el perfil en su lugar.`,
+      ],
+    };
+  }
+
+  await prisma.$transaction([
+    prisma.solicitudCambioInfo.deleteMany({ where: { perfil_id: id } }),
+    prisma.perfil.delete({ where: { id } }),
+  ]);
+
+  const adminAuth = createAdminClient();
+  await adminAuth.auth.admin.deleteUser(id);
+
+  await registrarAudit({
+    admin_id:     admin.id,
+    admin_nombre: admin.nombre,
+    accion:       "CLIENTE_ELIMINADO",
+    entidad:      "cliente",
+    entidad_id:   id,
+    detalle:      { nombre: perfil.nombre },
+  });
+
+  redirect("/admin/clientes");
+}

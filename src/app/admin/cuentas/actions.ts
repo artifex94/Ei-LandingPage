@@ -28,6 +28,11 @@ const actualizarCuentaSchema = z.object({
   categoria: z.enum(CATEGORIAS),
   estado: z.enum(ESTADOS_CUENTA),
   costo_mensual: z.coerce.number().min(0),
+  calle: z.string().optional().transform((v) => v?.trim() || null),
+  localidad: z.string().optional().transform((v) => v?.trim() || null),
+  provincia: z.string().optional().transform((v) => v?.trim() || null),
+  codigo_postal: z.string().optional().transform((v) => v?.trim() || null),
+  notas_tecnicas: z.string().optional().transform((v) => v?.trim() || null),
   motivo_baja: z.string().optional(),
 });
 
@@ -49,6 +54,11 @@ export async function actualizarCuenta(
     categoria: formData.get("categoria"),
     estado: formData.get("estado"),
     costo_mensual: formData.get("costo_mensual"),
+    calle: formData.get("calle"),
+    localidad: formData.get("localidad"),
+    provincia: formData.get("provincia"),
+    codigo_postal: formData.get("codigo_postal"),
+    notas_tecnicas: formData.get("notas_tecnicas"),
     motivo_baja: formData.get("motivo_baja"),
   });
 
@@ -58,14 +68,13 @@ export async function actualizarCuenta(
 
   const { id, motivo_baja, ...data } = parsed.data;
 
-  // Cuando es baja definitiva, registrar motivo en notas_tecnicas
-  let updateData: typeof data & { notas_tecnicas?: string } = { ...data };
+  // Cuando es baja definitiva, prepender nota de baja a notas_tecnicas
+  let updateData = { ...data };
   if (data.estado === "BAJA_DEFINITIVA" && motivo_baja?.trim()) {
-    const cuenta = await prisma.cuenta.findUnique({ where: { id }, select: { notas_tecnicas: true } });
     const fechaBaja = new Date().toLocaleDateString("es-AR");
     const notaBaja = `[BAJA ${fechaBaja} — por ${admin.nombre}] ${motivo_baja.trim()}`;
-    updateData.notas_tecnicas = cuenta?.notas_tecnicas
-      ? `${notaBaja}\n\n${cuenta.notas_tecnicas}`
+    updateData.notas_tecnicas = data.notas_tecnicas
+      ? `${notaBaja}\n\n${data.notas_tecnicas}`
       : notaBaja;
   }
 

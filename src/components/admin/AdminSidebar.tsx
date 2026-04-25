@@ -8,7 +8,7 @@ import {
   LayoutDashboard,
   Users, ShieldCheck, CreditCard, AlertTriangle, Wrench, FilePen,
   ClipboardList, HardHat, CalendarDays, Truck, UserCog, CalendarCheck,
-  Receipt, Bell,
+  Receipt, Bell, Briefcase,
   FileUp, Database, ScrollText, Radio, Settings, UmbrellaOff,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -26,7 +26,7 @@ interface NavItem {
 }
 
 interface NavSection {
-  id: "general" | "clientes" | "operaciones" | "finanzas" | "sistema";
+  id: "general" | "clientes" | "trabajadores" | "operaciones" | "finanzas" | "sistema";
   label: string | null;
   items: NavItem[];
 }
@@ -51,6 +51,13 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/morosidad",          label: "Morosidad",        icon: AlertTriangle,  badge: "cuentasEnMora" },
       { href: "/admin/mantenimiento",      label: "Mantenimiento",    icon: Wrench,         badge: "pendingMantenimiento" },
       { href: "/admin/solicitudes-cambio", label: "Cambios de datos", icon: FilePen,        badge: "pendingSolicitudes" },
+    ],
+  },
+  {
+    id: "trabajadores",
+    label: "Trabajadores",
+    items: [
+      { href: "/admin/trabajadores", label: "Equipo", icon: Briefcase },
     ],
   },
   {
@@ -137,6 +144,18 @@ const SECTION_STYLE = {
     hoverBg:         "hover:bg-emerald-500/5",
     chevron:         "text-emerald-600",
     toggleHover:     "hover:bg-emerald-500/5",
+  },
+  trabajadores: {
+    labelColor:      "text-amber-400",
+    dot:             "bg-amber-500",
+    activeBg:        "bg-amber-500/10",
+    activeText:      "text-amber-100",
+    activeBorder:    "border-l-2 border-amber-500",
+    activeIconColor: "text-amber-400",
+    inactiveIcon:    "text-slate-500",
+    hoverBg:         "hover:bg-amber-500/5",
+    chevron:         "text-amber-600",
+    toggleHover:     "hover:bg-amber-500/5",
   },
   sistema: {
     labelColor:      "text-slate-500",

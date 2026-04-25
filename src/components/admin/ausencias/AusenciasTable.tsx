@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { aprobarAusencia, eliminarAusencia } from "@/lib/actions/ausencias";
+import { EditarAusenciaDialog } from "./EditarAusenciaDialog";
 import type { Ausencia, Empleado, Perfil } from "@/generated/prisma/client";
 
 type AusenciaConEmpleado = Ausencia & {
@@ -107,6 +108,7 @@ export function AusenciasTable({
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
+                      <EditarAusenciaDialog ausencia={a} nombreEmpleado={a.empleado.perfil.nombre} />
                       {!a.aprobada && (
                         <button
                           onClick={() => handleAprobar(a.id)}

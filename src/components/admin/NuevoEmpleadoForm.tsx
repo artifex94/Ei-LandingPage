@@ -27,8 +27,9 @@ const DEFAULTS: Record<string, string[]> = {
   ADMIN_GENERAL:  ["puede_instalar", "puede_monitorear", "puede_facturar"],
 };
 
-export function NuevoEmpleadoForm() {
+export function NuevoEmpleadoForm({ esEscobarAdmin = false }: { esEscobarAdmin?: boolean }) {
   const [state, action, pending] = useActionState(crearEmpleado, {});
+  const rolesVisibles = ROLES_EMPLEADO.filter((r) => r.value !== "ADMIN_GENERAL" || esEscobarAdmin);
 
   return (
     <form action={action} className="space-y-5">
@@ -95,7 +96,7 @@ export function NuevoEmpleadoForm() {
           </label>
           <select id="emp-rol" name="rol_empleado" required className={inputCls}>
             <option value="">Seleccioná un rol…</option>
-            {ROLES_EMPLEADO.map((r) => (
+            {rolesVisibles.map((r) => (
               <option key={r.value} value={r.value}>{r.label} — {r.hint}</option>
             ))}
           </select>

@@ -37,6 +37,7 @@ export async function crearEmpleado(data: {
   });
 
   revalidatePath("/admin/empleados");
+  revalidatePath("/admin/trabajadores");
   return empleado;
 }
 
@@ -59,6 +60,7 @@ export async function toggleEmpleadoActivo(empleado_id: string, activo: boolean)
   });
 
   revalidatePath("/admin/empleados");
+  revalidatePath("/admin/trabajadores");
   return empleado;
 }
 
@@ -90,5 +92,6 @@ export async function actualizarEmpleado(
   });
 
   revalidatePath("/admin/empleados");
+  revalidatePath("/admin/trabajadores");
   return empleado;
 }

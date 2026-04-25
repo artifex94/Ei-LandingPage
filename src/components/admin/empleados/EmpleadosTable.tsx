@@ -21,7 +21,14 @@ const ROL_LABEL: Record<string, string> = {
   ADMINISTRATIVO:"Administrativo",
 };
 
-export function EmpleadosTable({ empleados }: { empleados: EmpleadoConPerfil[]; rolLabel: Record<string, string> }) {
+export function EmpleadosTable({
+  empleados,
+  basePath = "/admin/empleados",
+}: {
+  empleados: EmpleadoConPerfil[];
+  rolLabel: Record<string, string>;
+  basePath?: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -94,7 +101,7 @@ export function EmpleadosTable({ empleados }: { empleados: EmpleadoConPerfil[]; 
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-3">
                   <Link
-                    href={`/admin/empleados/${emp.perfil_id}`}
+                    href={`${basePath}/${emp.perfil_id}`}
                     className="text-xs text-orange-400 hover:text-orange-300 transition-colors font-medium"
                   >
                     Editar

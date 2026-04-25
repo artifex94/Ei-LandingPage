@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma/client";
 import { VehiculoCard } from "@/components/admin/vehiculo/VehiculoCard";
 import { ReservasVehiculo } from "@/components/admin/vehiculo/ReservasVehiculo";
 import { NuevaReservaDialog } from "@/components/admin/vehiculo/NuevaReservaDialog";
+import { EditarVehiculoDialog } from "@/components/admin/vehiculo/EditarVehiculoDialog";
 
 export const metadata: Metadata = { title: "Vehículo — Admin" };
 
@@ -50,7 +51,12 @@ export default async function VehiculoPage() {
       ) : (
         vehiculos.map((v) => (
           <div key={v.id} className="space-y-4">
-            <VehiculoCard vehiculo={v} />
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <VehiculoCard vehiculo={v} />
+              </div>
+              <EditarVehiculoDialog vehiculo={v} />
+            </div>
             <ReservasVehiculo reservas={v.reservas} />
           </div>
         ))

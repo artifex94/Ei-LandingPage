@@ -20,6 +20,7 @@ interface Empleado {
 
 interface Props {
   empleado: Empleado;
+  esEscobarAdmin?: boolean;
 }
 
 const inputCls =
@@ -38,8 +39,9 @@ const CAPACIDADES = [
   { name: "puede_facturar",   label: "Finanzas y cobros" },
 ];
 
-export function EditarEmpleadoForm({ empleado }: Props) {
+export function EditarEmpleadoForm({ empleado, esEscobarAdmin = false }: Props) {
   const [state, action, pending] = useActionState(actualizarEmpleado, {});
+  const rolesVisibles = ROLES_EMPLEADO.filter((r) => r.value !== "ADMIN_GENERAL" || esEscobarAdmin);
 
   return (
     <form action={action} className="space-y-5">
@@ -124,7 +126,7 @@ export function EditarEmpleadoForm({ empleado }: Props) {
             defaultValue={empleado.rol_empleado}
             className={inputCls}
           >
-            {ROLES_EMPLEADO.map((r) => (
+            {rolesVisibles.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>

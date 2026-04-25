@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
@@ -53,6 +54,61 @@ export async function crearReservaVehiculo(data: {
 
   revalidatePath("/admin/vehiculo");
   return reserva;
+}
+
+const editarVehiculoSchema = z.object({
+  id: z.string().min(1),
+  marca: z.string().min(1, "La marca es obligatoria"),
+  modelo: z.string().min(1, "El modelo es obligatorio"),
+  anio: z.coerce.number().min(1990).max(2100),
+  patente: z.string().min(1, "La patente es obligatoria").transform((v) => v.trim().toUpperCase()),
+  km_actual: z.coerce.number().min(0),
+  proximo_service_km: z.coerce.number().min(0).optional().nullable(),
+  proximo_service_fecha: z.string().optional().nullable().transform((v) => v ? new Date(v) : null),
+  observaciones: z.string().optional().nullable().transform((v) => v?.trim() || null),
+});
+
+export interface EditarVehiculoResult {
+  ok?: boolean;
+  errores?: string[];
+}
+
+export async function editarVehiculo(
+  prevState: EditarVehiculoResult,
+  formData: FormData
+): Promise<EditarVehiculoResult> {
+  const admin = await getAdminActual();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
+
+  const parsed = editarVehiculoSchema.safeParse({
+    id: formData.get("id"),
+    marca: formData.get("marca"),
+    modelo: formData.get("modelo"),
+    anio: formData.get("anio"),
+    patente: formData.get("patente"),
+    km_actual: formData.get("km_actual"),
+    proximo_service_km: formData.get("proximo_service_km") || null,
+    proximo_service_fecha: formData.get("proximo_service_fecha") || null,
+    observaciones: formData.get("observaciones"),
+  });
+
+  if (!parsed.success) return { errores: parsed.error.issues.map((i) => i.message) };
+
+  const { id, ...data } = parsed.data;
+
+  await prisma.vehiculo.update({ where: { id }, data });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre ?? "Admin",
+    accion: "VEHICULO_EDITADO",
+    entidad: "vehiculo",
+    entidad_id: id,
+    detalle: { patente: data.patente, km_actual: data.km_actual },
+  });
+
+  revalidatePath("/admin/vehiculo");
+  return { ok: true };
 }
 
 export async function actualizarKmVehiculo(vehiculo_id: string, km_actual: number) {

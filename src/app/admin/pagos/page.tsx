@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma/client";
 import { PagoManualBulkForm } from "@/components/admin/PagoManualBulkForm";
 import { ConfirmarTransferenciaForm } from "@/components/admin/ConfirmarTransferenciaForm";
+import { EditarPagoDialog } from "@/components/admin/EditarPagoDialog";
 
 const ESTADO_CONFIG: Record<string, { bg: string; label: string }> = {
   PAGADO:     { bg: "bg-green-900/40 text-green-400",  label: "Pagado" },
@@ -209,6 +210,7 @@ export default async function PagosAdminPage({
                   <th className="text-left px-4 py-3 font-semibold text-slate-300">Estado</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-300">Método</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-300">Acreditado</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
@@ -225,6 +227,18 @@ export default async function PagosAdminPage({
                       <td className="px-4 py-3 text-slate-300">{p.metodo ? METODO_LABELS[p.metodo] ?? p.metodo : "—"}</td>
                       <td className="px-4 py-3 text-slate-400 text-xs">
                         {p.acreditado_en ? new Date(p.acreditado_en).toLocaleDateString("es-AR") : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <EditarPagoDialog pago={{
+                          id: p.id,
+                          mes: p.mes,
+                          anio: p.anio,
+                          importe: Number(p.importe),
+                          estado: p.estado,
+                          metodo: p.metodo ?? null,
+                          cuentaNombre: p.cuenta.perfil.nombre,
+                          cuentaDesc: p.cuenta.descripcion,
+                        }} />
                       </td>
                     </tr>
                   );

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { IniciarButton, ResolverButton, ReopenButton } from "./AccionesForm";
+import { NuevaSolicitudAdminDialog } from "@/components/admin/NuevaSolicitudAdminDialog";
 
 const ESTADO_CONFIG: Record<string, { label: string; cls: string }> = {
   PENDIENTE:   { label: "Pendiente",   cls: "bg-amber-900/40 text-amber-400 border-amber-800/40" },
@@ -47,9 +48,19 @@ export default async function MantenimientoPage({
     ],
   });
 
-  const cuentaAbiertas = await prisma.solicitudMantenimiento.count({
-    where: { estado: { not: "RESUELTA" } },
-  });
+  const [cuentaAbiertas, cuentasActivas] = await Promise.all([
+    prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
+    prisma.cuenta.findMany({
+      where: { estado: { in: ["ACTIVA", "SUSPENDIDA_PAGO", "EN_MANTENIMIENTO"] } },
+      select: {
+        id: true,
+        descripcion: true,
+        softguard_ref: true,
+        perfil: { select: { nombre: true } },
+      },
+      orderBy: [{ perfil: { nombre: "asc" } }, { descripcion: "asc" }],
+    }),
+  ]);
 
   const TABS = [
     { key: "abiertas",   label: `Abiertas${cuentaAbiertas > 0 ? ` (${cuentaAbiertas})` : ""}` },
@@ -59,11 +70,19 @@ export default async function MantenimientoPage({
 
   return (
     <div className="space-y-8 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Solicitudes de mantenimiento</h1>
-        <p className="text-slate-400 text-sm mt-1">
-          Asistencias técnicas solicitadas por los clientes.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Solicitudes de mantenimiento</h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Asistencias técnicas solicitadas por los clientes.
+          </p>
+        </div>
+        <NuevaSolicitudAdminDialog cuentas={cuentasActivas.map((c) => ({
+          id: c.id,
+          descripcion: c.descripcion,
+          softguard_ref: c.softguard_ref,
+          perfilNombre: c.perfil.nombre,
+        }))} />
       </div>
 
       {/* Tabs de filtro */}

@@ -9,6 +9,10 @@ interface Cuenta {
   categoria: string;
   estado: string;
   costo_mensual: number | { toNumber: () => number };
+  calle?: string | null;
+  localidad?: string | null;
+  provincia?: string | null;
+  codigo_postal?: string | null;
   notas_tecnicas?: string | null;
 }
 
@@ -121,6 +125,83 @@ export function ActualizarCuentaForm({ cuenta }: { cuenta: Cuenta }) {
           required
           defaultValue={costoActual}
           className={inputCls}
+        />
+      </div>
+
+      {/* ── Dirección ─────────────────────────────────────────────────────── */}
+      <fieldset className="border border-slate-700 rounded-xl p-4 space-y-3">
+        <legend className="text-xs font-semibold text-slate-400 px-1 uppercase tracking-wide">
+          Dirección del servicio
+        </legend>
+        <div>
+          <label htmlFor="calle" className="block text-sm font-medium text-slate-300 mb-1">
+            Calle y número
+          </label>
+          <input
+            id="calle"
+            name="calle"
+            type="text"
+            placeholder="Ej: Rawson 255"
+            defaultValue={cuenta.calle ?? ""}
+            className={inputCls}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="localidad" className="block text-sm font-medium text-slate-300 mb-1">
+              Localidad
+            </label>
+            <input
+              id="localidad"
+              name="localidad"
+              type="text"
+              placeholder="Victoria"
+              defaultValue={cuenta.localidad ?? ""}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="provincia" className="block text-sm font-medium text-slate-300 mb-1">
+              Provincia
+            </label>
+            <input
+              id="provincia"
+              name="provincia"
+              type="text"
+              placeholder="Entre Ríos"
+              defaultValue={cuenta.provincia ?? ""}
+              className={inputCls}
+            />
+          </div>
+        </div>
+        <div className="w-32">
+          <label htmlFor="codigo_postal" className="block text-sm font-medium text-slate-300 mb-1">
+            Código postal
+          </label>
+          <input
+            id="codigo_postal"
+            name="codigo_postal"
+            type="text"
+            placeholder="3153"
+            defaultValue={cuenta.codigo_postal ?? ""}
+            className={inputCls}
+          />
+        </div>
+      </fieldset>
+
+      {/* ── Notas técnicas ────────────────────────────────────────────────── */}
+      <div>
+        <label htmlFor="notas_tecnicas" className="block text-sm font-medium text-slate-300 mb-1">
+          Notas técnicas
+          <span className="text-slate-500 font-normal text-xs ml-1">(interno)</span>
+        </label>
+        <textarea
+          id="notas_tecnicas"
+          name="notas_tecnicas"
+          rows={3}
+          placeholder="Observaciones internas, historial de intervenciones, etc."
+          defaultValue={cuenta.notas_tecnicas ?? ""}
+          className={`${inputCls} resize-y`}
         />
       </div>
 

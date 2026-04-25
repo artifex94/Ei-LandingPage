@@ -5,14 +5,14 @@ import { prisma } from "@/lib/prisma/client";
 import { EditarEmpleadoForm } from "@/components/admin/EditarEmpleadoForm";
 import { EliminarEmpleadoForm } from "@/components/admin/EliminarEmpleadoForm";
 
-export const metadata = { title: "Editar empleado — Admin" };
+export const metadata = { title: "Editar trabajador — Admin" };
 
 const ROL_PERFIL_LABEL: Record<string, string> = {
   ADMIN:   "Administrador (acceso completo)",
   TECNICO: "Técnico / Empleado",
 };
 
-export default async function EditarEmpleadoPage({
+export default async function EditarTrabajadorPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -34,12 +34,11 @@ export default async function EditarEmpleadoPage({
 
   return (
     <div className="max-w-xl space-y-8">
-      {/* Breadcrumb */}
       <nav aria-label="Ruta de navegación">
         <ol className="flex items-center gap-2 text-sm text-slate-400">
           <li>
-            <Link href="/admin/empleados" className="hover:text-white transition-colors">
-              Empleados
+            <Link href="/admin/trabajadores" className="hover:text-white transition-colors">
+              Equipo
             </Link>
           </li>
           <li aria-hidden="true">/</li>
@@ -47,7 +46,6 @@ export default async function EditarEmpleadoPage({
         </ol>
       </nav>
 
-      {/* Header */}
       <div className="flex items-center gap-4">
         <div
           className="w-10 h-10 rounded-full flex-shrink-0 border-2 border-slate-600"
@@ -65,7 +63,6 @@ export default async function EditarEmpleadoPage({
         </div>
       </div>
 
-      {/* WhatsApp rápido */}
       {perfil.telefono && (
         <a
           href={`https://wa.me/${perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${perfil.nombre.split(" ")[0]}, te contactamos de Escobar Instalaciones.`)}`}
@@ -78,7 +75,6 @@ export default async function EditarEmpleadoPage({
         </a>
       )}
 
-      {/* Formulario de edición */}
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
         <EditarEmpleadoForm
           esEscobarAdmin={esEscobarAdmin}

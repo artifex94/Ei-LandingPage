@@ -71,6 +71,10 @@ export async function crearEmpleado(
     rol_empleado, puede_monitorear, puede_instalar, puede_facturar, color_calendario,
   } = parsed.data;
 
+  if (rol_empleado === "ADMIN_GENERAL" && admin.email !== "admin@instalacionescob.ar") {
+    return { errores: ["Solo el administrador principal puede crear usuarios con rol Administrador."] };
+  }
+
   if (dni) {
     const existente = await prisma.perfil.findUnique({ where: { dni } });
     if (existente) return { errores: [`Ya existe un perfil con el DNI ${dni}.`] };
@@ -125,7 +129,7 @@ export async function crearEmpleado(
     detalle:      { nombre, email, rol_empleado, puede_monitorear, puede_instalar, puede_facturar },
   });
 
-  redirect("/admin/empleados");
+  redirect("/admin/trabajadores");
 }
 
 // ── Actualizar empleado ────────────────────────────────────────────────────────
@@ -172,6 +176,10 @@ export async function actualizarEmpleado(
     rol_empleado, puede_monitorear, puede_instalar, puede_facturar, color_calendario,
   } = parsed.data;
 
+  if (rol_empleado === "ADMIN_GENERAL" && admin.email !== "admin@instalacionescob.ar") {
+    return { errores: ["Solo el administrador principal puede asignar el rol Administrador."] };
+  }
+
   if (dni) {
     const colision = await prisma.perfil.findFirst({ where: { dni, NOT: { id } } });
     if (colision) return { errores: [`El DNI ${dni} ya pertenece a otro perfil.`] };
@@ -216,5 +224,72 @@ export async function actualizarEmpleado(
 
   revalidatePath(`/admin/empleados/${id}`);
   revalidatePath("/admin/empleados");
+  revalidatePath("/admin/trabajadores");
+  revalidatePath(`/admin/trabajadores/${id}`);
   return { ok: true };
+}
+
+// ── Eliminar empleado ──────────────────────────────────────────────────────────
+
+export async function eliminarEmpleado(
+  prevState: EmpleadoActionResult,
+  formData: FormData
+): Promise<EmpleadoActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { errores: ["Sin permisos de administrador."] };
+
+  const id = (formData.get("id") as string ?? "").trim();
+  if (!id) return { errores: ["ID inválido."] };
+
+  const empleado = await prisma.empleado.findUnique({
+    where: { perfil_id: id },
+    select: {
+      id: true,
+      _count: {
+        select: {
+          ordenes_trabajo: true,
+          turnos:          true,
+          ausencias:       true,
+        },
+      },
+    },
+  });
+
+  if (!empleado) return { errores: ["Empleado no encontrado."] };
+
+  const totalRegistros =
+    empleado._count.ordenes_trabajo +
+    empleado._count.turnos +
+    empleado._count.ausencias;
+
+  if (totalRegistros > 0) {
+    return {
+      errores: [
+        `Este empleado tiene registros históricos (${empleado._count.ordenes_trabajo} OT, ${empleado._count.turnos} turno(s), ${empleado._count.ausencias} ausencia(s)). Para retirarlo del equipo, desactivá el perfil en su lugar.`,
+      ],
+    };
+  }
+
+  await prisma.$transaction([
+    prisma.reservaVehiculo.deleteMany({ where: { empleado_id: empleado.id } }),
+    prisma.solicitudCambioTurno.deleteMany({
+      where: { OR: [{ solicitante_id: empleado.id }, { reemplazo_id: empleado.id }] },
+    }),
+    prisma.empleado.delete({ where: { id: empleado.id } }),
+    prisma.perfil.delete({ where: { id } }),
+  ]);
+
+  const adminAuth = createAdminClient();
+  await adminAuth.auth.admin.deleteUser(id);
+
+  await registrarAudit({
+    admin_id:     admin.id,
+    admin_nombre: admin.nombre,
+    accion:       "EMPLEADO_ELIMINADO",
+    entidad:      "empleado",
+    entidad_id:   id,
+    detalle:      {},
+  });
+
+  redirect("/admin/trabajadores");
 }

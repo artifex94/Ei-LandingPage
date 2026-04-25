@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { PagoManualForm } from "@/components/admin/PagoManualForm";
 import { EditarClienteForm } from "@/components/admin/EditarClienteForm";
 import { NuevaCuentaForm } from "@/components/admin/NuevaCuentaForm";
+import { EliminarClienteForm } from "@/components/admin/EliminarClienteForm";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "@/app/admin/solicitudes-cambio/AccionesForm";
 
 const ESTADO_CUENTA: Record<string, string> = {
@@ -279,6 +280,8 @@ export default async function ClienteDetallePage({
           </div>
         </section>
       )}
+
+      <EliminarClienteForm id={perfil.id} nombre={perfil.nombre} />
     </div>
   );
 }
