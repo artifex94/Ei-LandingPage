@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LoginTabs } from "./LoginTabs";
+import { siteConfig } from "@/config/site";
 
 export const metadata = {
   title: "Ingresar",
@@ -72,7 +73,7 @@ export default function LoginPage() {
                 <p className="text-xs text-slate-600 text-center">
                   ¿Problemas para ingresar?{" "}
                   <a
-                    href="https://wa.me/5493436575372"
+                    href={siteConfig.contact.whatsappLink}
                     className="text-tactical-500 hover:text-tactical-400 transition-colors"
                     target="_blank"
                     rel="noopener noreferrer"

@@ -4,6 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { siteConfig } from "@/config/site";
 
 interface Props {
   deudaTotal: number;
@@ -65,7 +66,7 @@ export function PagoRequeridoModal({ deudaTotal }: Props) {
           <div className="mt-3 grid grid-cols-2 gap-2">
             {/* Contacto WhatsApp */}
             <a
-              href="https://wa.me/5493436575372?text=Hola%2C+quiero+regularizar+mi+servicio+suspendido"
+              href={`${siteConfig.contact.whatsappLink}?text=Hola%2C+quiero+regularizar+mi+servicio+suspendido`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-1.5 bg-green-800/50 hover:bg-green-700/60 border border-green-700 text-green-300 font-semibold py-2.5 px-3 rounded-xl min-h-[44px] transition-colors text-sm"

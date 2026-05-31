@@ -14,7 +14,7 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
-import { enviarWhatsApp } from "@/lib/twilio";
+import { enviarWhatsApp, enviarWhatsAppTemplate } from "@/lib/twilio";
 import { prepararBorradoresFactura } from "@/lib/facturacion/preparar-borradores";
 import { TARIFA_FALLBACK_PESOS } from "@/lib/constants/billing";
 
@@ -109,35 +109,46 @@ export async function POST(req: NextRequest) {
   let notificados = 0;
   let erroresEnvio = 0;
 
+  const morosidadTemplateSid = process.env.TWILIO_TEMPLATE_MOROSIDAD;
+
   for (const perfil of perfilesConDeuda) {
     if (!perfil.telefono) continue;
 
-    // Armar lista de deudas
-    const lineasDeuda: string[] = [];
-    for (const cuenta of perfil.cuentas) {
-      for (const pago of cuenta.pagos) {
-        const mesLabel = MESES_ES[pago.mes - 1];
-        const esVencido = pago.estado === "VENCIDO";
-        lineasDeuda.push(
-          `• ${cuenta.descripcion}: ${mesLabel} ${pago.anio}${esVencido ? " _(VENCIDO)_" : ""}`
-        );
-      }
-    }
-
-    if (lineasDeuda.length === 0) continue;
+    const todosPagos = perfil.cuentas.flatMap((c) => c.pagos);
+    if (todosPagos.length === 0) continue;
 
     const nombre = perfil.nombre.split(" ")[0];
-    const tieneVencidos = perfil.cuentas.some((c) =>
-      c.pagos.some((pg) => pg.estado === "VENCIDO")
-    );
+    let ok: boolean;
 
-    const mensaje =
-      `Hola ${nombre}! 👋 Te recordamos que tenés pagos pendientes en Escobar Instalaciones:\n\n` +
-      lineasDeuda.join("\n") +
-      `\n\nPodés abonar desde tu portal o comunicarte con nosotros al WhatsApp si necesitás ayuda.` +
-      (tieneVencidos ? "\n\n⚠️ Algunos pagos están vencidos — regularizalos a la brevedad." : "");
+    if (morosidadTemplateSid) {
+      const totalImporte = todosPagos.reduce((sum, p) => sum + Number(p.importe ?? 0), 0);
+      const meses = [
+        ...new Set(todosPagos.map((p) => `${MESES_ES[p.mes - 1]} ${p.anio}`)),
+      ].join(", ");
+      ok = await enviarWhatsAppTemplate(perfil.telefono, morosidadTemplateSid, {
+        "1": nombre,
+        "2": new Intl.NumberFormat("es-AR").format(totalImporte),
+        "3": meses,
+      });
+    } else {
+      const lineasDeuda: string[] = [];
+      for (const cuenta of perfil.cuentas) {
+        for (const pago of cuenta.pagos) {
+          const mesLabel = MESES_ES[pago.mes - 1];
+          const esVencido = pago.estado === "VENCIDO";
+          lineasDeuda.push(
+            `• ${cuenta.descripcion}: ${mesLabel} ${pago.anio}${esVencido ? " (VENCIDO)" : ""}`
+          );
+        }
+      }
+      ok = await enviarWhatsApp(
+        perfil.telefono,
+        `Hola ${nombre}! Te recordamos que tenés pagos pendientes en Escobar Instalaciones:\n\n` +
+          lineasDeuda.join("\n") +
+          `\n\nPodés abonar desde tu portal o al WhatsApp si necesitás ayuda.`
+      );
+    }
 
-    const ok = await enviarWhatsApp(perfil.telefono, mensaje);
     if (ok) notificados++; else erroresEnvio++;
   }
 

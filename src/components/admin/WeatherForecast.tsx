@@ -1,4 +1,5 @@
 import { fetchWeatherForecast } from "@/lib/weather";
+import { siteConfig } from "@/config/site";
 import { WeatherCard } from "./WeatherCard";
 
 export async function WeatherForecast() {
@@ -16,7 +17,7 @@ export async function WeatherForecast() {
     <section aria-label="Pronóstico meteorológico 7 días">
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-semibold text-white">
-          Pronóstico 7 días — Victoria, Entre Ríos
+          Pronóstico 7 días — {siteConfig.contact.location}
         </p>
         <div className="flex items-center gap-3 text-[10px] text-slate-500">
           <span className="flex items-center gap-1">

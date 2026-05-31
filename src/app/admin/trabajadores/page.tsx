@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { EmpleadosTable } from "@/components/admin/empleados/EmpleadosTable";
+import { siteConfig } from "@/config/site";
 import type { RolEmpleado } from "@/generated/prisma/client";
 
 export const metadata: Metadata = { title: "Equipo — Admin" };
@@ -31,7 +32,7 @@ export default async function TrabajadoresPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const esEscobarAdmin = user.email === "admin@instalacionescob.ar";
+  const esEscobarAdmin = user.email === siteConfig.contact.email;
 
   const sp = await searchParams;
   const filtroRol = sp.rol ?? "todos";

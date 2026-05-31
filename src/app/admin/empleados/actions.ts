@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import type { Rol } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/actions/auth";
+import { siteConfig } from "@/config/site";
 
 export interface EmpleadoActionResult {
   ok?: boolean;
@@ -63,7 +64,7 @@ export async function crearEmpleado(
     rol_empleado, puede_monitorear, puede_instalar, puede_facturar, color_calendario,
   } = parsed.data;
 
-  if (rol_empleado === "ADMIN_GENERAL" && admin.email !== "admin@instalacionescob.ar") {
+  if (rol_empleado === "ADMIN_GENERAL" && admin.email !== siteConfig.contact.email) {
     return { errores: ["Solo el administrador principal puede crear usuarios con rol Administrador."] };
   }
 
@@ -168,7 +169,7 @@ export async function actualizarEmpleado(
     rol_empleado, puede_monitorear, puede_instalar, puede_facturar, color_calendario,
   } = parsed.data;
 
-  if (rol_empleado === "ADMIN_GENERAL" && admin.email !== "admin@instalacionescob.ar") {
+  if (rol_empleado === "ADMIN_GENERAL" && admin.email !== siteConfig.contact.email) {
     return { errores: ["Solo el administrador principal puede asignar el rol Administrador."] };
   }
 

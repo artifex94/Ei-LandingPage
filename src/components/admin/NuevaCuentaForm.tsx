@@ -2,6 +2,7 @@
 
 import { useState, useActionState } from "react";
 import { crearCuenta } from "@/app/admin/cuentas/actions";
+import { siteConfig } from "@/config/site";
 
 interface Props {
   perfilId: string;
@@ -141,7 +142,7 @@ export function NuevaCuentaForm({ perfilId }: Props) {
               id="nueva-provincia"
               name="provincia"
               type="text"
-              defaultValue="Entre Ríos"
+              defaultValue={siteConfig.contact.region}
               className={inputCls}
             />
           </div>

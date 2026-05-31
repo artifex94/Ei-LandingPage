@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
-import { enviarWhatsApp } from "@/lib/twilio";
+import { enviarWhatsApp, enviarWhatsAppTemplate } from "@/lib/twilio";
 
 async function getAppUrl(): Promise<string> {
   // En producción detrás de Passenger el header host llega como localhost:3000.
@@ -128,14 +128,24 @@ export async function enviarLinkWhatsApp(
     return { error: "No se pudo generar el link. Intentá de nuevo." };
   }
 
-  const nombre = perfil.nombre?.split(" ")[0] ?? "";
-  const saludo = nombre ? `Hola ${nombre}! ` : "Hola! ";
-  const mensaje =
-    `${saludo}Tocá este link para ingresar a tu portal de Escobar Instalaciones 🔐\n\n` +
-    `${data.properties.action_link}\n\n` +
-    `_El link es personal y expira en 1 hora._`;
+  const nombre = perfil.nombre?.split(" ")[0] ?? "cliente";
+  const loginTemplateSid = process.env.TWILIO_TEMPLATE_LOGIN;
 
-  const enviado = await enviarWhatsApp(telefono, mensaje);
+  let enviado: boolean;
+  if (loginTemplateSid) {
+    // Template {{1}}=nombre abre la ventana de 24hs; el link sigue como mensaje libre.
+    enviado = await enviarWhatsAppTemplate(telefono, loginTemplateSid, { "1": nombre });
+    if (enviado) {
+      await enviarWhatsApp(telefono, data.properties.action_link);
+    }
+  } else {
+    enviado = await enviarWhatsApp(
+      telefono,
+      `Hola ${nombre}! Tocá este link para ingresar a tu portal de Escobar Instalaciones:\n\n` +
+        `${data.properties.action_link}\n\n` +
+        `El link es personal y expira en 1 hora.`
+    );
+  }
   if (!enviado) {
     return { error: "No se pudo enviar el mensaje. Verificá el número o usá tu email." };
   }

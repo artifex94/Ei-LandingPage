@@ -5,6 +5,7 @@ import { read, utils } from "xlsx";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants/billing";
+import { siteConfig } from "@/config/site";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -332,7 +333,7 @@ export async function analizarXLS(formData: FormData): Promise<ResultadoAnalisis
         nombre_cuenta,
         campo: "provincia",
         valor_actual: null,
-        valor_propuesto: "Entre Ríos",
+        valor_propuesto: siteConfig.contact.region,
         confianza: "ALTA",
         razon: "Todas las cuentas son de Entre Ríos",
       });

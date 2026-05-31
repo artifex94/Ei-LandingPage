@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { CuentaCard } from "@/components/portal/CuentaCard";
+import { siteConfig } from "@/config/site";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -48,7 +49,7 @@ export default async function DashboardPage() {
         <div className="bg-industrial-800 rounded-lg border border-industrial-700 p-8 text-center shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
           <p className="text-slate-400 mb-5 text-sm">No tenés servicios activos.</p>
           <a
-            href="https://wa.me/5493436575372"
+            href={siteConfig.contact.whatsappLink}
             className="inline-flex items-center gap-2 bg-tactical-500 hover:bg-tactical-400
                        text-white px-6 py-3 rounded-sm font-bold uppercase text-xs tracking-widest
                        border border-tactical-600 border-b-[4px] border-b-tactical-600

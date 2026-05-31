@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
 import { FacturacionTabs } from "@/components/admin/facturacion/FacturacionTabs";
 import { GenerarBorradoresButton } from "@/components/admin/facturacion/GenerarBorradoresButton";
+import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = { title: "Facturación — Admin" };
 
@@ -49,7 +50,7 @@ export default async function FacturacionPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Facturación</h1>
           <p className="text-sm text-slate-400 mt-1">
-            Factura C — ESCOBAR RAMIRO ANIBAL · CUIT 20-38557350-3
+            Factura C — ESCOBAR RAMIRO ANIBAL · CUIT {siteConfig.fiscal.cuitDisplay}
           </p>
         </div>
         <GenerarBorradoresButton anio={anioActual} mes={mesActual} />

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
 import { ConfiguracionForm } from "@/components/admin/configuracion/ConfiguracionForm";
+import { TARIFA_FALLBACK_PESOS } from "@/lib/constants/billing";
 
 export const metadata: Metadata = { title: "Configuración — Admin" };
 
@@ -18,7 +19,7 @@ export default async function ConfiguracionPage() {
         </p>
       </div>
 
-      <ConfiguracionForm tarifaActual={ultimaTarifa ? Number(ultimaTarifa.monto) : 15000} />
+      <ConfiguracionForm tarifaActual={ultimaTarifa ? Number(ultimaTarifa.monto) : TARIFA_FALLBACK_PESOS} />
     </div>
   );
 }

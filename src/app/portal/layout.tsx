@@ -7,6 +7,7 @@ import { calcularEstadoFinanciero, peorEstadoFinanciero } from "@/lib/billing-st
 import { PagoRequeridoGuard } from "@/components/portal/PagoRequeridoGuard";
 import { PortalNav } from "@/components/portal/PortalNav";
 import "./portal.css";
+import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
   title: "Mi Portal — Escobar Instalaciones",
@@ -131,10 +132,10 @@ export default async function PortalLayout({
           <span className="text-xs text-slate-600 font-mono tracking-wide">
             Escobar Instalaciones — Soporte:{" "}
             <a
-              href="https://wa.me/5493436575372"
+              href={siteConfig.contact.whatsappLink}
               className="text-tactical-500 hover:text-tactical-400 transition-colors"
             >
-              343-657-5372
+              {siteConfig.contact.phoneLocal}
             </a>
           </span>
         </footer>

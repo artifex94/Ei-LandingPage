@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { EditarEmpleadoForm } from "@/components/admin/EditarEmpleadoForm";
 import { EliminarEmpleadoForm } from "@/components/admin/EliminarEmpleadoForm";
+import { siteConfig } from "@/config/site";
 
 export const metadata = { title: "Editar trabajador — Admin" };
 
@@ -21,7 +22,7 @@ export default async function EditarTrabajadorPage({
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const esEscobarAdmin = user?.email === "admin@instalacionescob.ar";
+  const esEscobarAdmin = user?.email === siteConfig.contact.email;
 
   const perfil = await prisma.perfil.findUnique({
     where: { id },
