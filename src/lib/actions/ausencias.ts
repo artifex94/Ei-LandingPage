@@ -1,20 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id }, select: { rol: true, nombre: true } });
-  if (perfil?.rol !== "ADMIN") return null;
-  return { id: user.id, nombre: perfil.nombre };
-}
+import { requireAdminWithName as requireAdmin } from "@/lib/actions/auth";
 
 const crearSchema = z.object({
   empleado_id: z.string().uuid(),

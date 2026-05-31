@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
+import { requireAdmin } from "@/lib/actions/auth";
 
 export interface ConfirmarResult {
   ok?: boolean;
@@ -15,15 +16,6 @@ export interface ConfirmarResult {
 export interface PagoEditResult {
   ok?: boolean;
   errores?: string[];
-}
-
-async function requireAdminForPagos() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") return null;
-  return perfil;
 }
 
 const editarPagoSchema = z.object({
@@ -37,7 +29,7 @@ export async function editarPago(
   prevState: PagoEditResult,
   formData: FormData
 ): Promise<PagoEditResult> {
-  const admin = await requireAdminForPagos();
+  const admin = await requireAdmin();
   if (!admin) return { errores: ["Sin permisos de administrador."] };
 
   const parsed = editarPagoSchema.safeParse({
@@ -84,7 +76,7 @@ export async function editarPago(
 }
 
 export async function anularPago(pagoId: string): Promise<{ error?: string }> {
-  const admin = await requireAdminForPagos();
+  const admin = await requireAdmin();
   if (!admin) return { error: "Sin permisos de administrador." };
 
   const pago = await prisma.pago.findUnique({

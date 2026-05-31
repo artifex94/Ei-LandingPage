@@ -6,21 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
+import { requireAdmin } from "@/lib/actions/auth";
 
 export interface TecnicoActionResult {
   ok?: boolean;
   errores?: string[];
-}
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") return null;
-  return perfil;
 }
 
 const nuevoTecnicoSchema = z.object({
