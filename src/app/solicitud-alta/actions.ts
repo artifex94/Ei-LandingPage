@@ -87,7 +87,18 @@ export async function enviarSolicitudAlta(
     if (billingErrors.length > 0) return { errores: billingErrors };
   }
 
-  // Avoid duplicate pending submissions by phone
+  // Rate limit: 1 submission per phone per 5 minutes (any status)
+  const cincoMinutosAtras = new Date(Date.now() - 5 * 60 * 1000);
+  const reciente = await prisma.altaUsuario.findFirst({
+    where: { telefono, created_at: { gte: cincoMinutosAtras } },
+  });
+  if (reciente) {
+    return {
+      errores: ["Esperá unos minutos antes de enviar otra solicitud."],
+    };
+  }
+
+  // Block duplicate pending submissions
   const yaExiste = await prisma.altaUsuario.findFirst({
     where: { telefono, estado: "PENDIENTE" },
   });

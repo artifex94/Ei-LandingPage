@@ -29,6 +29,14 @@ function ProcesarForm({ altaId }: { altaId: string }) {
       {state.errores && (
         <p className="text-xs text-red-400 mb-1">{state.errores[0]}</p>
       )}
+      {state.ok && !state.warnWhatsApp && (
+        <p className="text-green-400 text-xs mt-1">Solicitud procesada. Link enviado por WhatsApp.</p>
+      )}
+      {state.ok && state.warnWhatsApp && (
+        <p className="text-amber-400 text-xs mt-1">
+          Perfil creado pero el WhatsApp no se pudo enviar. Copiá el link de acceso desde <code>notas_admin</code> y envialo manualmente.
+        </p>
+      )}
       <button
         type="submit"
         disabled={pending}

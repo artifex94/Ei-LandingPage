@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/actions/auth";
 export interface AltaActionResult {
   ok?: boolean;
   errores?: string[];
+  warnWhatsApp?: boolean;
 }
 
 async function getAppUrl(): Promise<string> {
@@ -50,7 +51,11 @@ export async function procesarAltaUsuario(
   const adminAuth = createAdminClient();
 
   if (perfilExistente) {
-    // Update existing perfil
+    const notas: string[] = [];
+    if (perfilExistente.telefono && perfilExistente.telefono !== alta.telefono) {
+      notas.push(`Teléfono anterior: ${perfilExistente.telefono} → actualizado a ${alta.telefono}`);
+    }
+
     await prisma.perfil.update({
       where: { id: perfilExistente.id },
       data: {
@@ -70,6 +75,13 @@ export async function procesarAltaUsuario(
 
     if (!perfilEmail) {
       return { errores: ["El perfil existente no tiene email. Editalo manualmente primero."] };
+    }
+
+    if (notas.length > 0) {
+      await prisma.altaUsuario.update({
+        where: { id: altaId },
+        data: { notas_admin: notas.join(" | ") },
+      });
     }
   } else {
     // Create new Supabase Auth user + Perfil
@@ -118,7 +130,7 @@ export async function procesarAltaUsuario(
     perfilEmail = resolvedEmail;
   }
 
-  // Generate magic link
+  // Generate magic link — if this fails, perfil exists but alta stays PENDIENTE (retriable)
   const appUrl = await getAppUrl();
   const { data: linkData, error: linkError } = await adminAuth.auth.admin.generateLink({
     type: "magiclink",
@@ -131,32 +143,47 @@ export async function procesarAltaUsuario(
     return { errores: ["No se pudo generar el link de acceso. Intentá de nuevo."] };
   }
 
+  // BUG#3 fix: capture WhatsApp result — if it fails, record in notas_admin
   const nombre = alta.nombre.split(" ")[0];
   const actionLink = linkData.properties.action_link;
   const loginTemplateSid = process.env.TWILIO_TEMPLATE_LOGIN;
 
+  let whatsappOk = false;
   if (loginTemplateSid) {
-    const sent = await enviarWhatsAppTemplate(alta.telefono, loginTemplateSid, { "1": nombre });
-    if (sent) {
+    whatsappOk = await enviarWhatsAppTemplate(alta.telefono, loginTemplateSid, { "1": nombre });
+    if (whatsappOk) {
       await enviarWhatsApp(alta.telefono, actionLink).catch(() => {});
     }
   } else {
-    await enviarWhatsApp(
+    whatsappOk = await enviarWhatsApp(
       alta.telefono,
       `Hola ${nombre}! Tu acceso a Escobar Instalaciones está listo:\n\n${actionLink}\n\nEl link expira en 1 hora.`
-    ).catch(() => {});
+    ).then(() => true).catch(() => false);
   }
 
-  // Mark request as processed
-  await prisma.altaUsuario.update({
-    where: { id: altaId },
-    data: {
-      estado: "PROCESADA",
-      perfil_id: perfilId,
-      procesada_at: new Date(),
-      procesada_por: admin.id,
-    },
-  });
+  // BUG#4 fix: if altaUsuario.update fails after this point, the client has their
+  // link already. The solicitud stays PENDIENTE and the admin can safely retry
+  // (the perfilExistente path will regenerate the link).
+  const notasFinales: string[] = [];
+  if (!whatsappOk) {
+    notasFinales.push(`WhatsApp no enviado — link generado: ${actionLink}`);
+  }
+
+  try {
+    await prisma.altaUsuario.update({
+      where: { id: altaId },
+      data: {
+        estado: "PROCESADA",
+        perfil_id: perfilId,
+        procesada_at: new Date(),
+        procesada_por: admin.id,
+        ...(notasFinales.length > 0 && { notas_admin: notasFinales.join(" | ") }),
+      },
+    });
+  } catch (err) {
+    // Log but don't fail — client has their link; admin can retry from PENDIENTE state
+    console.error("altaUsuario.update failed after processing:", err);
+  }
 
   await registrarAudit({
     admin_id: admin.id,
@@ -164,11 +191,11 @@ export async function procesarAltaUsuario(
     accion: "ALTA_USUARIO_PROCESADA",
     entidad: "alta_usuario",
     entidad_id: altaId,
-    detalle: { nombre: alta.nombre, telefono: alta.telefono, perfil_id: perfilId },
-  });
+    detalle: { nombre: alta.nombre, telefono: alta.telefono, perfil_id: perfilId, whatsappOk },
+  }).catch(() => {});
 
   revalidatePath("/admin/solicitudes-alta");
-  return { ok: true };
+  return whatsappOk ? { ok: true } : { ok: true, warnWhatsApp: true };
 }
 
 export async function rechazarAltaUsuario(

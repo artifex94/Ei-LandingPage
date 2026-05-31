@@ -132,8 +132,7 @@ export function SolicitudAltaForm() {
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors appearance-none"
               >
                 <option value="">Seleccioná una opción</option>
-                <option value="RESIDENCIAL">Propietario</option>
-                <option value="RESIDENCIAL">Inquilino</option>
+                <option value="RESIDENCIAL">Propietario / Inquilino</option>
                 <option value="COMERCIAL">Comercial</option>
                 <option value="OFICINAS">Consorcio</option>
               </select>
