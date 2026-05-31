@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { NuevoClienteForm } from "@/components/admin/NuevoClienteForm";
+import { AltaClienteForm } from "@/components/admin/AltaClienteForm";
 
 export default function NuevoClientePage() {
   return (
-    <div className="max-w-xl">
+    <div className="max-w-2xl">
       <nav aria-label="Ruta de navegación" className="mb-6">
         <ol className="flex items-center gap-2 text-sm text-slate-400">
           <li>
@@ -18,11 +18,11 @@ export default function NuevoClientePage() {
 
       <h1 className="text-2xl font-bold text-white mb-2">Nuevo cliente</h1>
       <p className="text-sm text-slate-400 mb-6">
-        Se creará un usuario en Supabase Auth y su perfil de cliente en el sistema.
+        Creá el perfil del cliente y su primera cuenta de servicio en un solo paso.
       </p>
 
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
-        <NuevoClienteForm />
+        <AltaClienteForm />
       </div>
     </div>
   );
