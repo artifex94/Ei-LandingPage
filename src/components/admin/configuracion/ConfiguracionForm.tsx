@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { actualizarTarifa } from "@/lib/actions/configuracion";
+import { siteConfig } from "@/config/site";
 
 export function ConfiguracionForm({ tarifaActual }: { tarifaActual: number }) {
   const [pending, startTransition] = useTransition();
@@ -26,22 +27,22 @@ export function ConfiguracionForm({ tarifaActual }: { tarifaActual: number }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-xs text-slate-500 mb-0.5">Razón social</p>
-            <p className="text-white">ESCOBAR RAMIRO ANIBAL</p>
+            <p className="text-white">{siteConfig.fiscal.razonSocial}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500 mb-0.5">CUIT</p>
-            <p className="text-white">20-38557350-3</p>
+            <p className="text-white">{siteConfig.fiscal.cuitDisplay}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500 mb-0.5">Condición IVA</p>
-            <p className="text-white">Monotributista</p>
+            <p className="text-white">{siteConfig.fiscal.condicionIva}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500 mb-0.5">Domicilio fiscal</p>
-            <p className="text-white">Rawson 255, Victoria, Entre Ríos</p>
+            <p className="text-white">{siteConfig.address.full}</p>
           </div>
         </div>
-        <p className="text-xs text-slate-600">Para modificar los datos fiscales, editá el schema Prisma.</p>
+        <p className="text-xs text-slate-600">Para modificar los datos fiscales, actualizá <code>src/config/site.ts</code>.</p>
       </section>
 
       {/* Tarifa estándar */}

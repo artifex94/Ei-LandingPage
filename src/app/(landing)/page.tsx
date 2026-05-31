@@ -27,12 +27,13 @@ const jsonLd = {
   image: siteConfig.ogImage,
   priceRange: "$$",
   currenciesAccepted: "ARS",
-  paymentAccepted: "Efectivo, Transferencia bancaria, MercadoPago",
+  paymentAccepted: "Efectivo, Transferencia bancaria, MercadoPago, Débito automático",
   address: {
     "@type": "PostalAddress",
-    addressLocality: "Victoria",
-    addressRegion: "Entre Ríos",
-    addressCountry: "AR",
+    streetAddress: siteConfig.address.street,
+    addressLocality: siteConfig.contact.locality,
+    addressRegion: siteConfig.contact.region,
+    addressCountry: siteConfig.contact.countryCode,
   },
   geo: {
     "@type": "GeoCoordinates",

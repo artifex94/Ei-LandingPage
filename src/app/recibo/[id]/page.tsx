@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { PrintButton } from "./PrintButton";
 import { METODO_LABEL } from "@/lib/constants/payment";
+import { siteConfig } from "@/config/site";
 
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -76,10 +77,10 @@ export default async function ReciboPage({
             <div className="w-10 h-10 bg-orange-700 rounded-lg flex items-center justify-center text-white font-bold text-base mb-3 print:mb-2">
               EI
             </div>
-            <p className="text-lg font-bold text-slate-900">Escobar Instalaciones</p>
-            <p className="text-xs text-slate-500 mt-0.5">CUIT 20-38557350-3</p>
-            <p className="text-xs text-slate-500">Rawson 255 — Victoria, Entre Ríos</p>
-            <p className="text-xs text-slate-500">343-657-5372</p>
+            <p className="text-lg font-bold text-slate-900">{siteConfig.name}</p>
+            <p className="text-xs text-slate-500 mt-0.5">CUIT {siteConfig.fiscal.cuitDisplay}</p>
+            <p className="text-xs text-slate-500">{siteConfig.address.full}</p>
+            <p className="text-xs text-slate-500">{siteConfig.contact.phoneLocal}</p>
           </div>
 
           <div className="text-right">

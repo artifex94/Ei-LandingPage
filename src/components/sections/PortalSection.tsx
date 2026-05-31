@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { User, CreditCard, Wrench, ArrowRight } from "lucide-react";
+import { siteConfig } from "@/config/site";
 
 const FEATURES = [
   {
@@ -66,7 +67,7 @@ export default function PortalSection() {
           <p className="text-center text-sm text-slate-400 mt-4">
             ¿Primera vez?{" "}
             <a
-              href="https://wa.me/5493436575372"
+              href={siteConfig.contact.whatsappLink}
               className="text-orange-400 hover:text-orange-300 underline"
               target="_blank"
               rel="noopener noreferrer"

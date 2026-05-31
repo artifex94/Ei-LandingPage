@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
+import { siteConfig } from "@/config/site";
 
 export const runtime = "edge";
-export const alt = "Escobar Instalaciones — Seguridad y Monitoreo 24hs";
+export const alt = `${siteConfig.name} — Seguridad y Monitoreo 24hs`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -62,9 +63,9 @@ export default function OGImage() {
             marginBottom: "24px",
           }}
         >
-          Escobar
+          {siteConfig.name.split(" ")[0]}
           <br />
-          <span style={{ color: "#f97316" }}>Instalaciones</span>
+          <span style={{ color: "#f97316" }}>{siteConfig.name.split(" ").slice(1).join(" ")}</span>
         </div>
 
         {/* Descripción */}
@@ -91,9 +92,9 @@ export default function OGImage() {
           }}
         >
           <span style={{ color: "#f97316" }}>📍</span>
-          Victoria, Entre Ríos, Argentina
+          {siteConfig.contact.location}
           <span style={{ margin: "0 16px", color: "#334155" }}>|</span>
-          instalacionescob.ar
+          {siteConfig.url.replace("https://", "")}
         </div>
       </div>
     ),
