@@ -28,7 +28,7 @@ export default async function AdminLayout({
   const hace3dias = new Date();
   hace3dias.setDate(hace3dias.getDate() - 3);
 
-  const [pendingSolicitudes, pendingMantenimiento, cuentasEnMora, otsPendientes] =
+  const [pendingSolicitudes, pendingMantenimiento, cuentasEnMora, otsPendientes, altasUsuarioPendientes] =
     await Promise.all([
       prisma.solicitudCambioInfo.count({ where: { estado: "PENDIENTE" } }),
       prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
@@ -43,6 +43,7 @@ export default async function AdminLayout({
           ],
         },
       }),
+      prisma.altaUsuario.count({ where: { estado: "PENDIENTE" } }),
     ]);
 
   return (
@@ -61,6 +62,7 @@ export default async function AdminLayout({
           pendingMantenimiento={pendingMantenimiento}
           cuentasEnMora={cuentasEnMora}
           otsPendientes={otsPendientes}
+          altasUsuarioPendientes={altasUsuarioPendientes}
         />
 
         <main

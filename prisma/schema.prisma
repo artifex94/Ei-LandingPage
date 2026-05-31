@@ -99,6 +99,12 @@ enum EstadoCambioInfo {
   RECHAZADO
 }
 
+enum EstadoAltaUsuario {
+  PENDIENTE
+  PROCESADA
+  RECHAZADA
+}
+
 // ── Fase 3: Órdenes de Trabajo ───────────────────────────────
 
 enum TipoOT {
@@ -317,6 +323,30 @@ model SolicitudMantenimiento {
 
   @@index([cuenta_id])
   @@map("solicitudes_mantenimiento")
+}
+
+model AltaUsuario {
+  id               String            @id @default(cuid())
+  nombre           String
+  telefono         String
+  dni              String?
+  email            String?
+  tipo_titular     String?
+  requiere_factura Boolean           @default(false)
+  razon_social     String?
+  cuit             String?
+  condicion_iva    String?
+  estado           EstadoAltaUsuario @default(PENDIENTE)
+  notas_admin      String?
+  perfil_id        String?
+  procesada_at     DateTime?
+  procesada_por    String?
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
+
+  @@index([estado])
+  @@index([telefono])
+  @@map("altas_usuario")
 }
 
 model AuditLog {

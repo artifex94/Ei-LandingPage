@@ -10,13 +10,14 @@ import {
   ClipboardList, HardHat, CalendarDays, Truck, UserCog, CalendarCheck,
   Receipt, Bell, Briefcase,
   FileUp, Database, ScrollText, Radio, Settings, UmbrellaOff,
+  UserPlus,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/components/ui/LogoutButton";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
-type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes";
+type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes" | "altasUsuarioPendientes";
 
 interface NavItem {
   href: string;
@@ -51,6 +52,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/morosidad",          label: "Morosidad",        icon: AlertTriangle,  badge: "cuentasEnMora" },
       { href: "/admin/mantenimiento",      label: "Mantenimiento",    icon: Wrench,         badge: "pendingMantenimiento" },
       { href: "/admin/solicitudes-cambio", label: "Cambios de datos", icon: FilePen,        badge: "pendingSolicitudes" },
+      { href: "/admin/solicitudes-alta",   label: "Altas de usuario", icon: UserPlus,       badge: "altasUsuarioPendientes" },
     ],
   },
   {
@@ -172,10 +174,11 @@ const SECTION_STYLE = {
 } satisfies Record<NavSection["id"], object>;
 
 const BADGE_COLOR: Record<BadgeKey, string> = {
-  pendingSolicitudes:   "bg-orange-500",
-  pendingMantenimiento: "bg-sky-500",
-  cuentasEnMora:        "bg-red-500",
-  otsPendientes:        "bg-amber-500",
+  pendingSolicitudes:      "bg-orange-500",
+  pendingMantenimiento:    "bg-sky-500",
+  cuentasEnMora:           "bg-red-500",
+  otsPendientes:           "bg-amber-500",
+  altasUsuarioPendientes:  "bg-orange-500",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -358,12 +361,14 @@ export function AdminSidebar({
   pendingMantenimiento = 0,
   cuentasEnMora = 0,
   otsPendientes = 0,
+  altasUsuarioPendientes = 0,
 }: {
   nombreAdmin: string;
   pendingSolicitudes?: number;
   pendingMantenimiento?: number;
   cuentasEnMora?: number;
   otsPendientes?: number;
+  altasUsuarioPendientes?: number;
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -398,9 +403,10 @@ export function AdminSidebar({
     pendingMantenimiento,
     cuentasEnMora,
     otsPendientes,
+    altasUsuarioPendientes,
   };
 
-  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes;
+  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes + altasUsuarioPendientes;
 
   return (
     <>
