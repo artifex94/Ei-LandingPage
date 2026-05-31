@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { read, utils } from "xlsx";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
+import { MAX_UPLOAD_BYTES } from "@/lib/constants/billing";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -231,8 +232,7 @@ export async function analizarXLS(formData: FormData): Promise<ResultadoAnalisis
   if (!archivo) {
     return { correcciones: [], estadisticas: { total: 0, excluidos: [], sin_email: 0, correcciones_por_campo: {} }, error: "No se recibió ningún archivo." };
   }
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-  if (archivo.size > MAX_SIZE_BYTES) {
+  if (archivo.size > MAX_UPLOAD_BYTES) {
     return { correcciones: [], estadisticas: { total: 0, excluidos: [], sin_email: 0, correcciones_por_campo: {} }, error: "El archivo supera el límite de 5MB." };
   }
 

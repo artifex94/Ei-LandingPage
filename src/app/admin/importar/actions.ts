@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
 import type { CategoriaCuenta, TipoSensor } from "@/generated/prisma/client";
+import { MAX_UPLOAD_BYTES } from "@/lib/constants/billing";
 
 const rowSchema = z.object({
   codigo_cuenta: z.string().min(1),
@@ -78,10 +79,7 @@ export async function importarCsvSoftguard(
   if (extension !== "csv" || !MIME_CSV_PERMITIDOS.has(archivo.type)) {
     return { ok: 0, errores: ["Solo se aceptan archivos .csv."] };
   }
-  // Límite de 5MB — un CSV de Softguard con 500 cuentas y zonas no supera 1MB.
-  // Previene DoS por agotamiento de memoria.
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024;
-  if (archivo.size > MAX_SIZE_BYTES) {
+  if (archivo.size > MAX_UPLOAD_BYTES) {
     return { ok: 0, errores: ["El archivo supera el límite de 5MB."] };
   }
 
@@ -184,7 +182,7 @@ export async function importarCsvSoftguard(
           descripcion: direccion,
           categoria: CATEGORIA_MAP[tipo_servicio] as unknown as CategoriaCuenta,
           estado: activa ? "ACTIVA" : "SUSPENDIDA_PAGO",
-          costo_mensual: 20000,
+          costo_mensual: null,
         },
         update: {
           estado: activa ? "ACTIVA" : "SUSPENDIDA_PAGO",

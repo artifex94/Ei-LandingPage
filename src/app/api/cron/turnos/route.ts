@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { enviarWhatsApp } from "@/lib/twilio";
 
+const COBERTURA_DIAS = 3;
 const FRANJAS = ["MANANA", "TARDE", "NOCHE"] as const;
 const FRANJA_LABEL: Record<string, string> = {
   MANANA: "Mañana (06–14 hs)",
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   if (!valido) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const ahora = new Date(); ahora.setHours(0, 0, 0, 0);
-  const hasta = addDays(ahora, 3);
+  const hasta = addDays(ahora, COBERTURA_DIAS);
 
   const turnos = await prisma.turno.findMany({
     where: {
@@ -52,15 +53,18 @@ export async function POST(req: NextRequest) {
   }
 
   if (huecos.length > 0) {
-    const ramiroTel = process.env.RAMIRO_TELEFONO ?? "3436575372";
-    const lineas = huecos
-      .map((h) => `• ${h.fecha.toLocaleDateString("es-AR")} — ${FRANJA_LABEL[h.franja]}`)
-      .join("\n");
-
-    await enviarWhatsApp(
-      ramiroTel,
-      `⚠️ *Huecos de cobertura (72h)*\n\n${lineas}\n\nAsigná reemplazos en /admin/turnos`
-    );
+    const ramiroTel = process.env.RAMIRO_TELEFONO;
+    if (ramiroTel) {
+      const lineas = huecos
+        .map((h) => `• ${h.fecha.toLocaleDateString("es-AR")} — ${FRANJA_LABEL[h.franja]}`)
+        .join("\n");
+      await enviarWhatsApp(
+        ramiroTel,
+        `⚠️ *Huecos de cobertura (${COBERTURA_DIAS * 24}h)*\n\n${lineas}\n\nAsigná reemplazos en /admin/turnos`
+      );
+    } else {
+      console.warn("[cron/turnos] RAMIRO_TELEFONO no configurado — alerta no enviada");
+    }
   }
 
   console.log(`[cron/turnos] huecos=${huecos.length}`);

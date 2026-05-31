@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { enviarWhatsApp } from "@/lib/twilio";
 import { prepararBorradoresFactura } from "@/lib/facturacion/preparar-borradores";
+import { TARIFA_FALLBACK_PESOS } from "@/lib/constants/billing";
 
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
     prisma.cuenta.findMany({ where: { estado: "ACTIVA" }, select: { id: true, costo_mensual: true } }),
     prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" } }),
   ]);
-  const tarifaEstandar = tarifaRow?.monto ?? 15000;
+  const tarifaEstandar = tarifaRow?.monto ?? TARIFA_FALLBACK_PESOS;
 
   const { count: pagosCreados } = await prisma.pago.createMany({
     data: cuentasActivas.map((cuenta) => ({
