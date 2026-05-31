@@ -2,19 +2,12 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { PrintButton } from "./PrintButton";
+import { METODO_LABEL } from "@/lib/constants/payment";
 
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 ];
-
-const METODO_LABEL: Record<string, string> = {
-  MERCADOPAGO:            "MercadoPago",
-  TALO_CVU:               "Transferencia CVU",
-  EFECTIVO:               "Efectivo",
-  CHEQUE:                 "Cheque",
-  TRANSFERENCIA_BANCARIA: "Transferencia bancaria",
-};
 
 function numeroRecibo(id: string, anio: number, mes: number) {
   return `REC-${anio}${String(mes).padStart(2, "0")}-${id.slice(-6).toUpperCase()}`;

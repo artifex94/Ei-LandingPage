@@ -2,6 +2,7 @@
 
 import { useState, useActionState, useTransition } from "react";
 import { editarPago, anularPago } from "@/app/admin/pagos/actions";
+import { METODOS } from "@/lib/constants/payment";
 
 interface Pago {
   id: string;
@@ -27,14 +28,7 @@ const ESTADOS = [
   { value: "PROCESANDO", label: "Procesando" },
 ];
 
-const METODOS = [
-  { value: "",                        label: "Sin método" },
-  { value: "EFECTIVO",               label: "Efectivo" },
-  { value: "CHEQUE",                 label: "Cheque" },
-  { value: "TRANSFERENCIA_BANCARIA", label: "Transferencia" },
-  { value: "MERCADOPAGO",            label: "MercadoPago" },
-  { value: "TALO_CVU",               label: "Talo (crypto)" },
-];
+const METODOS_CON_VACIO = [{ value: "", label: "Sin método" }, ...METODOS];
 
 const inputCls = "w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-2 focus:outline-orange-500";
 
@@ -116,7 +110,7 @@ export function EditarPagoDialog({ pago }: Props) {
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1.5">Método de pago</label>
                 <select name="metodo" defaultValue={pago.metodo ?? ""} className={inputCls}>
-                  {METODOS.map((m) => (
+                  {METODOS_CON_VACIO.map((m) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
                   ))}
                 </select>

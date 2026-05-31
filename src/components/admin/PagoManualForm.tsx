@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { registrarPagoManual } from "@/app/admin/cuentas/actions";
+import { METODOS } from "@/lib/constants/payment";
 
 interface Props {
   cuentaId: string;
@@ -9,14 +10,6 @@ interface Props {
   anio: number;
   importe: number;
 }
-
-const METODOS = [
-  { value: "EFECTIVO", label: "Efectivo" },
-  { value: "CHEQUE", label: "Cheque" },
-  { value: "TRANSFERENCIA_BANCARIA", label: "Transferencia bancaria" },
-  { value: "MERCADOPAGO", label: "MercadoPago" },
-  { value: "TALO_CVU", label: "Talo (crypto)" },
-];
 
 export function PagoManualForm({ cuentaId, mes, anio, importe }: Props) {
   const [state, action, pending] = useActionState(registrarPagoManual, {});

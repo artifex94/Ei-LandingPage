@@ -2,20 +2,13 @@ import { prisma } from "@/lib/prisma/client";
 import { PagoManualBulkForm } from "@/components/admin/PagoManualBulkForm";
 import { ConfirmarTransferenciaForm } from "@/components/admin/ConfirmarTransferenciaForm";
 import { EditarPagoDialog } from "@/components/admin/EditarPagoDialog";
+import { METODO_LABEL as METODO_LABELS } from "@/lib/constants/payment";
 
 const ESTADO_CONFIG: Record<string, { bg: string; label: string }> = {
   PAGADO:     { bg: "bg-green-900/40 text-green-400",  label: "Pagado" },
   PENDIENTE:  { bg: "bg-amber-900/40 text-amber-400",  label: "Pendiente" },
   VENCIDO:    { bg: "bg-red-900/40 text-red-400",      label: "Vencido" },
   PROCESANDO: { bg: "bg-blue-900/40 text-blue-400",    label: "Procesando" },
-};
-
-const METODO_LABELS: Record<string, string> = {
-  EFECTIVO:               "Efectivo",
-  CHEQUE:                 "Cheque",
-  TRANSFERENCIA_BANCARIA: "Transferencia",
-  MERCADOPAGO:            "MercadoPago",
-  TALO_CVU:               "Talo (crypto)",
 };
 
 export default async function PagosAdminPage({

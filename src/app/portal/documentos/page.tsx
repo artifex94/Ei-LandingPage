@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
+import { METODO_LABEL } from "@/lib/constants/payment";
 
 export const metadata: Metadata = { title: "Documentos — Portal" };
 
@@ -10,14 +11,6 @@ const MESES_ES = [
   "enero","febrero","marzo","abril","mayo","junio",
   "julio","agosto","septiembre","octubre","noviembre","diciembre",
 ];
-
-const METODO_LABEL: Record<string, string> = {
-  MERCADOPAGO:             "MercadoPago",
-  TALO_CVU:                "Transferencia CVU",
-  EFECTIVO:                "Efectivo",
-  CHEQUE:                  "Cheque",
-  TRANSFERENCIA_BANCARIA:  "Transferencia bancaria",
-};
 
 // ── Tipos para searchParams ───────────────────────────────────────────────────
 
