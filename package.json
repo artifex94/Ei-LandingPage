@@ -8,6 +8,8 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "playwright test",
     "test:a11y": "playwright test tests/a11y.spec.ts",
     "test:billing": "playwright test tests/billing.spec.ts",
