@@ -5,6 +5,9 @@
  * Se puede usar en Server Components, layouts y scripts de cron.
  */
 
+const DIAS_GRACIA = 1;
+const DIAS_SUSPENSION = 15;
+
 export type EstadoFinanciero =
   | { tipo: "ACTIVE" }
   | { tipo: "GRACE_PERIOD"; dias_mora: number }
@@ -48,8 +51,8 @@ export function calcularEstadoFinanciero(
   }
 
   const dpd = calcDPD(pagos);
-  if (dpd >= 15) return { tipo: "SUSPENDED", dias_mora: dpd };
-  if (dpd >= 1)  return { tipo: "GRACE_PERIOD", dias_mora: dpd };
+  if (dpd >= DIAS_SUSPENSION) return { tipo: "SUSPENDED", dias_mora: dpd };
+  if (dpd >= DIAS_GRACIA)     return { tipo: "GRACE_PERIOD", dias_mora: dpd };
   return { tipo: "ACTIVE" };
 }
 

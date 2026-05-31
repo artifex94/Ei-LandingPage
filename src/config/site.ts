@@ -16,6 +16,7 @@ if (!env.success) {
 
 export const siteConfig = {
   name: "Escobar Instalaciones",
+  shortName: "EI Seguridad",
   title: "Escobar Instalaciones | Seguridad y Monitoreo 24hs — Victoria, Entre Ríos",
   description:
     "Empresa de seguridad en Victoria, Entre Ríos. Instalamos y monitoreamos alarmas, cámaras CCTV, domótica y control de acceso. Atención 24 hs, respuesta inmediata.",
@@ -36,11 +37,30 @@ export const siteConfig = {
   contact: {
     phoneDisplay: "+54 9 343 657-5372",
     phoneE164: "+5493436575372",
+    phoneLocal: "343-657-5372",
     whatsappNumber: env.data.NEXT_PUBLIC_WHATSAPP_NUMBER,
+    get whatsappLink() {
+      return `https://wa.me/${this.whatsappNumber}`;
+    },
     email: "admin@instalacionescob.ar",
     location: "Victoria, Entre Ríos, Argentina",
+    locality: "Victoria",
+    region: "Entre Ríos",
+    countryCode: "AR",
+    countryPrefix: "549",
     latitude: -32.6267,
     longitude: -60.1553,
+  },
+  address: {
+    street: "Rawson 255",
+    full: "Rawson 255, Victoria, Entre Ríos",
+  },
+  fiscal: {
+    cuitDisplay: "20-38557350-3",
+    cuitRaw: "20385573503",
+    razonSocial: "ESCOBAR RAMIRO ANIBAL",
+    condicionIva: "Monotributista",
+    diaVtoPago: 10,
   },
   links: {
     // instagram: "https://instagram.com/escobarinstalaciones",

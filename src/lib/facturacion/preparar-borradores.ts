@@ -2,18 +2,14 @@
 
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
-// Datos fiscales del emisor — hardcodeados según facturas reales
-const EMISOR = {
-  cuit: "20385573503",
-  razon_social: "ESCOBAR RAMIRO ANIBAL",
-} as const;
+import { siteConfig } from "@/config/site";
+import { TARIFA_FALLBACK_PESOS } from "@/lib/constants/billing";
 
-// Tarifa estándar vigente si la cuenta no tiene override
 async function getTarifaVigente() {
   const ultima = await prisma.tarifaHistorico.findFirst({
     orderBy: { vigente_desde: "desc" },
   });
-  return ultima?.monto ?? 15000;
+  return ultima?.monto ?? TARIFA_FALLBACK_PESOS;
 }
 
 export interface ResultadoBorradores {
@@ -87,16 +83,15 @@ export async function prepararBorradoresFactura(
         0
       );
 
-      // Fecha de vto: día 10 del mes que se factura
       const fecha_vto = new Date(periodo_desde);
-      fecha_vto.setDate(10);
+      fecha_vto.setDate(siteConfig.fiscal.diaVtoPago);
 
       await prisma.factura.create({
         data: {
           perfil_id:             perfil.id,
           tipo:                  "FACTURA_C",
-          cuit_emisor:           EMISOR.cuit,
-          razon_social_emisor:   EMISOR.razon_social,
+          cuit_emisor:           siteConfig.fiscal.cuitRaw,
+          razon_social_emisor:   siteConfig.fiscal.razonSocial,
           cuit_receptor:         perfil.cuit ?? null,
           razon_social_receptor: perfil.razon_social ?? perfil.nombre,
           condicion_iva_receptor: perfil.condicion_iva ?? "RESPONSABLE_INSCRIPTO",

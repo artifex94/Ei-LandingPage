@@ -1,6 +1,7 @@
-// Victoria, Entre Ríos — lat/lon
-const LAT = -32.6310;
-const LON = -60.1650;
+import { siteConfig } from "@/config/site";
+
+const LAT = siteConfig.contact.latitude;
+const LON = siteConfig.contact.longitude;
 
 export type WeatherCondition =
   | "sunny"

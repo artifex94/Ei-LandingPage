@@ -6,7 +6,8 @@ export async function enviarWhatsApp(to10Digits: string, body: string): Promise<
   const sid = process.env.TWILIO_ACCOUNT_SID!;
   const token = process.env.TWILIO_AUTH_TOKEN!;
   const from = `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`;
-  const toWsp = `whatsapp:+549${to10Digits}`;
+  const countryPrefix = process.env.TWILIO_COUNTRY_PREFIX ?? "549";
+  const toWsp = `whatsapp:+${countryPrefix}${to10Digits}`;
 
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
