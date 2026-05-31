@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
+import type { EstadoCuenta } from "@/generated/prisma/client";
 
 const ESTADO_COLORES: Record<string, string> = {
   ACTIVA:           "bg-green-900/40 text-green-400",
@@ -34,7 +35,7 @@ export default async function CuentasAdminPage({
   const pagina = Math.max(1, Number(paginaStr ?? 1));
 
   const where = {
-    ...(estado ? { estado: estado as never } : {}),
+    ...(estado ? { estado: estado as unknown as EstadoCuenta } : {}),
     ...(q
       ? {
           OR: [

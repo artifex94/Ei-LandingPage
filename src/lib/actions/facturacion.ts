@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
+import type { CondicionIVA } from "@/generated/prisma/client";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { prepararBorradoresFactura } from "@/lib/facturacion/preparar-borradores";
@@ -43,7 +44,7 @@ export async function actualizarDatosFiscales(
     data: {
       cuit:          datos.cuit         || undefined,
       razon_social:  datos.razon_social || undefined,
-      condicion_iva: (datos.condicion_iva as never) || undefined,
+      condicion_iva: (datos.condicion_iva as unknown as CondicionIVA) || undefined,
     },
   });
 

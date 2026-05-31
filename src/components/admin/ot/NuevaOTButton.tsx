@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { crearOT } from "@/lib/actions/ot";
+import type { TipoOT, Prioridad } from "@/generated/prisma/client";
 
 type EmpleadoConPerfil = { id: string; perfil: { nombre: string } };
 
@@ -43,9 +44,9 @@ export function NuevaOTButton({ empleados }: { empleados: EmpleadoConPerfil[] })
     startTransition(async () => {
       try {
         await crearOT({
-          tipo:        tipo as never,
+          tipo:        tipo as unknown as TipoOT,
           descripcion,
-          prioridad:   prioridad as never,
+          prioridad:   prioridad as unknown as Prioridad,
           fecha_visita: fecha_str ? new Date(fecha_str) : undefined,
           notas_admin:  notas || undefined,
         });

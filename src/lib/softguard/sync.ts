@@ -13,6 +13,7 @@
 
 import { prisma } from "@/lib/prisma/client";
 import { withSoftguardConnection } from "./client";
+import type { EstadoEventoSync } from "@/generated/prisma/client";
 import type { SgCuentaResumen, SgEventoReciente } from "./schema";
 
 // ── syncCuentas ───────────────────────────────────────────────────────────────
@@ -109,7 +110,7 @@ export async function syncEventos(): Promise<{ synced: number; errors: number; m
           prioridad:          ev.accion_code,
           operador_softguard: ev.operador_id?.toString() ?? null,
           // Sin estado_nativo en el schema real — defaultear a PROCESADO
-          estado:             "PROCESADO" as never,
+          estado:             "PROCESADO" as unknown as EstadoEventoSync,
           resolucion:         ev.observacion ?? null,
           raw:                ev.id_evento.toString(),
         },

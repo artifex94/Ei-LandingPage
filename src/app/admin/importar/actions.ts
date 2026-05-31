@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
+import type { CategoriaCuenta, TipoSensor } from "@/generated/prisma/client";
 
 const rowSchema = z.object({
   codigo_cuenta: z.string().min(1),
@@ -181,7 +182,7 @@ export async function importarCsvSoftguard(
           softguard_ref: codigo_cuenta,
           perfil_id: perfilId,
           descripcion: direccion,
-          categoria: CATEGORIA_MAP[tipo_servicio] as never,
+          categoria: CATEGORIA_MAP[tipo_servicio] as unknown as CategoriaCuenta,
           estado: activa ? "ACTIVA" : "SUSPENDIDA_PAGO",
           costo_mensual: 20000,
         },
@@ -205,7 +206,7 @@ export async function importarCsvSoftguard(
             cuenta_id: cuenta.id,
             codigo_zona: zona.codigo,
             etiqueta: zona.nombre,
-            tipo: zona.tipo as never,
+            tipo: zona.tipo as unknown as TipoSensor,
             activa: zona.activa,
           },
           update: {
