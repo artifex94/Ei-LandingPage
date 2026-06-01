@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
-import { registrarAudit } from "@/lib/audit";
+import { registrarAudit, registrarAuditTx } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
 
 export interface ConfirmarResult {
@@ -79,22 +79,35 @@ export async function anularPago(pagoId: string): Promise<{ error?: string }> {
   const admin = await requireAdmin();
   if (!admin) return { error: "Sin permisos de administrador." };
 
-  const pago = await prisma.pago.findUnique({
-    where: { id: pagoId },
-    select: { estado: true, mes: true, anio: true, cuenta_id: true },
-  });
+  // Snapshot COMPLETO antes de borrar: tras el delete, este registro de
+  // auditoría es la ÚNICA copia que queda del pago.
+  const pago = await prisma.pago.findUnique({ where: { id: pagoId } });
   if (!pago) return { error: "Pago no encontrado." };
   if (pago.estado === "PROCESANDO") return { error: "No se puede anular un pago en proceso de acreditación." };
 
-  await prisma.pago.delete({ where: { id: pagoId } });
-
-  await registrarAudit({
-    admin_id: admin.id,
-    admin_nombre: admin.nombre,
-    accion: "PAGO_ANULADO",
-    entidad: "pago",
-    entidad_id: pagoId,
-    detalle: { mes: pago.mes, anio: pago.anio, cuenta_id: pago.cuenta_id },
+  // Audit + delete atómicos: o queda el rastro y se borra el pago, o no ocurre
+  // ninguna de las dos cosas. registrarAuditTx propaga errores para revertir.
+  await prisma.$transaction(async (tx) => {
+    await registrarAuditTx(tx, {
+      admin_id: admin.id,
+      admin_nombre: admin.nombre,
+      accion: "PAGO_ANULADO",
+      entidad: "pago",
+      entidad_id: pagoId,
+      detalle: {
+        cuenta_id: pago.cuenta_id,
+        mes: pago.mes,
+        anio: pago.anio,
+        importe: Number(pago.importe),
+        estado: pago.estado,
+        metodo: pago.metodo,
+        ref_externa: pago.ref_externa,
+        acreditado_en: pago.acreditado_en,
+        registrado_por: pago.registrado_por,
+        factura_id: pago.factura_id,
+      },
+    });
+    await tx.pago.delete({ where: { id: pagoId } });
   });
 
   revalidatePath("/admin/pagos");
