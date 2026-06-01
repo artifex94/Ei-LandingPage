@@ -65,9 +65,12 @@ test.describe("calcularEstadoFinanciero", () => {
       estado: "VENCIDO",
     };
     const r = calcularEstadoFinanciero("ACTIVA", [pagoDelMesActual]);
-    // Solo tiene mora si hoy es DESPUÉS del último día del mes
+    // Comparar por fecha-a-medianoche, igual que calcDPD. Si no, el ÚLTIMO día
+    // del mes el test rompe: `hoy` lleva la hora actual (> último día a 00:00),
+    // mientras calcDPD normaliza con setHours(0,0,0,0) y da DPD = 0 → ACTIVE.
+    const hoySoloFecha = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-    if (hoy <= ultimoDiaMes) {
+    if (hoySoloFecha <= ultimoDiaMes) {
       expect(r.tipo).toBe("ACTIVE");
     } else {
       expect(r.tipo).not.toBe("ACTIVE");

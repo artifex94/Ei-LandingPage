@@ -373,21 +373,21 @@ export function AdminSidebar({
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const [openSections, setOpenSections] = useState<Set<NavSection["id"]>>(() => {
-    const current = getSectionForPath(pathname);
-    return new Set(current ? [current] : []);
-  });
+  const seccionActual = getSectionForPath(pathname);
+  const [openSections, setOpenSections] = useState<Set<NavSection["id"]>>(
+    () => new Set(seccionActual ? [seccionActual] : [])
+  );
 
-  // Abre la sección al navegar desde fuera (e.g. link directo)
-  useEffect(() => {
-    const section = getSectionForPath(pathname);
-    if (section) {
-      setOpenSections((prev) => {
-        if (prev.has(section)) return prev;
-        return new Set([...prev, section]);
-      });
+  // Abre la sección de la ruta actual al navegar (link directo / cambio de ruta)
+  // ajustando el estado DURANTE el render — patrón recomendado de React para
+  // derivar estado de un valor cambiante, sin useEffect ni renders en cascada.
+  const [rutaPrevia, setRutaPrevia] = useState(pathname);
+  if (pathname !== rutaPrevia) {
+    setRutaPrevia(pathname);
+    if (seccionActual && !openSections.has(seccionActual)) {
+      setOpenSections((prev) => new Set([...prev, seccionActual]));
     }
-  }, [pathname]);
+  }
 
   function toggleSection(id: NavSection["id"]) {
     setOpenSections((prev) => {

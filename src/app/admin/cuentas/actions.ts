@@ -56,7 +56,7 @@ export async function actualizarCuenta(
   const { id, motivo_baja, ...data } = parsed.data;
 
   // Cuando es baja definitiva, prepender nota de baja a notas_tecnicas
-  let updateData = { ...data };
+  const updateData = { ...data };
   if (data.estado === "BAJA_DEFINITIVA" && motivo_baja?.trim()) {
     const fechaBaja = new Date().toLocaleDateString("es-AR");
     const notaBaja = `[BAJA ${fechaBaja} — por ${admin.nombre}] ${motivo_baja.trim()}`;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 import {
   analizarXLS,
   aplicarCorreccionesSeleccionadas,
@@ -397,12 +398,12 @@ export default function HigienizarPage() {
           )}
 
           <div className="flex gap-3">
-            <a
+            <Link
               href="/admin/clientes"
               className="inline-block bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg px-6 py-3 min-h-[48px] transition-colors"
             >
               Ver clientes
-            </a>
+            </Link>
             <button
               type="button"
               onClick={() => {

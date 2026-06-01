@@ -1,11 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { read, utils } from "xlsx";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants/billing";
 import { siteConfig } from "@/config/site";
+import { requireRol } from "@/lib/auth/session";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -218,16 +217,8 @@ function normalizarHeaders(row: Record<string, string>): Record<string, string> 
 
 // ── Server Action principal ───────────────────────────────────────────────────
 
-async function verificarAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") redirect("/portal/dashboard");
-}
-
 export async function analizarXLS(formData: FormData): Promise<ResultadoAnalisis> {
-  await verificarAdmin();
+  await requireRol("ADMIN");
 
   const archivo = formData.get("archivo") as File | null;
   if (!archivo) {
@@ -415,7 +406,7 @@ const CAMPOS_PERFIL_ACTUALIZABLES = new Set<string>(["nombre", "telefono"]);
 export async function aplicarCorreccionesSeleccionadas(
   correcciones: Correccion[]
 ): Promise<ResultadoAplicacion> {
-  await verificarAdmin();
+  await requireRol("ADMIN");
 
   let aplicadas = 0;
   const errores: ResultadoAplicacion["errores"] = [];

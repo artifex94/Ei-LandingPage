@@ -3,10 +3,9 @@
 import { Readable } from "stream";
 import { parse } from "csv-parse";
 import { z } from "zod";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
+import { requireRol } from "@/lib/auth/session";
 import type { CategoriaCuenta, TipoSensor } from "@/generated/prisma/client";
 import { MAX_UPLOAD_BYTES } from "@/lib/constants/billing";
 
@@ -54,14 +53,7 @@ export interface ImportResult {
 export async function importarCsvSoftguard(
   formData: FormData
 ): Promise<ImportResult> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") {
-    return { ok: 0, errores: ["Sin permisos de administrador."] };
-  }
+  await requireRol("ADMIN");
 
   const archivo = formData.get("csv") as File | null;
   if (!archivo || archivo.size === 0) {

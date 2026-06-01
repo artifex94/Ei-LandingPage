@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   if (evento.type === "payment.completed") {
     const externalId = evento.data?.external_id;
     if (externalId) {
-      await prisma.pago.updateMany({
+      const { count } = await prisma.pago.updateMany({
         where: { ref_externa: String(externalId) },
         data: {
           estado: "PAGADO",
@@ -45,8 +45,17 @@ export async function POST(req: Request) {
         },
       });
 
-      revalidatePath("/portal/pagos");
-      revalidatePath("/admin/pagos");
+      if (count === 0) {
+        // Pago completado en Talo SIN pago local con esa ref_externa:
+        // acreditación sin conciliar. Devolvemos OK pero lo dejamos asentado.
+        console.error(
+          "[conciliacion][talo] payment.completed sin pago local con esa ref_externa",
+          { externalId: String(externalId) }
+        );
+      } else {
+        revalidatePath("/portal/pagos");
+        revalidatePath("/admin/pagos");
+      }
     }
   }
 

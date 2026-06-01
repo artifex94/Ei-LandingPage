@@ -79,8 +79,8 @@ export async function POST(req: Request) {
   const detalle = await detRes.json();
 
   if (detalle.status === "approved") {
-    // ref_externa UNIQUE → idempotente: si ya existe, updateMany no falla
-    await prisma.pago.updateMany({
+    // ref_externa UNIQUE → idempotente: reaplicar el update es seguro.
+    const { count } = await prisma.pago.updateMany({
       where: { ref_externa: String(mpPaymentId) },
       data: {
         estado: "PAGADO",
@@ -89,8 +89,22 @@ export async function POST(req: Request) {
       },
     });
 
-    revalidatePath("/portal/pagos");
-    revalidatePath("/admin/pagos");
+    if (count === 0) {
+      // Pago aprobado en Mercado Pago SIN pago local con esa ref_externa:
+      // dinero acreditado que no se pudo conciliar. Devolvemos OK igual (no
+      // queremos que MP reintente en loop), pero esto NO puede pasar silencioso.
+      console.error(
+        "[conciliacion][mercadopago] pago approved sin pago local con esa ref_externa",
+        {
+          mpPaymentId: String(mpPaymentId),
+          monto: detalle.transaction_amount ?? null,
+          payerEmail: detalle.payer?.email ?? null,
+        }
+      );
+    } else {
+      revalidatePath("/portal/pagos");
+      revalidatePath("/admin/pagos");
+    }
   }
 
   return new Response("OK");

@@ -1,30 +1,21 @@
-"use server";
+import "server-only";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma/client";
-
-export async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") return null;
-  return perfil;
-}
-
-export async function requireAdminWithName() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const perfil = await prisma.perfil.findUnique({
-    where: { id: user.id },
-    select: { rol: true, nombre: true },
-  });
-  if (perfil?.rol !== "ADMIN") return null;
-  return { id: user.id, nombre: perfil.nombre };
-}
+/**
+ * Punto de entrada retrocompatible de los guards de autorización.
+ *
+ * La implementación vive en `@/lib/auth/*` (política pura + guards de sesión
+ * + wrappers para Server Actions). Este archivo se mantiene para no romper
+ * los imports existentes (`@/lib/actions/auth`).
+ *
+ * Para código nuevo, preferí importar directamente desde:
+ *   - `@/lib/auth/session` → requireRol / requireSesion / requireAdmin
+ *   - `@/lib/auth/guard`   → accionAdmin / accionConRol (Server Actions)
+ */
+export {
+  getSesion,
+  requireSesion,
+  requireRol,
+  requireAdmin,
+  requireAdminWithName,
+  type Sesion,
+} from "@/lib/auth/session";

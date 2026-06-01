@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Las comillas/apóstrofes en texto JSX se renderizan igual estén escapadas
+      // o no; esta regla genera fricción sin beneficio real. Desactivada a
+      // propósito (revertir si se quiere reimponer el escapado).
+      "react/no-unescaped-entities": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

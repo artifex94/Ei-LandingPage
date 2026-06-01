@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { FacturacionTabs } from "@/components/admin/facturacion/FacturacionTabs";
 import { GenerarBorradoresButton } from "@/components/admin/facturacion/GenerarBorradoresButton";
@@ -68,7 +69,7 @@ export default async function FacturacionPage() {
             </strong>{" "}
             El borrador se genera igual pero el CUIT receptor quedará vacío.{" "}
             Completalo en la pestaña <strong>Titulares</strong> o en{" "}
-            <a href="/admin/clientes" className="underline">Clientes</a>.
+            <Link href="/admin/clientes" className="underline">Clientes</Link>.
           </p>
         </div>
       )}

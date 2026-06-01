@@ -1,23 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
-
-async function getAdminPerfil() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") redirect("/portal/dashboard");
-
-  return perfil;
-}
+import { requireAdmin } from "@/lib/auth/session";
+import { accionAdmin } from "@/lib/auth/guard";
 
 /** Verifica unicidad del valor nuevo para campos únicos (telefono, email) */
 async function verificarUnicidad(
@@ -40,64 +27,67 @@ async function verificarUnicidad(
 }
 
 // ── Aprobar cambio ────────────────────────────────────────────────────────────
+// Invocado programáticamente (await + se lee el retorno), así que usa el wrapper
+// accionAdmin: la autorización es estructural y el contexto (ctx.nombre) queda
+// disponible para auditoría. Si no es admin, devuelve { error } y el form lo muestra.
 
-export async function aprobarCambio(id: string): Promise<{ error?: string }> {
-  const adminPerfil = await getAdminPerfil();
-
-  const solicitud = await prisma.solicitudCambioInfo.findUnique({
-    where: { id },
-    include: { perfil: true },
-  });
-
-  if (!solicitud || solicitud.estado !== "PENDIENTE") {
-    return { error: "Solicitud no encontrada o ya procesada." };
-  }
-
-  const errorUnicidad = await verificarUnicidad(
-    solicitud.campo,
-    solicitud.valor_nuevo,
-    solicitud.perfil_id
-  );
-
-  if (errorUnicidad) {
-    // Rechazar automáticamente con la razón
-    await prisma.solicitudCambioInfo.update({
+export const aprobarCambio = accionAdmin(
+  async (ctx, id: string): Promise<{ error?: string }> => {
+    const solicitud = await prisma.solicitudCambioInfo.findUnique({
       where: { id },
-      data: {
-        estado: "RECHAZADO",
-        notas_admin: errorUnicidad,
-        revisado_en: new Date(),
-        revisado_por: adminPerfil.nombre,
-      },
+      include: { perfil: true },
     });
+
+    if (!solicitud || solicitud.estado !== "PENDIENTE") {
+      return { error: "Solicitud no encontrada o ya procesada." };
+    }
+
+    const errorUnicidad = await verificarUnicidad(
+      solicitud.campo,
+      solicitud.valor_nuevo,
+      solicitud.perfil_id
+    );
+
+    if (errorUnicidad) {
+      // Rechazar automáticamente con la razón
+      await prisma.solicitudCambioInfo.update({
+        where: { id },
+        data: {
+          estado: "RECHAZADO",
+          notas_admin: errorUnicidad,
+          revisado_en: new Date(),
+          revisado_por: ctx.nombre,
+        },
+      });
+      revalidatePath("/admin/solicitudes-cambio");
+      revalidatePath(`/admin/clientes/${solicitud.perfil_id}`);
+      return { error: errorUnicidad };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Aplicar el cambio al perfil
+      await tx.perfil.update({
+        where: { id: solicitud.perfil_id },
+        data: { [solicitud.campo]: solicitud.valor_nuevo },
+      });
+
+      // Marcar la solicitud como aprobada
+      await tx.solicitudCambioInfo.update({
+        where: { id },
+        data: {
+          estado: "APROBADO",
+          revisado_en: new Date(),
+          revisado_por: ctx.nombre,
+        },
+      });
+    });
+
     revalidatePath("/admin/solicitudes-cambio");
     revalidatePath(`/admin/clientes/${solicitud.perfil_id}`);
-    return { error: errorUnicidad };
+
+    return {};
   }
-
-  await prisma.$transaction(async (tx) => {
-    // Aplicar el cambio al perfil
-    await tx.perfil.update({
-      where: { id: solicitud.perfil_id },
-      data: { [solicitud.campo]: solicitud.valor_nuevo },
-    });
-
-    // Marcar la solicitud como aprobada
-    await tx.solicitudCambioInfo.update({
-      where: { id },
-      data: {
-        estado: "APROBADO",
-        revisado_en: new Date(),
-        revisado_por: adminPerfil.nombre,
-      },
-    });
-  });
-
-  revalidatePath("/admin/solicitudes-cambio");
-  revalidatePath(`/admin/clientes/${solicitud.perfil_id}`);
-
-  return {};
-}
+);
 
 // ── Rechazar cambio ───────────────────────────────────────────────────────────
 
@@ -110,7 +100,7 @@ export async function rechazarCambio(
   _prev: { error: string; ok?: boolean } | null,
   formData: FormData
 ): Promise<{ error: string; ok?: boolean } | null> {
-  const adminPerfil = await getAdminPerfil();
+  const adminPerfil = await requireAdmin();
 
   const input = rechazarSchema.safeParse({
     id: formData.get("id"),
@@ -154,7 +144,7 @@ export async function editarYAprobarCambio(
   _prev: { error: string; ok?: boolean } | null,
   formData: FormData
 ): Promise<{ error: string; ok?: boolean } | null> {
-  const adminPerfil = await getAdminPerfil();
+  const adminPerfil = await requireAdmin();
 
   const input = editarSchema.safeParse({
     id: formData.get("id"),
