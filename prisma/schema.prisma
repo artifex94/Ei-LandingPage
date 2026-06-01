@@ -676,6 +676,7 @@ model CamaraCliente {
 enum OrigenNotificacion {
   SOFTGUARD
   PORTAL
+  COBRANZA
 }
 
 enum EstadoNotificacion {
