@@ -1,18 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
-import { createClient } from "@/lib/supabase/server";
 import type { FranjaTurno, EstadoTurno } from "@/generated/prisma/client";
-
-async function getAdminActual() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  return perfil?.rol === "ADMIN" ? perfil : null;
-}
 
 export async function asignarTurno(data: {
   empleado_id: string;
@@ -20,8 +13,7 @@ export async function asignarTurno(data: {
   franja: FranjaTurno;
   notas?: string;
 }) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const turno = await prisma.turno.upsert({
     where: {
@@ -49,8 +41,7 @@ export async function asignarTurno(data: {
 }
 
 export async function cambiarEstadoTurno(turno_id: string, estado: EstadoTurno) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const ahora = new Date();
   const turno = await prisma.turno.update({
@@ -77,8 +68,7 @@ export async function cambiarEstadoTurno(turno_id: string, estado: EstadoTurno) 
 }
 
 export async function eliminarTurno(turno_id: string) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   await prisma.turno.delete({ where: { id: turno_id } });
 

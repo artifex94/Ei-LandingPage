@@ -104,7 +104,7 @@ function FilaSensor({ sensor }: { sensor: SensorData }) {
               <button
                 type="submit"
                 disabled={pending}
-                className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-xs font-semibold"
+                className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-slate-900 px-3 py-1.5 rounded-lg text-xs font-semibold"
               >
                 {pending ? "Guardando…" : "Guardar"}
               </button>
@@ -179,7 +179,7 @@ function FilaSensor({ sensor }: { sensor: SensorData }) {
             <button
               type="button"
               onClick={() => setConfirmarBorrar(true)}
-              className="text-xs text-slate-600 hover:text-red-400 transition-colors"
+              className="text-xs text-slate-500 hover:text-red-400 transition-colors"
             >
               Eliminar
             </button>
@@ -290,7 +290,7 @@ function NuevoSensorForm({ cuentaId }: { cuentaId: string }) {
           <button
             type="submit"
             disabled={pending}
-            className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-xs font-semibold"
+            className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-slate-900 px-3 py-1.5 rounded-lg text-xs font-semibold"
           >
             {pending ? "Agregando…" : "Agregar"}
           </button>
@@ -406,7 +406,7 @@ function MobileSensorCard({ sensor }: { sensor: SensorData }) {
             <button
               type="submit"
               disabled={pending}
-              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-xs font-semibold flex-1"
+              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-slate-900 px-4 py-2 rounded-lg text-xs font-semibold flex-1"
             >
               {pending ? "Guardando…" : "Guardar"}
             </button>
@@ -466,7 +466,7 @@ function MobileSensorCard({ sensor }: { sensor: SensorData }) {
         ) : (
           <button
             onClick={() => setConfirmarBorrar(true)}
-            className="text-xs text-slate-600 hover:text-red-400"
+            className="text-xs text-slate-500 hover:text-red-400"
           >
             Eliminar
           </button>

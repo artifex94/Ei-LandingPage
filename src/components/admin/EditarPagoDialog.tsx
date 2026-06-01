@@ -120,7 +120,7 @@ export function EditarPagoDialog({ pago }: Props) {
                 <button
                   type="submit"
                   disabled={pending}
-                  className="flex-1 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
+                  className="flex-1 text-sm font-semibold bg-orange-500 hover:bg-orange-400 disabled:opacity-60 text-slate-900 px-4 py-2.5 rounded-lg transition-colors"
                 >
                   {pending ? "Guardando…" : "Guardar"}
                 </button>

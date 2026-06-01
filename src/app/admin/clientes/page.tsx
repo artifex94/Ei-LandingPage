@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
+
+export const metadata: Metadata = { title: "Clientes" };
 
 const POR_PAGINA = 30;
 
@@ -31,7 +34,7 @@ export default async function ClientesPage({
     prisma.perfil.count({ where }),
     prisma.perfil.findMany({
       where,
-      include: { cuentas: { select: { id: true, estado: true } } },
+      include: { cuentas: { select: { id: true } } },
       orderBy: { nombre: "asc" },
       skip: (pagina - 1) * POR_PAGINA,
       take: POR_PAGINA,
@@ -44,7 +47,7 @@ export default async function ClientesPage({
     <section aria-labelledby="clientes-heading">
       <div className="flex items-center justify-between mb-6 gap-4">
         <h1 id="clientes-heading" className="text-2xl font-bold text-white">
-          Clientes ({perfiles.length})
+          Clientes ({total})
         </h1>
         <div className="flex gap-2 shrink-0">
           <a
@@ -56,7 +59,7 @@ export default async function ClientesPage({
           </a>
           <Link
             href="/admin/clientes/nuevo"
-            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
+            className="bg-orange-500 hover:bg-orange-600 text-slate-900 font-semibold px-4 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
           >
             + Nuevo
           </Link>
@@ -115,29 +118,45 @@ export default async function ClientesPage({
           {/* ── Cards — mobile ───────────────────────────────────────────────── */}
           <div className="md:hidden space-y-3">
             {perfiles.map((p) => (
-              <Link
+              <div
                 key={p.id}
-                href={`/admin/clientes/${p.id}`}
-                className="block bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 hover:border-orange-500/50 active:bg-slate-700 transition-colors"
+                className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-4"
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-white truncate">{p.nombre}</p>
-                    <p className="text-sm text-slate-400 mt-0.5">
-                      DNI: {p.dni ?? "—"}
+                    <Link
+                      href={`/admin/clientes/${p.id}`}
+                      className="font-semibold text-white truncate block hover:text-orange-400 transition-colors"
+                    >
+                      {p.nombre}
+                    </Link>
+                    <p className="text-xs text-slate-500 mt-0.5 font-mono">
+                      {p.dni ?? "—"}
                     </p>
-                    {p.telefono && (
-                      <p className="text-sm text-slate-400">{p.telefono}</p>
-                    )}
                   </div>
-                  <div className="shrink-0 text-right">
-                    <span className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded-full font-medium">
-                      {p.cuentas.length} cuenta{p.cuentas.length !== 1 ? "s" : ""}
+                  <div className="shrink-0 flex items-center gap-2">
+                    {p.telefono && (
+                      <a
+                        href={`https://wa.me/549${p.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${p.nombre.split(" ")[0]}, te contactamos de Escobar Instalaciones.`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-green-700 hover:bg-green-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
+                      >
+                        WA
+                      </a>
+                    )}
+                    <span className="text-xs bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg font-medium">
+                      {p.cuentas.length}c
                     </span>
-                    <p className="text-orange-400 text-xs mt-2">Ver →</p>
+                    <Link
+                      href={`/admin/clientes/${p.id}`}
+                      className="text-orange-400 hover:text-orange-300 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-orange-500/30 transition-colors"
+                    >
+                      Ver →
+                    </Link>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </>

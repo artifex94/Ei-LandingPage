@@ -203,7 +203,7 @@ export function PagoTotalModal({ deudas, onClose }: Props) {
       )}
       <button
         onClick={onClose}
-        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl px-5 py-4 min-h-[60px] text-lg mt-4"
+        className="w-full bg-orange-500 hover:bg-orange-600 text-slate-900 font-bold rounded-xl px-5 py-4 min-h-[60px] text-lg mt-4"
       >
         Cerrar
       </button>

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma/client";
 import { ConfiguracionForm } from "@/components/admin/configuracion/ConfiguracionForm";
 import { TARIFA_FALLBACK_PESOS } from "@/lib/constants/billing";
 
-export const metadata: Metadata = { title: "Configuración — Admin" };
+export const metadata: Metadata = { title: "Configuración" };
 
 export default async function ConfiguracionPage() {
   const [ultimaTarifa] = await Promise.all([

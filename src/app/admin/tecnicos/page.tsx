@@ -2,7 +2,7 @@ import Link from "next/link";
 import { startOfWeek, endOfWeek } from "date-fns";
 import { prisma } from "@/lib/prisma/client";
 
-export const metadata = { title: "Técnicos — Admin EI" };
+export const metadata = { title: "Técnicos" };
 
 export default async function TecnicosPage() {
   const hoy = new Date();
@@ -83,7 +83,7 @@ export default async function TecnicosPage() {
                         {t.tareas_asignadas.length}
                       </Link>
                     ) : (
-                      <span className="text-slate-600">—</span>
+                      <span className="text-slate-500">—</span>
                     )}
                   </td>
                 </tr>

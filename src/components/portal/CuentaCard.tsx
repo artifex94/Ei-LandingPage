@@ -148,7 +148,7 @@ export function CuentaCard({ cuenta }: CuentaCardProps) {
           <h2 className="font-semibold text-slate-200 text-base leading-tight truncate group-hover:text-white transition-colors">
             {cuenta.descripcion}
           </h2>
-          <span className="font-mono text-[10px] text-slate-600 tracking-widest uppercase">
+          <span className="font-mono text-[10px] text-slate-500 tracking-widest uppercase">
             {CATEGORIA_LABELS[cuenta.categoria] ?? cuenta.categoria}
           </span>
         </div>

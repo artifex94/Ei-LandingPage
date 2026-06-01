@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
@@ -6,6 +8,37 @@ import { EditarClienteForm } from "@/components/admin/EditarClienteForm";
 import { NuevaCuentaForm } from "@/components/admin/NuevaCuentaForm";
 import { EliminarClienteForm } from "@/components/admin/EliminarClienteForm";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "@/app/admin/solicitudes-cambio/AccionesForm";
+
+const getClientePerfil = cache(async (id: string) => {
+  return prisma.perfil.findUnique({
+    where: { id },
+    include: {
+      cuentas: {
+        include: {
+          pagos: {
+            where: { anio: new Date().getFullYear() },
+            orderBy: { mes: "asc" },
+          },
+          solicitudes: {
+            where: { estado: { not: "RESUELTA" } },
+            orderBy: { creada_en: "desc" },
+          },
+        },
+        orderBy: { descripcion: "asc" },
+      },
+      solicitudes_cambio: {
+        where: { estado: "PENDIENTE" },
+        orderBy: { created_at: "asc" },
+      },
+    },
+  });
+});
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const perfil = await getClientePerfil(id);
+  return { title: perfil?.nombre ?? "Cliente" };
+}
 
 const ESTADO_CUENTA: Record<string, string> = {
   ACTIVA: "Activa",
@@ -42,29 +75,7 @@ export default async function ClienteDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  const perfil = await prisma.perfil.findUnique({
-    where: { id },
-    include: {
-      cuentas: {
-        include: {
-          pagos: {
-            where: { anio: new Date().getFullYear() },
-            orderBy: { mes: "asc" },
-          },
-          solicitudes: {
-            where: { estado: { not: "RESUELTA" } },
-            orderBy: { creada_en: "desc" },
-          },
-        },
-        orderBy: { descripcion: "asc" },
-      },
-      solicitudes_cambio: {
-        where: { estado: "PENDIENTE" },
-        orderBy: { created_at: "asc" },
-      },
-    },
-  });
+  const perfil = await getClientePerfil(id);
 
   if (!perfil || perfil.rol !== "CLIENTE") notFound();
 

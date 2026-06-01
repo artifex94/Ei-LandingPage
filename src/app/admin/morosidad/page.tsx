@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
+
+export const metadata: Metadata = { title: "Morosidad" };
 
 const MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -9,7 +12,7 @@ function waLink(telefono: string, nombre: string, deuda: string) {
     `Hola ${nombre}, te contactamos de Escobar Instalaciones. Tenés pagos pendientes por $${deuda}. ¿Podemos ayudarte a regularizarlos?`
   );
   const num = telefono.replace(/\D/g, "");
-  return `https://wa.me/${num}?text=${msg}`;
+  return `https://wa.me/549${num}?text=${msg}`;
 }
 
 export default async function MorosidadPage() {
@@ -73,10 +76,19 @@ export default async function MorosidadPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-white">Morosidad</h1>
-        <span className="text-sm text-slate-400">
-          {morosas.length} cuenta{morosas.length !== 1 ? "s" : ""} con pagos vencidos
-        </span>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Morosidad</h1>
+          <p className="text-sm text-slate-400 mt-1">
+            {morosas.length} cuenta{morosas.length !== 1 ? "s" : ""} con pagos vencidos
+          </p>
+        </div>
+        <a
+          href="/api/admin/export?tipo=morosidad"
+          className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors shrink-0"
+          title="Exportar morosidad a Excel"
+        >
+          ↓ Excel
+        </a>
       </div>
 
       {grupos.length === 0 ? (
@@ -109,9 +121,12 @@ export default async function MorosidadPage() {
                     <div className="flex flex-wrap gap-3 mt-1 text-sm text-slate-400">
                       {perfil.email && <span>{perfil.email}</span>}
                       {perfil.telefono && (
-                        <span>
+                        <a
+                          href={`tel:${perfil.telefono.replace(/\D/g, "")}`}
+                          className="hover:text-white transition-colors"
+                        >
                           {perfil.telefono}
-                        </span>
+                        </a>
                       )}
                     </div>
                   </div>

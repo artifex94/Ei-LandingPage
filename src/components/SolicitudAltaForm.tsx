@@ -90,7 +90,7 @@ export function SolicitudAltaForm() {
                   className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-orange-500 transition-colors"
                 />
               </div>
-              <p className="mt-1 text-xs text-slate-600">10 dígitos sin 0 ni 15</p>
+              <p className="mt-1 text-xs text-slate-400">10 dígitos sin 0 ni 15</p>
             </div>
 
             <div>
@@ -218,7 +218,7 @@ export function SolicitudAltaForm() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-slate-900 font-semibold py-3 rounded-xl text-sm transition-colors"
           >
             {pending ? "Enviando solicitud..." : "Solicitar acceso"}
           </button>

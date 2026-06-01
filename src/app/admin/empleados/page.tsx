@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { EmpleadosTable } from "@/components/admin/empleados/EmpleadosTable";
 
-export const metadata: Metadata = { title: "Empleados — Admin" };
+export const metadata: Metadata = { title: "Empleados" };
 
 const ROL_LABEL: Record<string, string> = {
   ADMIN_GENERAL:  "Admin",
@@ -29,7 +29,7 @@ export default async function EmpleadosPage() {
         </div>
         <Link
           href="/admin/empleados/nuevo"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-semibold transition-colors"
         >
           + Nuevo empleado
         </Link>

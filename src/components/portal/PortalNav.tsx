@@ -101,7 +101,7 @@ function DesktopLink({ nav, pathname }: { nav: NavDef; pathname: string }) {
     >
       <Icon
         className={`w-3.5 h-3.5 flex-shrink-0 transition-colors
-          ${active ? "text-tactical-500" : "text-slate-600 group-hover:text-slate-400"}`}
+          ${active ? "text-tactical-500" : "text-slate-500 group-hover:text-slate-300"}`}
         strokeWidth={active ? 2.2 : 1.8}
       />
       <span>{nav.label}</span>
@@ -125,7 +125,7 @@ function BottomNavItem({ nav, pathname }: { nav: NavDef; pathname: string }) {
       className={`
         flex-1 flex flex-col items-center justify-center gap-1
         min-h-[56px] py-2 rounded-sm transition-colors duration-150
-        ${active ? "bg-tactical-500/10 text-tactical-500" : "text-slate-600 hover:text-slate-400"}
+        ${active ? "bg-tactical-500/10 text-tactical-500" : "text-slate-400 hover:text-slate-200"}
       `}
     >
       <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={active ? 2.2 : 1.8} />
@@ -162,7 +162,7 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
             </div>
             <div>
               <span className="text-sm font-semibold text-white block leading-tight">Escobar Instalaciones</span>
-              <span className="text-[9px] text-slate-600 font-mono tracking-widest uppercase">Mi Portal</span>
+              <span className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">Mi Portal</span>
             </div>
           </Link>
 

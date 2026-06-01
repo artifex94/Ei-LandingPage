@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { Car, CheckCircle, Circle } from "lucide-react";
+import { Car, Circle } from "lucide-react";
 import { reservarVehiculo, liberarVehiculo } from "@/lib/actions/vehiculo-reserva";
 
 interface Vehiculo {

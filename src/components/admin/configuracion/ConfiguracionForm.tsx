@@ -42,7 +42,7 @@ export function ConfiguracionForm({ tarifaActual }: { tarifaActual: number }) {
             <p className="text-white">{siteConfig.address.full}</p>
           </div>
         </div>
-        <p className="text-xs text-slate-600">Para modificar los datos fiscales, actualizá <code>src/config/site.ts</code>.</p>
+        <p className="text-xs text-slate-500">Para modificar los datos fiscales, actualizá <code>src/config/site.ts</code>.</p>
       </section>
 
       {/* Tarifa estándar */}

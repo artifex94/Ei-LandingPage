@@ -1,9 +1,16 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { SensorItem } from "@/components/portal/SensorItem";
 import { calcularEstadoFinanciero } from "@/lib/billing-state";
 import type { EstadoPago } from "@/generated/prisma/client";
+
+export async function generateMetadata({ params }: { params: Promise<{ perfilId: string }> }): Promise<Metadata> {
+  const { perfilId } = await params;
+  const perfil = await prisma.perfil.findUnique({ where: { id: perfilId }, select: { nombre: true } });
+  return { title: perfil?.nombre ?? "Vista cliente" };
+}
 
 // ─── Fetch + tipos inferidos desde Prisma ────────────────────────────────────
 
@@ -662,7 +669,7 @@ export default async function VistaClientePage({
           role="status"
           className="bg-orange-950/80 border-b border-orange-800/40 px-4 py-2 flex items-center gap-3"
         >
-          <span className="text-xs font-bold bg-orange-500 text-white px-2 py-0.5 rounded uppercase tracking-wide shrink-0">
+          <span className="text-xs font-bold bg-orange-500 text-slate-900 px-2 py-0.5 rounded uppercase tracking-wide shrink-0">
             Vista admin
           </span>
           <span className="text-orange-200 text-xs">
@@ -680,7 +687,7 @@ export default async function VistaClientePage({
               href={`?tab=${key}`}
               className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 isActiveNav(key)
-                  ? "bg-orange-500 text-white"
+                  ? "bg-orange-500 text-slate-900"
                   : "text-slate-400 hover:text-white"
               }`}
             >

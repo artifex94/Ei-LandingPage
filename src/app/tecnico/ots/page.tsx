@@ -1,17 +1,14 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { OtsClient, type OTCard } from "./OtsClient";
 
-export const metadata = { title: "OTs — Panel Técnico" };
+export const metadata = { title: "OTs" };
 
 export default async function OtsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const empleado = await prisma.empleado.findFirst({
-    where: { perfil_id: user.id },
+    where: { perfil_id: userId },
     select: { id: true },
   });
 

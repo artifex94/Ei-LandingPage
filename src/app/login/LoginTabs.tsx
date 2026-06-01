@@ -14,7 +14,7 @@ const inputCls =
   "w-full bg-industrial-900 border border-industrial-600 text-slate-200 placeholder:text-slate-600 font-mono rounded-sm px-4 py-3 text-sm focus:outline-2 focus:outline-tactical-500 min-h-[48px] transition-colors duration-150";
 
 const labelCls =
-  "block text-[10px] font-bold text-slate-500 mb-1.5 tracking-widest uppercase font-mono";
+  "block text-[10px] font-bold text-slate-400 mb-1.5 tracking-widest uppercase font-mono";
 
 function AlertError({ msg }: { msg: string }) {
   return (
@@ -84,7 +84,7 @@ function FormWhatsApp({ onBack }: { onBack: () => void }) {
     return (
       <div className="flex flex-col gap-4">
         <AlertOk msg="Te enviamos un link a tu WhatsApp. Tocalo para ingresar." />
-        <p className="text-xs text-slate-600 text-center font-mono">
+        <p className="text-xs text-slate-400 text-center font-mono">
           El link expira en 1 hora. Si no llega,{" "}
           <button className="text-tactical-500 hover:text-tactical-400 underline" onClick={() => window.location.reload()}>
             intentá de nuevo
@@ -111,7 +111,7 @@ function FormWhatsApp({ onBack }: { onBack: () => void }) {
           className={inputCls}
           placeholder="3436 575372"
         />
-        <p className="text-[10px] text-slate-600 mt-1.5 font-mono">
+        <p className="text-[10px] text-slate-400 mt-1.5 font-mono">
           El número registrado con Escobar Instalaciones.
         </p>
       </div>
@@ -131,7 +131,7 @@ function FormWhatsApp({ onBack }: { onBack: () => void }) {
       <button
         type="button"
         onClick={onBack}
-        className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors text-center min-h-[44px] font-mono tracking-widest uppercase"
+        className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors text-center min-h-[44px] font-mono tracking-widest uppercase"
       >
         ← Volver
       </button>
@@ -168,9 +168,9 @@ function FormEmail({ onBack }: { onBack: () => void }) {
           <button
             type="submit"
             disabled={magicPending}
-            className={`${mechBtnCls} bg-tactical-500 text-white border border-tactical-600 border-b-[5px] border-b-tactical-600 hover:bg-tactical-400 active:border-b-[1px] active:translate-y-[4px] active:bg-tactical-600`}
+            className={`${mechBtnCls} bg-tactical-500 text-slate-900 border border-tactical-600 border-b-[5px] border-b-tactical-600 hover:bg-tactical-400 active:border-b-[1px] active:translate-y-[4px] active:bg-tactical-600`}
           >
-            {magicPending ? <><Spinner /> Enviando…</> : "Enviar link de acceso"}
+            {magicPending ? <><Spinner /> Enviando…</> : "Enviarme link de acceso"}
           </button>
         </form>
       )}
@@ -180,7 +180,7 @@ function FormEmail({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={() => setMostrarPassword((v) => !v)}
-          className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors w-full text-center min-h-[44px] font-mono tracking-widest uppercase"
+          className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors w-full text-center min-h-[44px] font-mono tracking-widest uppercase"
         >
           {mostrarPassword ? "▲ Ocultar" : "¿Tenés contraseña? Ingresar con contraseña"}
         </button>
@@ -218,7 +218,7 @@ function FormEmail({ onBack }: { onBack: () => void }) {
       <button
         type="button"
         onClick={onBack}
-        className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors text-center min-h-[44px] font-mono tracking-widest uppercase"
+        className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors text-center min-h-[44px] font-mono tracking-widest uppercase"
       >
         ← Volver
       </button>
@@ -260,14 +260,14 @@ function FormDni({ onBack }: { onBack: () => void }) {
       <button
         type="submit"
         disabled={pending}
-        className={`${mechBtnCls} bg-tactical-500 text-white border border-tactical-600 border-b-[5px] border-b-tactical-600 hover:bg-tactical-400 active:border-b-[1px] active:translate-y-[4px] active:bg-tactical-600`}
+        className={`${mechBtnCls} bg-tactical-500 text-slate-900 border border-tactical-600 border-b-[5px] border-b-tactical-600 hover:bg-tactical-400 active:border-b-[1px] active:translate-y-[4px] active:bg-tactical-600`}
       >
         {pending ? <><Spinner /> Ingresando…</> : "Ingresar"}
       </button>
       <button
         type="button"
         onClick={onBack}
-        className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors text-center min-h-[44px] font-mono tracking-widest uppercase"
+        className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors text-center min-h-[44px] font-mono tracking-widest uppercase"
       >
         ← Volver
       </button>
@@ -282,7 +282,7 @@ type Metodo = "whatsapp" | "email" | "dni";
 function SelectorMetodo({ onSelect }: { onSelect: (m: Metodo) => void }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-[10px] text-slate-600 text-center mb-2 font-mono tracking-widest uppercase">
+      <p className="text-[10px] text-slate-400 text-center mb-2 font-mono tracking-widest uppercase">
         Seleccioná método de acceso
       </p>
 
@@ -297,7 +297,7 @@ function SelectorMetodo({ onSelect }: { onSelect: (m: Metodo) => void }) {
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-slate-200 font-semibold text-sm leading-tight">WhatsApp</div>
-          <div className="text-slate-600 text-[10px] mt-0.5 font-mono">Recibís un link — tocás y entrás</div>
+          <div className="text-slate-400 text-[10px] mt-0.5 font-mono">Recibís un link — tocás y entrás</div>
         </div>
         <span className="text-slate-700 group-hover:text-slate-500 transition-colors text-sm font-mono">›</span>
       </button>
@@ -316,7 +316,7 @@ function SelectorMetodo({ onSelect }: { onSelect: (m: Metodo) => void }) {
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-slate-200 font-semibold text-sm leading-tight">Email</div>
-          <div className="text-slate-600 text-[10px] mt-0.5 font-mono">Link de acceso a tu correo</div>
+          <div className="text-slate-400 text-[10px] mt-0.5 font-mono">Link de acceso a tu correo</div>
         </div>
         <span className="text-slate-700 group-hover:text-slate-500 transition-colors text-sm font-mono">›</span>
       </button>
@@ -325,7 +325,7 @@ function SelectorMetodo({ onSelect }: { onSelect: (m: Metodo) => void }) {
       <button
         type="button"
         onClick={() => onSelect("dni")}
-        className="w-full text-[10px] text-slate-600 hover:text-slate-400 transition-colors py-2 min-h-[44px] text-center font-mono tracking-widest uppercase"
+        className="w-full text-[10px] text-slate-400 hover:text-slate-200 transition-colors py-2 min-h-[44px] text-center font-mono tracking-widest uppercase"
       >
         Ingresar con DNI y contraseña
       </button>

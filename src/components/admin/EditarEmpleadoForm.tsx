@@ -196,7 +196,7 @@ export function EditarEmpleadoForm({ empleado, esEscobarAdmin = false }: Props) 
       <button
         type="submit"
         disabled={pending}
-        className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+        className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-slate-900 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
       >
         {pending ? "Guardando…" : "Guardar cambios"}
       </button>

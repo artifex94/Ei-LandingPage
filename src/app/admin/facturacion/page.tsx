@@ -5,7 +5,7 @@ import { FacturacionTabs } from "@/components/admin/facturacion/FacturacionTabs"
 import { GenerarBorradoresButton } from "@/components/admin/facturacion/GenerarBorradoresButton";
 import { siteConfig } from "@/config/site";
 
-export const metadata: Metadata = { title: "Facturación — Admin" };
+export const metadata: Metadata = { title: "Facturación" };
 
 export default async function FacturacionPage() {
   const hoy = new Date();

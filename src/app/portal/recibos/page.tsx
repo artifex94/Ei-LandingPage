@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { METODO_LABEL } from "@/lib/constants/payment";
 
-export const metadata: Metadata = { title: "Mis Recibos — Portal" };
+export const metadata: Metadata = { title: "Mis recibos" };
 
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -13,14 +12,12 @@ const MESES_ES = [
 ];
 
 export default async function RecibosPortalPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const pagos = await prisma.pago.findMany({
     where: {
       estado: "PAGADO",
-      cuenta: { perfil_id: user.id },
+      cuenta: { perfil_id: userId },
     },
     include: {
       cuenta: { select: { descripcion: true } },

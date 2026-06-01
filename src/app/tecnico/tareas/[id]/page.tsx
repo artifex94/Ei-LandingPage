@@ -1,10 +1,17 @@
-import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { marcarCompletada, guardarNotas } from "./actions";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const tarea = await prisma.tareaAgendada.findUnique({ where: { id }, select: { titulo: true } });
+  return { title: tarea?.titulo ?? "Tarea" };
+}
 
 const PRIORIDAD_BADGE: Record<string, string> = {
   ALTA:  "bg-red-500/20 text-red-300",
@@ -31,12 +38,7 @@ export default async function TareaDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const tarea = await prisma.tareaAgendada.findUnique({
     where: { id },
@@ -52,7 +54,7 @@ export default async function TareaDetallePage({
     },
   });
 
-  if (!tarea || tarea.tecnico_id !== user.id) notFound();
+  if (!tarea || tarea.tecnico_id !== userId) notFound();
 
   const fechaFormateada = format(new Date(tarea.fecha), "EEEE d 'de' MMMM", { locale: es });
   const mapsQuery = [tarea.cuenta?.calle, tarea.cuenta?.localidad, tarea.cuenta?.provincia]

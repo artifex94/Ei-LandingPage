@@ -40,7 +40,7 @@ function ProcesarForm({ altaId }: { altaId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-white transition-colors min-h-[36px]"
+        className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-slate-900 transition-colors min-h-[36px]"
       >
         {pending ? "Procesando..." : "Procesar"}
       </button>
@@ -83,7 +83,15 @@ export function AltaUsuarioRow({ solicitud }: { solicitud: AltaUsuario }) {
   return (
     <tr className="hover:bg-slate-700/20 transition-colors">
       <td className="px-4 py-3 text-white font-medium">{solicitud.nombre}</td>
-      <td className="px-4 py-3 text-slate-400 font-mono text-xs">{solicitud.telefono}</td>
+      <td className="px-4 py-3 text-xs">
+        {solicitud.telefono ? (
+          <a href={`tel:${solicitud.telefono.replace(/\D/g, "")}`} className="text-slate-400 hover:text-white font-mono transition-colors">
+            {solicitud.telefono}
+          </a>
+        ) : (
+          <span className="text-slate-600 font-mono">—</span>
+        )}
+      </td>
       <td className="px-4 py-3 text-slate-400 text-xs">{solicitud.dni ?? "—"}</td>
       <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{fecha}</td>
       <td className="px-4 py-3">
@@ -103,7 +111,7 @@ export function AltaUsuarioRow({ solicitud }: { solicitud: AltaUsuario }) {
         {solicitud.estado === "PROCESADA" && solicitud.perfil_id && (
           <Link
             href={`/admin/clientes/${solicitud.perfil_id}`}
-            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
           >
             Ver cliente →
           </Link>

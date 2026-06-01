@@ -19,7 +19,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variants = {
       primary: `
-        bg-tactical-500 text-white
+        bg-tactical-500 text-slate-900
         border border-tactical-600
         border-b-[5px] border-b-tactical-600
         shadow-[0_1px_0_rgba(255,255,255,0.06)_inset]

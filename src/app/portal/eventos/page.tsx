@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
-export const metadata: Metadata = { title: "Mis eventos — Portal EI" };
+export const metadata: Metadata = { title: "Mis eventos" };
 
 const ESTADO_LABEL: Record<string, string> = {
   NUEVO:                   "Nuevo",
@@ -30,24 +29,20 @@ const ESTADO_COLOR: Record<string, string> = {
 };
 
 export default async function EventosPortalPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const cuentaIds = await prisma.cuenta.findMany({
-    where: { perfil_id: user.id, estado: { not: "BAJA_DEFINITIVA" } },
-    select: { id: true },
-  });
-
-  const ids = cuentaIds.map((c) => c.id);
+  const { userId } = await requireSesion();
 
   const eventos = await prisma.eventoAlarma.findMany({
-    where: { cuenta_id: { in: ids } },
+    where: {
+      cuenta: {
+        perfil_id: userId,
+        estado: { not: "BAJA_DEFINITIVA" },
+      },
+    },
     include: {
       cuenta: { select: { descripcion: true } },
     },
     orderBy: { fecha_evento: "desc" },
-    take: 50,
+    take: 100,
   });
 
   return (
@@ -55,14 +50,16 @@ export default async function EventosPortalPage() {
       <div>
         <h1 className="text-xl font-bold text-white">Mis eventos</h1>
         <p className="text-sm text-slate-400 mt-0.5">
-          Alarmas y eventos recientes de tus cuentas
+          {eventos.length > 0
+            ? `Últimos ${eventos.length} eventos de tus cuentas`
+            : "Alarmas y eventos recientes de tus cuentas"}
         </p>
       </div>
 
       {eventos.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center">
           <p className="text-slate-400">No hay eventos registrados todavía.</p>
-          <p className="text-xs text-slate-600 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Los eventos de alarma aparecen aquí una vez que el sistema esté sincronizado.
           </p>
         </div>
@@ -91,7 +88,7 @@ export default async function EventosPortalPage() {
                     {ESTADO_LABEL[ev.estado] ?? ev.estado}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-2">
+                <p className="text-xs text-slate-400 mt-2">
                   {new Date(ev.fecha_evento).toLocaleString("es-AR", {
                     day: "2-digit", month: "2-digit", year: "2-digit",
                     hour: "2-digit", minute: "2-digit",

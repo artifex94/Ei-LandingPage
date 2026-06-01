@@ -298,6 +298,9 @@ model Pago {
 
   @@unique([cuenta_id, mes, anio])
   @@index([cuenta_id])
+  @@index([factura_id])
+  @@index([estado])
+  @@index([mes, anio])
   @@map("pagos")
 }
 
@@ -565,6 +568,7 @@ model ReservaVehiculo {
   created_at  DateTime      @default(now())
 
   @@index([vehiculo_id, desde])
+  @@index([empleado_id])
   @@map("reservas_vehiculo")
 }
 
@@ -610,6 +614,8 @@ model OrdenTrabajo {
 
   @@index([estado])
   @@index([tecnico_id, fecha_visita])
+  @@index([cuenta_id])
+  @@index([perfil_id])
   @@map("ordenes_trabajo")
 }
 
@@ -731,6 +737,7 @@ model TareaAgendada {
 
   @@index([tecnico_id])
   @@index([fecha])
+  @@index([cuenta_id])
   @@map("tareas_agendadas")
 }
 

@@ -20,7 +20,7 @@ export function NuevaSolicitudAdminDialog({ cuentas }: { cuentas: CuentaItem[] }
     <>
       <button
         onClick={() => setOpen(true)}
-        className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
+        className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-slate-900 px-4 py-2 rounded-lg transition-colors"
       >
         + Nueva solicitud
       </button>
@@ -95,7 +95,7 @@ export function NuevaSolicitudAdminDialog({ cuentas }: { cuentas: CuentaItem[] }
                 <button
                   type="submit"
                   disabled={pending}
-                  className="flex-1 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
+                  className="flex-1 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 px-4 py-2.5 rounded-lg transition-colors"
                 >
                   {pending ? "Creando…" : "Crear solicitud"}
                 </button>

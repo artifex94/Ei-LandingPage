@@ -5,7 +5,7 @@ import { ReservasVehiculo } from "@/components/admin/vehiculo/ReservasVehiculo";
 import { NuevaReservaDialog } from "@/components/admin/vehiculo/NuevaReservaDialog";
 import { EditarVehiculoDialog } from "@/components/admin/vehiculo/EditarVehiculoDialog";
 
-export const metadata: Metadata = { title: "Vehículo — Admin" };
+export const metadata: Metadata = { title: "Vehículo" };
 
 export default async function VehiculoPage() {
   const [vehiculos, empleados] = await Promise.all([

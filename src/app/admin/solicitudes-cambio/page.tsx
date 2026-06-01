@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "./AccionesForm";
+
+export const metadata: Metadata = { title: "Solicitudes de cambio" };
 
 const CAMPO_LABEL: Record<string, string> = {
   nombre: "Nombre",

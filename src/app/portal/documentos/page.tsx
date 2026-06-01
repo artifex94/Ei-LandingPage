@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { METODO_LABEL } from "@/lib/constants/payment";
 
-export const metadata: Metadata = { title: "Documentos — Portal" };
+export const metadata: Metadata = { title: "Documentos" };
 
 const MESES_ES = [
   "enero","febrero","marzo","abril","mayo","junio",
@@ -23,10 +22,7 @@ export default async function DocumentosPage({
 }: {
   searchParams: Promise<{ tab?: string; anio?: string }>;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
+  const { userId } = await requireSesion();
   const sp  = await searchParams;
   const tab: Tab = sp.tab === "facturas" ? "facturas" : "recibos";
   const anioActual = new Date().getFullYear();
@@ -34,14 +30,14 @@ export default async function DocumentosPage({
   // ── Años disponibles por tipo (para los chips de año) ──────────────────────
   const [aniosRecibosRaw, aniosFacturasRaw] = await Promise.all([
     prisma.pago.findMany({
-      where: { estado: "PAGADO", cuenta: { perfil_id: user.id } },
+      where: { estado: "PAGADO", cuenta: { perfil_id: userId } },
       select: { anio: true },
       distinct: ["anio"],
       orderBy: { anio: "desc" },
     }),
     prisma.factura.findMany({
       where: {
-        perfil_id: user.id,
+        perfil_id: userId,
         estado: { in: ["EMITIDA_MANUAL", "EMITIDA_WSFE"] },
       },
       select: { periodo_desde: true },
@@ -66,7 +62,7 @@ export default async function DocumentosPage({
           where: {
             estado: "PAGADO",
             anio,
-            cuenta: { perfil_id: user.id },
+            cuenta: { perfil_id: userId },
           },
           include: { cuenta: { select: { descripcion: true } } },
           orderBy: { mes: "desc" },
@@ -77,7 +73,7 @@ export default async function DocumentosPage({
     tab === "facturas"
       ? await prisma.factura.findMany({
           where: {
-            perfil_id: user.id,
+            perfil_id: userId,
             estado: { in: ["EMITIDA_MANUAL", "EMITIDA_WSFE"] },
             periodo_desde: {
               gte: new Date(anio, 0, 1),

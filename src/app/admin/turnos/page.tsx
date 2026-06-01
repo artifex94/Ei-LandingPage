@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { CalendarioTurnos } from "@/components/admin/turnos/CalendarioTurnos";
 
-export const metadata: Metadata = { title: "Turnos — Admin" };
+export const metadata: Metadata = { title: "Turnos" };
 
 function startOfWeek(date: Date): Date {
   const d = new Date(date);

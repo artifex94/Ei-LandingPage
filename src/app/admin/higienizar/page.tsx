@@ -90,7 +90,7 @@ export default function HigienizarPage() {
 
   // ── Filtrado ───────────────────────────────────────────────────────────────
 
-  const correccionesFiltradas = correcciones.filter((c, _i) => {
+  const correccionesFiltradas = correcciones.filter((c) => {
     if (filtroConfianza !== "TODAS" && c.confianza !== filtroConfianza) return false;
     if (filtroCampo !== "TODOS" && c.campo !== filtroCampo) return false;
     return true;
@@ -151,7 +151,7 @@ export default function HigienizarPage() {
                 type="file"
                 accept=".xls,.xlsx"
                 required
-                className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600 file:cursor-pointer cursor-pointer"
+                className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-slate-900 hover:file:bg-orange-600 file:cursor-pointer cursor-pointer"
               />
               <p className="text-xs text-slate-500 mt-2">
                 El archivo &quot;Reporte Cuentas&quot; que se exporta desde Softguard.
@@ -170,7 +170,7 @@ export default function HigienizarPage() {
             <button
               type="submit"
               disabled={cargando}
-              className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] transition-colors"
+              className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 font-semibold rounded-lg px-4 py-3 min-h-[48px] transition-colors"
             >
               {cargando ? "Analizando..." : "Analizar archivo"}
             </button>
@@ -340,7 +340,7 @@ export default function HigienizarPage() {
               type="button"
               onClick={handleAplicar}
               disabled={cargando || seleccionadas.size === 0}
-              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-lg px-6 py-3 min-h-[48px] transition-colors"
+              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 font-semibold rounded-lg px-6 py-3 min-h-[48px] transition-colors"
             >
               {cargando
                 ? "Aplicando..."

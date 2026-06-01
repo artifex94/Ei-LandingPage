@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
@@ -5,6 +7,30 @@ import { ActualizarCuentaForm } from "@/components/admin/ActualizarCuentaForm";
 import { GestionSensores } from "@/components/admin/GestionSensores";
 import { NuevaSolicitudForm } from "@/components/admin/NuevaSolicitudForm";
 import { OverrideSuspensionForm } from "@/components/admin/OverrideSuspensionForm";
+
+const getCuenta = cache(async (id: string) => {
+  return prisma.cuenta.findUnique({
+    where: { id },
+    include: {
+      perfil: { select: { id: true, nombre: true, telefono: true } },
+      sensores: { orderBy: { codigo_zona: "asc" } },
+      solicitudes: {
+        where: { estado: { not: "RESUELTA" } },
+        orderBy: { creada_en: "desc" },
+      },
+      pagos: {
+        orderBy: [{ anio: "desc" }, { mes: "desc" }],
+        take: 12,
+      },
+    },
+  });
+});
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const cuenta = await getCuenta(id);
+  return { title: cuenta?.descripcion ?? "Cuenta" };
+}
 
 const MESES = [
   "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",
@@ -24,23 +50,7 @@ export default async function CuentaAdminPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  const cuenta = await prisma.cuenta.findUnique({
-    where: { id },
-    include: {
-      perfil: { select: { id: true, nombre: true, telefono: true } },
-      sensores: { orderBy: { codigo_zona: "asc" } },
-      solicitudes: {
-        where: { estado: { not: "RESUELTA" } },
-        orderBy: { creada_en: "desc" },
-      },
-      pagos: {
-        orderBy: [{ anio: "desc" }, { mes: "desc" }],
-        take: 12,
-      },
-    },
-  });
-
+  const cuenta = await getCuenta(id);
   if (!cuenta) notFound();
 
   return (

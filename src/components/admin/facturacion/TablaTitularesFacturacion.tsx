@@ -64,7 +64,7 @@ export function TablaTitularesFacturacion({
                   )}
                 </td>
                 <td className="px-4 py-3 text-slate-400 text-xs">
-                  {t.razon_social ?? <span className="text-slate-600">—</span>}
+                  {t.razon_social ?? <span className="text-slate-500">—</span>}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <button

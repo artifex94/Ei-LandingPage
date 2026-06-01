@@ -86,7 +86,7 @@ export function SolicitudCambioForm({
         <button
           type="submit"
           disabled={pending}
-          className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-2 min-h-[40px] text-sm transition-colors"
+          className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 font-semibold rounded-lg px-4 py-2 min-h-[40px] text-sm transition-colors"
         >
           {pending ? "Enviando..." : "Enviar solicitud"}
         </button>

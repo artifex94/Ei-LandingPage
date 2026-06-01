@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { LoginTabs } from "./LoginTabs";
 import { siteConfig } from "@/config/site";
 
@@ -43,7 +42,7 @@ export default function LoginPage() {
             <div className="inline-flex items-center justify-center mb-5">
               <div
                 aria-hidden="true"
-                className="h-14 w-14 bg-tactical-500 rounded-lg flex items-center justify-center text-white font-bold text-xl
+                className="h-14 w-14 bg-tactical-500 rounded-lg flex items-center justify-center text-slate-900 font-bold text-xl
                            shadow-[0_0_24px_rgba(241,119,32,0.3)]
                            border border-tactical-600 border-b-[4px] border-b-tactical-600"
               >
@@ -53,7 +52,7 @@ export default function LoginPage() {
             <h1 className="text-xl font-bold text-white tracking-[0.2em] uppercase font-mono">
               Acceso al Sistema
             </h1>
-            <p className="text-slate-600 mt-2 text-xs tracking-widest font-mono uppercase">
+            <p className="text-slate-400 mt-2 text-xs tracking-widest font-mono uppercase">
               Escobar Instalaciones · Infraestructura
             </p>
           </div>
@@ -70,11 +69,11 @@ export default function LoginPage() {
               <LoginTabs />
 
               <div className="mt-8 pt-5 border-t border-industrial-700">
-                <p className="text-xs text-slate-600 text-center">
+                <p className="text-xs text-slate-400 text-center">
                   ¿Problemas para ingresar?{" "}
                   <a
                     href={siteConfig.contact.whatsappLink}
-                    className="text-tactical-500 hover:text-tactical-400 transition-colors"
+                    className="text-tactical-400 hover:text-tactical-300 underline transition-colors"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -88,7 +87,7 @@ export default function LoginPage() {
           {/* Indicador de estado del sistema */}
           <div className="mt-6 flex items-center justify-center gap-2">
             <span className="inline-block h-2 w-2 rounded-full bg-blue-500 animate-led-idle flex-shrink-0" aria-hidden="true" />
-            <span className="text-[10px] text-slate-700 font-mono tracking-widest uppercase">
+            <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">
               Sistema en línea
             </span>
           </div>

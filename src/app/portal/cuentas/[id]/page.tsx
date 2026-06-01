@@ -1,8 +1,15 @@
-import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SensorItem } from "@/components/portal/SensorItem";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const cuenta = await prisma.cuenta.findUnique({ where: { id }, select: { descripcion: true } });
+  return { title: cuenta?.descripcion ?? "Mi cuenta" };
+}
 
 // ─── Panel de estado del sistema ──────────────────────────────────────────────
 
@@ -95,13 +102,10 @@ export default async function CuentaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const cuenta = await prisma.cuenta.findFirst({
-    where: { id, perfil_id: user.id },
+    where: { id, perfil_id: userId },
     include: {
       sensores: { orderBy: { codigo_zona: "asc" } },
       pagos: {

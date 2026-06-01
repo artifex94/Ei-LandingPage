@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { NuevaOTButton } from "@/components/admin/ot/NuevaOTButton";
 
-export const metadata: Metadata = { title: "Órdenes de Trabajo — Admin" };
+export const metadata: Metadata = { title: "Órdenes de Trabajo" };
 
 const ESTADO_BADGE: Record<string, string> = {
   SOLICITADA:  "bg-amber-500/20 text-amber-300 border-amber-500/30",
@@ -37,7 +37,7 @@ const PRIORIDAD_COLOR: Record<string, string> = {
 };
 
 export default async function OTListPage() {
-  const [ots, empleados] = await Promise.all([
+  const [ots, completadas] = await Promise.all([
     prisma.ordenTrabajo.findMany({
       where: { estado: { not: "CANCELADA" } },
       include: {
@@ -47,26 +47,22 @@ export default async function OTListPage() {
       },
       orderBy: [{ estado: "asc" }, { fecha_visita: "asc" }, { created_at: "desc" }],
     }),
-    prisma.empleado.findMany({
-      where: { activo: true, puede_instalar: true },
-      include: { perfil: { select: { nombre: true } } },
+    prisma.ordenTrabajo.findMany({
+      where: { estado: "COMPLETADA" },
+      include: {
+        tecnico: { include: { perfil: { select: { nombre: true } } } },
+        cuenta:  { select: { descripcion: true, perfil: { select: { nombre: true } } } },
+        perfil:  { select: { nombre: true } },
+      },
+      orderBy: { hora_fin: "desc" },
+      take: 20,
     }),
   ]);
 
   const ahora = new Date();
   const hace3dias = new Date(); hace3dias.setDate(ahora.getDate() - 3);
 
-  const activas    = ots.filter((o) => !["COMPLETADA", "CANCELADA"].includes(o.estado));
-  const completadas = await prisma.ordenTrabajo.findMany({
-    where: { estado: "COMPLETADA" },
-    include: {
-      tecnico: { include: { perfil: { select: { nombre: true } } } },
-      cuenta:  { select: { descripcion: true, perfil: { select: { nombre: true } } } },
-      perfil:  { select: { nombre: true } },
-    },
-    orderBy: { hora_fin: "desc" },
-    take: 20,
-  });
+  const activas = ots.filter((o) => !["COMPLETADA", "CANCELADA"].includes(o.estado));
 
   return (
     <div className="space-y-6">
@@ -77,7 +73,16 @@ export default async function OTListPage() {
             {activas.length} activa{activas.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <NuevaOTButton empleados={empleados} />
+        <div className="flex items-center gap-2">
+          <a
+            href="/api/admin/export?tipo=ots"
+            className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
+            title="Exportar OTs a Excel"
+          >
+            ↓ Excel
+          </a>
+          <NuevaOTButton />
+        </div>
       </div>
 
       {/* Banner alertas */}
@@ -133,7 +138,9 @@ function OTTable({ ots, titulo, muted = false, ahora }: { ots: OTRow[]; titulo: 
       <h2 className={`text-sm font-semibold uppercase tracking-wider ${muted ? "text-slate-500" : "text-slate-300"}`}>
         {titulo}
       </h2>
-      <div className="rounded-lg border border-slate-700 overflow-hidden">
+
+      {/* Desktop — tabla */}
+      <div className="hidden md:block rounded-lg border border-slate-700 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-800 border-b border-slate-700">
             <tr>
@@ -193,6 +200,56 @@ function OTTable({ ots, titulo, muted = false, ahora }: { ots: OTRow[]; titulo: 
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile — cards */}
+      <div className="md:hidden space-y-2">
+        {ots.map((ot) => {
+          const clienteNombre = ot.cuenta?.perfil.nombre ?? ot.perfil?.nombre ?? "—";
+          const vencida = ahora && ot.fecha_visita &&
+            new Date(ot.fecha_visita) < ahora &&
+            !["EN_RUTA", "EN_SITIO", "COMPLETADA", "CANCELADA"].includes(ot.estado);
+          return (
+            <Link
+              key={ot.id}
+              href={`/admin/ot/${ot.id}`}
+              className={`block rounded-lg border px-4 py-3 transition-colors ${
+                vencida
+                  ? "bg-red-950/30 border-red-800/50 hover:bg-red-900/20"
+                  : "bg-slate-800 border-slate-700 hover:bg-slate-700/60"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <div className="min-w-0">
+                  <p className="font-medium text-white text-sm">
+                    {TIPO_LABEL[ot.tipo] ?? ot.tipo}
+                    <span className="font-mono text-xs text-slate-500 ml-2">
+                      #{String(ot.numero).padStart(4, "0")}
+                    </span>
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">{clienteNombre}</p>
+                  {ot.cuenta && (
+                    <p className="text-xs text-slate-500 truncate">{ot.cuenta.descripcion}</p>
+                  )}
+                </div>
+                <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${ESTADO_BADGE[ot.estado] ?? ""}`}>
+                  {ESTADO_LABEL[ot.estado] ?? ot.estado}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">
+                  {ot.tecnico?.perfil.nombre ?? <span className="text-slate-500">Sin asignar</span>}
+                </span>
+                <span className={vencida ? "text-red-400 font-medium" : "text-slate-500"}>
+                  {ot.fecha_visita
+                    ? new Date(ot.fecha_visita).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" })
+                    : "Sin fecha"}
+                  {vencida && " · vencida"}
+                </span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma/client";
 import { AltaUsuarioRow } from "./AltaUsuarioRow";
 
-export const metadata = { title: "Altas de usuario — Admin" };
+export const metadata = { title: "Altas de usuario" };
 
 export default async function SolicitudesAltaPage() {
   const solicitudes = await prisma.altaUsuario.findMany({

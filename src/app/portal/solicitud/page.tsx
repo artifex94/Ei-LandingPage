@@ -1,7 +1,9 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SolicitudForm } from "./SolicitudForm";
+
+export const metadata: Metadata = { title: "Nueva solicitud" };
 
 export default async function SolicitudPage({
   searchParams,
@@ -9,13 +11,10 @@ export default async function SolicitudPage({
   searchParams: Promise<{ cuenta?: string }>;
 }) {
   const { cuenta: cuentaPreId } = await searchParams;
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const cuentas = await prisma.cuenta.findMany({
-    where: { perfil_id: user.id, estado: { in: ["ACTIVA", "EN_MANTENIMIENTO"] } },
+    where: { perfil_id: userId, estado: { in: ["ACTIVA", "EN_MANTENIMIENTO"] } },
     select: { id: true, descripcion: true },
     orderBy: { descripcion: "asc" },
   });

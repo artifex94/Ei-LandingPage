@@ -64,7 +64,7 @@ export function SensorItem({ sensor }: SensorItemProps) {
               <span className="text-slate-400">{ultimaActiv}</span>
             </p>
           ) : (
-            <p className="text-xs text-slate-600 mt-1 italic">Sin activaciones registradas</p>
+            <p className="text-xs text-slate-500 mt-1 italic">Sin activaciones registradas</p>
           )}
         </div>
 

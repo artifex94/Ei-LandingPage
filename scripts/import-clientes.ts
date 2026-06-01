@@ -20,7 +20,6 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { read, utils } from "xlsx";
 import * as fs from "fs";
 import * as path from "path";
-import * as readline from "readline";
 
 // ── Configuración ─────────────────────────────────────────────────────────────
 

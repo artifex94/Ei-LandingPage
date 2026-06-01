@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma/client";
 import { AusenciasTable } from "@/components/admin/ausencias/AusenciasTable";
 import { NuevaAusenciaDialog } from "@/components/admin/ausencias/NuevaAusenciaDialog";
 
-export const metadata: Metadata = { title: "Ausencias — Admin" };
+export const metadata: Metadata = { title: "Ausencias" };
 
 const TIPO_LABEL: Record<string, string> = {
   VACACIONES: "Vacaciones",

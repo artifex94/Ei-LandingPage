@@ -2,19 +2,15 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
 async function requireTecnicoOwner(tareaId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const tarea = await prisma.tareaAgendada.findUnique({ where: { id: tareaId } });
-  if (!tarea || tarea.tecnico_id !== user.id) return null;
-  return { user, tarea };
+  if (!tarea || tarea.tecnico_id !== userId) return null;
+  return { userId, tarea };
 }
 
 export async function marcarCompletada(tareaId: string) {

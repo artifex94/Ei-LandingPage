@@ -1,7 +1,9 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
+
+export const metadata: Metadata = { title: "Mis solicitudes" };
 
 const ESTADO_CONFIG: Record<string, { label: string; cls: string }> = {
   PENDIENTE:   { label: "Pendiente",   cls: "bg-amber-900/40 text-amber-400" },
@@ -16,12 +18,10 @@ const PRIORIDAD_CONFIG: Record<string, { label: string; cls: string }> = {
 };
 
 export default async function SolicitudesPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const solicitudes = await prisma.solicitudMantenimiento.findMany({
-    where: { cuenta: { perfil_id: user.id } },
+    where: { cuenta: { perfil_id: userId } },
     include: { cuenta: { select: { id: true, descripcion: true } } },
     orderBy: { creada_en: "desc" },
   });
@@ -42,7 +42,7 @@ export default async function SolicitudesPage() {
         </div>
         <Link
           href="/portal/solicitud"
-          className="shrink-0 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-3 rounded-lg min-h-[48px] text-sm flex items-center gap-2 transition-colors"
+          className="shrink-0 bg-orange-500 hover:bg-orange-600 text-slate-900 font-semibold px-5 py-3 rounded-lg min-h-[48px] text-sm flex items-center gap-2 transition-colors"
         >
           + Nueva solicitud
         </Link>
@@ -53,7 +53,7 @@ export default async function SolicitudesPage() {
           <p className="text-slate-400 mb-4">No tenés solicitudes registradas.</p>
           <Link
             href="/portal/solicitud"
-            className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            className="inline-block bg-orange-500 hover:bg-orange-600 text-slate-900 px-6 py-3 rounded-lg font-medium transition-colors"
           >
             Solicitar asistencia
           </Link>

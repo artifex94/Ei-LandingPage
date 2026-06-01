@@ -6,7 +6,7 @@ import { EditarEmpleadoForm } from "@/components/admin/EditarEmpleadoForm";
 import { EliminarEmpleadoForm } from "@/components/admin/EliminarEmpleadoForm";
 import { siteConfig } from "@/config/site";
 
-export const metadata = { title: "Editar trabajador — Admin" };
+export const metadata = { title: "Editar trabajador" };
 
 const ROL_PERFIL_LABEL: Record<string, string> = {
   ADMIN:   "Administrador (acceso completo)",

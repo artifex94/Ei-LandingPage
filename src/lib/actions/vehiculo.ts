@@ -4,16 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/session";
 import type { EstadoReserva } from "@/generated/prisma/client";
-
-async function getAdminActual() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  return perfil?.rol === "ADMIN" ? perfil : null;
-}
 
 export async function crearReservaVehiculo(data: {
   vehiculo_id: string;
@@ -24,8 +16,7 @@ export async function crearReservaVehiculo(data: {
   notas?: string;
   ot_id?: string;
 }) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   // Verificar que no haya solapamiento
   const conflicto = await prisma.reservaVehiculo.findFirst({
@@ -77,8 +68,7 @@ export async function editarVehiculo(
   prevState: EditarVehiculoResult,
   formData: FormData
 ): Promise<EditarVehiculoResult> {
-  const admin = await getAdminActual();
-  if (!admin) return { errores: ["Sin permisos de administrador."] };
+  const admin = await requireAdmin();
 
   const parsed = editarVehiculoSchema.safeParse({
     id: formData.get("id"),
@@ -112,8 +102,7 @@ export async function editarVehiculo(
 }
 
 export async function actualizarKmVehiculo(vehiculo_id: string, km_actual: number) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const vehiculo = await prisma.vehiculo.update({
     where: { id: vehiculo_id },
@@ -138,8 +127,7 @@ export async function cambiarEstadoReserva(
   estado: EstadoReserva,
   km_final?: number
 ) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const reserva = await prisma.reservaVehiculo.update({
     where: { id: reserva_id },

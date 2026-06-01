@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SolicitarOTButton } from "@/components/portal/SolicitarOTButton";
 
-export const metadata: Metadata = { title: "Mis Órdenes de Trabajo — Portal" };
+export const metadata: Metadata = { title: "Mis órdenes de trabajo" };
 
 const ESTADO_BADGE: Record<string, string> = {
   SOLICITADA:  "bg-amber-500/20 text-amber-300",
@@ -24,28 +23,23 @@ const TIPO_LABEL: Record<string, string> = {
 };
 
 export default async function PortalOTPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
-  const cuentas = await prisma.cuenta.findMany({
-    where: { perfil_id: user.id, estado: { not: "BAJA_DEFINITIVA" } },
-    select: { id: true, descripcion: true },
-  });
-
-  const ots = await prisma.ordenTrabajo.findMany({
-    where: { perfil_id: user.id },
-    orderBy: { created_at: "desc" },
-  });
-
-  const otsPorCuenta = await prisma.ordenTrabajo.findMany({
-    where: { cuenta: { perfil_id: user.id } },
-    orderBy: { created_at: "desc" },
-  });
-
-  const todasOTs = [...ots, ...otsPorCuenta]
-    .filter((o, i, arr) => arr.findIndex((x) => x.id === o.id) === i)
-    .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+  const [cuentas, todasOTs] = await Promise.all([
+    prisma.cuenta.findMany({
+      where: { perfil_id: userId, estado: { not: "BAJA_DEFINITIVA" } },
+      select: { id: true, descripcion: true },
+    }),
+    prisma.ordenTrabajo.findMany({
+      where: {
+        OR: [
+          { perfil_id: userId },
+          { cuenta: { perfil_id: userId } },
+        ],
+      },
+      orderBy: { created_at: "desc" },
+    }),
+  ]);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -56,7 +50,7 @@ export default async function PortalOTPage() {
             Solicitudes de instalación, mantenimiento o reparación.
           </p>
         </div>
-        <SolicitarOTButton cuentas={cuentas} perfil_id={user.id} />
+        <SolicitarOTButton cuentas={cuentas} perfil_id={userId} />
       </div>
 
       {todasOTs.length === 0 ? (

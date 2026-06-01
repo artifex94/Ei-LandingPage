@@ -93,7 +93,7 @@ export function SolicitudForm({ cuentas, cuentaPreId }: Props) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors"
+        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 font-semibold rounded-lg px-4 py-3 min-h-[48px] text-base transition-colors"
       >
         {pending ? "Enviando..." : "Enviar solicitud"}
       </button>

@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getCuentaCount } from "@/lib/softguard/queries";
 import { isMockMode } from "@/lib/softguard/client";
 import { SoftGuardPingPanel } from "@/components/admin/SoftGuardSyncStatus";
+import { prisma } from "@/lib/prisma/client";
 
 export const metadata: Metadata = {
-  title: "Integración SoftGuard — Admin",
+  title: "SoftGuard",
 };
 
 export default async function SyncSoftGuardPage() {
-  const result = await getCuentaCount();
+  const [result, eventosNuevos] = await Promise.all([
+    getCuentaCount(),
+    prisma.eventoAlarma.count({ where: { estado: "NUEVO" } }),
+  ]);
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -34,6 +39,45 @@ export default async function SyncSoftGuardPage() {
           </p>
         </div>
       )}
+
+      {/* Eventos sin procesar */}
+      <Link
+        href={`/admin/eventos?estado=NUEVO`}
+        className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
+          eventosNuevos > 0
+            ? "border-red-500/40 bg-red-500/10 hover:bg-red-500/15"
+            : "border-slate-700 bg-slate-800/50 hover:bg-slate-800"
+        }`}
+        aria-label={`${eventosNuevos} evento${eventosNuevos !== 1 ? "s" : ""} sin procesar`}
+      >
+        <div className="flex items-center gap-3">
+          <span
+            className={`text-lg leading-none ${eventosNuevos > 0 ? "text-red-400" : "text-slate-500"}`}
+            aria-hidden="true"
+          >
+            {eventosNuevos > 0 ? "🔴" : "✓"}
+          </span>
+          <div>
+            <p className={`text-sm font-semibold ${eventosNuevos > 0 ? "text-red-300" : "text-slate-300"}`}>
+              Eventos sin procesar
+            </p>
+            <p className="text-xs text-slate-500">
+              Estado <span className="font-mono">NUEVO</span> · requieren atención operativa
+            </p>
+          </div>
+        </div>
+        {eventosNuevos > 0 ? (
+          <span
+            className="bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full min-w-[28px] text-center"
+            role="status"
+            aria-live="polite"
+          >
+            {eventosNuevos}
+          </span>
+        ) : (
+          <span className="text-emerald-400 text-sm font-medium">Al día</span>
+        )}
+      </Link>
 
       <SoftGuardPingPanel initialResult={result} />
 

@@ -1,20 +1,18 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { CalendarioPagos, type PagoPlano } from "@/components/portal/CalendarioPagos";
 import { BannerDeudaTotal } from "@/components/portal/BannerDeudaTotal";
 import { getEventosHeatmap } from "@/lib/actions/eventos";
+
+export const metadata: Metadata = { title: "Mis pagos" };
 
 export default async function PagosPage({
   searchParams,
 }: {
   searchParams: Promise<{ anio?: string }>;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId: user_id } = await requireSesion();
 
   const sp = await searchParams;
   const anioActual = new Date().getFullYear();
@@ -22,7 +20,7 @@ export default async function PagosPage({
 
   // Años con pagos registrados para este usuario
   const aniosRaw = await prisma.pago.findMany({
-    where: { cuenta: { perfil_id: user.id } },
+    where: { cuenta: { perfil_id: user_id } },
     select: { anio: true },
     distinct: ["anio"],
     orderBy: { anio: "desc" },
@@ -35,7 +33,7 @@ export default async function PagosPage({
 
   // Cuentas activas con pagos del año seleccionado
   const cuentas = await prisma.cuenta.findMany({
-    where: { perfil_id: user.id, estado: { not: "BAJA_DEFINITIVA" } },
+    where: { perfil_id: user_id, estado: { not: "BAJA_DEFINITIVA" } },
     include: {
       pagos: {
         where: { anio },

@@ -1,6 +1,10 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { GraficoCobros } from "@/components/admin/GraficoCobros";
 import { GraficoDonut } from "@/components/admin/GraficoDonut";
+
+export const metadata: Metadata = { title: "Dashboard" };
 
 const MESES_CORTO = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
@@ -9,7 +13,17 @@ export default async function AdminDashboardPage() {
   const anio = hoy.getFullYear();
   const mes = hoy.getMonth() + 1;
 
-  // ── KPIs básicos ────────────────────────────────────────────────────────────
+  // ── Rangos de tiempo ─────────────────────────────────────────────────────────
+  const inicioDia = new Date(hoy); inicioDia.setHours(0, 0, 0, 0);
+  const finDia    = new Date(hoy); finDia.setHours(23, 59, 59, 999);
+
+  const mesesGrafico: { mes: number; anio: number; label: string }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(anio, mes - 1 - i, 1);
+    mesesGrafico.push({ mes: d.getMonth() + 1, anio: d.getFullYear(), label: MESES_CORTO[d.getMonth() + 1] });
+  }
+
+  // ── Todas las queries en paralelo ────────────────────────────────────────────
   const [
     totalActivas,
     suspendidas,
@@ -17,6 +31,13 @@ export default async function AdminDashboardPage() {
     bajaDefinitiva,
     solicitudesPendientes,
     cambiosPendientes,
+    eventosSinProcesar,
+    otsActivas,
+    turnosHoy,
+    pagosEsteMes,
+    pagosRango,
+    porCategoria,
+    morosos,
   ] = await Promise.all([
     prisma.cuenta.count({ where: { estado: "ACTIVA" } }),
     prisma.cuenta.count({ where: { estado: "SUSPENDIDA_PAGO" } }),
@@ -24,16 +45,45 @@ export default async function AdminDashboardPage() {
     prisma.cuenta.count({ where: { estado: "BAJA_DEFINITIVA" } }),
     prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
     prisma.solicitudCambioInfo.count({ where: { estado: "PENDIENTE" } }),
+    prisma.eventoAlarma.count({ where: { estado: "NUEVO" } }),
+    prisma.ordenTrabajo.count({ where: { estado: { in: ["SOLICITADA", "ASIGNADA", "EN_RUTA", "EN_SITIO"] } } }),
+    prisma.turno.findMany({
+      where: { fecha: { gte: inicioDia, lte: finDia } },
+      include: { empleado: { include: { perfil: { select: { nombre: true } } } } },
+      orderBy: { franja: "asc" },
+    }),
+    prisma.pago.groupBy({
+      by: ["estado"],
+      where: { anio, mes },
+      _count: { estado: true },
+      _sum: { importe: true },
+    }),
+    prisma.pago.findMany({
+      where: { OR: mesesGrafico.map((m) => ({ mes: m.mes, anio: m.anio })) },
+      select: { mes: true, anio: true, importe: true, estado: true },
+    }),
+    prisma.cuenta.groupBy({
+      by: ["categoria"],
+      where: { estado: { not: "BAJA_DEFINITIVA" } },
+      _count: { categoria: true },
+    }),
+    prisma.pago.groupBy({
+      by: ["cuenta_id"],
+      where: {
+        OR: [
+          { estado: "VENCIDO" },
+          {
+            estado: "PENDIENTE",
+            OR: [{ anio: { lt: anio } }, { anio, mes: { lt: mes } }],
+          },
+        ],
+      },
+      _count: { cuenta_id: true },
+      having: { cuenta_id: { _count: { gte: 2 } } },
+    }),
   ]);
 
-  // ── Pagos del mes actual ─────────────────────────────────────────────────────
-  const pagosEsteMes = await prisma.pago.groupBy({
-    by: ["estado"],
-    where: { anio, mes },
-    _count: { estado: true },
-    _sum: { importe: true },
-  });
-
+  // ── Derivados de pagosEsteMes ────────────────────────────────────────────────
   const cobradoEsteMes = pagosEsteMes
     .filter((p) => p.estado === "PAGADO")
     .reduce((s, p) => s + Number(p._sum.importe ?? 0), 0);
@@ -46,83 +96,108 @@ export default async function AdminDashboardPage() {
   const countPendiente = pagosEsteMes.find((p) => p.estado === "PENDIENTE")?._count.estado ?? 0;
   const countVencido = pagosEsteMes.find((p) => p.estado === "VENCIDO")?._count.estado ?? 0;
 
-  // ── Gráfico: cobros últimos 6 meses ─────────────────────────────────────────
-  const mesesGrafico: { mes: number; anio: number; label: string }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(anio, mes - 1 - i, 1);
-    mesesGrafico.push({
-      mes: d.getMonth() + 1,
-      anio: d.getFullYear(),
-      label: MESES_CORTO[d.getMonth() + 1],
-    });
-  }
-
-  const pagosRango = await prisma.pago.findMany({
-    where: {
-      OR: mesesGrafico.map((m) => ({ mes: m.mes, anio: m.anio })),
-    },
-    select: { mes: true, anio: true, importe: true, estado: true },
-  });
-
+  // ── Derivados de pagosRango ──────────────────────────────────────────────────
   const datosCobros = mesesGrafico.map(({ mes: m, anio: a, label }) => {
     const del = pagosRango.filter((p) => p.mes === m && p.anio === a);
-    const cobrado = del
-      .filter((p) => p.estado === "PAGADO")
-      .reduce((s, p) => s + Number(p.importe), 0);
-    const pendiente = del
-      .filter((p) => p.estado === "PENDIENTE" || p.estado === "VENCIDO")
-      .reduce((s, p) => s + Number(p.importe), 0);
+    const cobrado = del.filter((p) => p.estado === "PAGADO").reduce((s, p) => s + Number(p.importe), 0);
+    const pendiente = del.filter((p) => p.estado === "PENDIENTE" || p.estado === "VENCIDO").reduce((s, p) => s + Number(p.importe), 0);
     return { label, cobrado, pendiente };
   });
 
   // ── Gráfico: cuentas por estado ──────────────────────────────────────────────
   const datosEstado = [
-    { nombre: "Activas", valor: totalActivas, color: "#22c55e" },
-    { nombre: "Suspendidas", valor: suspendidas, color: "#f97316" },
-    { nombre: "Mantenimiento", valor: enMantenimiento, color: "#3b82f6" },
-    { nombre: "Baja", valor: bajaDefinitiva, color: "#475569" },
+    { nombre: "Activas",        valor: totalActivas,   color: "#22c55e" },
+    { nombre: "Suspendidas",    valor: suspendidas,    color: "#f97316" },
+    { nombre: "Mantenimiento",  valor: enMantenimiento, color: "#3b82f6" },
+    { nombre: "Baja",           valor: bajaDefinitiva, color: "#475569" },
   ].filter((d) => d.valor > 0);
 
   // ── Gráfico: cuentas por categoría ──────────────────────────────────────────
-  const porCategoria = await prisma.cuenta.groupBy({
-    by: ["categoria"],
-    where: { estado: { not: "BAJA_DEFINITIVA" } },
-    _count: { categoria: true },
-  });
-
   const coloresCategoria: Record<string, string> = {
-    ALARMA_MONITOREO: "#f97316",
-    CAMARA_CCTV: "#3b82f6",
-    DOMOTICA: "#a855f7",
-    ANTENA_STARLINK: "#06b6d4",
-    OTRO: "#64748b",
+    ALARMA_MONITOREO: "#f97316", CAMARA_CCTV: "#3b82f6",
+    DOMOTICA: "#a855f7", ANTENA_STARLINK: "#06b6d4", OTRO: "#64748b",
   };
-
   const labelsCategoria: Record<string, string> = {
-    ALARMA_MONITOREO: "Alarma",
-    CAMARA_CCTV: "CCTV",
-    DOMOTICA: "Domótica",
-    ANTENA_STARLINK: "StarLink",
-    OTRO: "Otro",
+    ALARMA_MONITOREO: "Alarma", CAMARA_CCTV: "CCTV",
+    DOMOTICA: "Domótica", ANTENA_STARLINK: "StarLink", OTRO: "Otro",
   };
-
   const datosCategoria = porCategoria.map((c) => ({
     nombre: labelsCategoria[c.categoria] ?? c.categoria,
     valor: c._count.categoria,
     color: coloresCategoria[c.categoria] ?? "#64748b",
   }));
 
-  // ── Morosidad rápida ─────────────────────────────────────────────────────────
-  const morosos = await prisma.pago.groupBy({
-    by: ["cuenta_id"],
-    where: { estado: "VENCIDO" },
-    _count: { cuenta_id: true },
-    having: { cuenta_id: { _count: { gte: 2 } } },
-  });
-
   return (
     <section className="space-y-8">
       <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+
+      {/* ── Alertas operacionales ────────────────────────────────────────────── */}
+      {(eventosSinProcesar > 0 || otsActivas > 0 || turnosHoy.length === 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {eventosSinProcesar > 0 && (
+            <Link
+              href="/admin/eventos?estado=NUEVO"
+              className="flex items-center gap-3 rounded-xl border border-red-500/40 bg-red-950/30 px-4 py-3 hover:border-red-500/70 transition-colors"
+            >
+              <span className="text-red-400 text-xl flex-shrink-0" aria-hidden="true">⚡</span>
+              <div>
+                <p className="text-red-300 font-bold text-sm">
+                  {eventosSinProcesar} evento{eventosSinProcesar !== 1 ? "s" : ""} sin procesar
+                </p>
+                <p className="text-red-400/60 text-xs">Ver eventos NUEVO →</p>
+              </div>
+            </Link>
+          )}
+          {otsActivas > 0 && (
+            <Link
+              href="/admin/ot"
+              className="flex items-center gap-3 rounded-xl border border-blue-500/40 bg-blue-950/30 px-4 py-3 hover:border-blue-500/70 transition-colors"
+            >
+              <span className="text-blue-400 text-xl flex-shrink-0" aria-hidden="true">🔧</span>
+              <div>
+                <p className="text-blue-300 font-bold text-sm">
+                  {otsActivas} OT{otsActivas !== 1 ? "s" : ""} en curso
+                </p>
+                <p className="text-blue-400/60 text-xs">Ver órdenes de trabajo →</p>
+              </div>
+            </Link>
+          )}
+          {turnosHoy.length === 0 && (
+            <Link
+              href="/admin/turnos"
+              className="flex items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-950/30 px-4 py-3 hover:border-amber-500/70 transition-colors"
+            >
+              <span className="text-amber-400 text-xl flex-shrink-0" aria-hidden="true">⚠</span>
+              <div>
+                <p className="text-amber-300 font-bold text-sm">Sin turnos asignados hoy</p>
+                <p className="text-amber-400/60 text-xs">Revisar cobertura →</p>
+              </div>
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* ── Turno actual ─────────────────────────────────────────────────────── */}
+      {turnosHoy.length > 0 && (
+        <div className="rounded-xl border border-slate-700 bg-slate-800 px-5 py-4">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+            Turnos de hoy
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {turnosHoy.map((t) => {
+              const franjaLabel: Record<string, string> = { MANANA: "Mañana", TARDE: "Tarde", NOCHE: "Noche" };
+              const franjaColor: Record<string, string> = { MANANA: "bg-yellow-900/40 text-yellow-300 border-yellow-700/40", TARDE: "bg-orange-900/40 text-orange-300 border-orange-700/40", NOCHE: "bg-indigo-900/40 text-indigo-300 border-indigo-700/40" };
+              return (
+                <div key={t.id} className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${franjaColor[t.franja] ?? "bg-slate-700 text-slate-300 border-slate-600"}`}>
+                  <span className="font-semibold">{franjaLabel[t.franja] ?? t.franja}</span>
+                  <span className="opacity-70">·</span>
+                  <span>{t.empleado.perfil.nombre}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── KPIs ────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

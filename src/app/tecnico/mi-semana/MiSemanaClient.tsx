@@ -130,7 +130,11 @@ function VistaMobile({ dias }: { dias: DiaSemana[] }) {
   const toggle = (fecha: string) => {
     setAbiertos((prev) => {
       const next = new Set(prev);
-      next.has(fecha) ? next.delete(fecha) : next.add(fecha);
+      if (next.has(fecha)) {
+        next.delete(fecha);
+      } else {
+        next.add(fecha);
+      }
       return next;
     });
   };
@@ -182,7 +186,7 @@ function VistaMobile({ dias }: { dias: DiaSemana[] }) {
             {abierto && (
               <div className="px-3 py-2 bg-slate-900/40 space-y-1.5">
                 {dia.tareas.length === 0 ? (
-                  <p className="text-xs text-slate-600 py-2 text-center">Sin tareas asignadas</p>
+                  <p className="text-xs text-slate-400 py-2 text-center">Sin tareas asignadas</p>
                 ) : (
                   dia.tareas
                     .sort((a, b) => (a.hora_inicio ?? "").localeCompare(b.hora_inicio ?? ""))

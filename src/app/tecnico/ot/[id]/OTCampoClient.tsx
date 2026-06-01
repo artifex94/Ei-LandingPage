@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
 import { cambiarEstadoOT, registrarGPS, subirFotosOT, guardarFirmaCliente } from "@/lib/actions/ot";
 import type { EstadoOT } from "@/generated/prisma/client";
@@ -28,6 +28,19 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dibujando = useRef(false);
+
+  // Ajustar dimensiones del canvas al tamaño CSS real cuando se muestra
+  useEffect(() => {
+    if (!firmando) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const { width, height } = canvas.getBoundingClientRect();
+    canvas.width  = width  * dpr;
+    canvas.height = height * dpr;
+    const ctx = canvas.getContext("2d")!;
+    ctx.scale(dpr, dpr);
+  }, [firmando]);
 
   // GPS helper
   function obtenerGPS(): Promise<{ lat: number; lng: number }> {
@@ -116,11 +129,21 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
 
   function limpiarFirma() {
     const canvas = canvasRef.current!;
-    canvas.getContext("2d")!.clearRect(0, 0, canvas.width, canvas.height);
+    const ctx = canvas.getContext("2d")!;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
   }
 
   function confirmarFirma() {
     const canvas = canvasRef.current!;
+    const { data } = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height);
+    if (!data.some((v) => v !== 0)) {
+      setError("Dibujá la firma antes de confirmar.");
+      return;
+    }
+    setError(null);
     const dataUrl = canvas.toDataURL("image/png");
     startTransition(async () => {
       try {
@@ -282,9 +305,7 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
               <div className="rounded-xl border-2 border-slate-600 bg-white overflow-hidden touch-none">
                 <canvas
                   ref={canvasRef}
-                  width={360}
-                  height={160}
-                  className="w-full"
+                  className="w-full h-40 block"
                   style={{ touchAction: "none" }}
                   onPointerDown={iniciarTrazo}
                   onPointerMove={trazar}

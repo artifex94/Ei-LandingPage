@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SolicitarOTButton } from "@/components/portal/SolicitarOTButton";
 
-export const metadata: Metadata = { title: "Soporte — Portal" };
+export const metadata: Metadata = { title: "Soporte" };
 
 // ── Configuraciones de display ────────────────────────────────────────────────
 
@@ -43,38 +42,29 @@ const OT_ACTIVOS = ["SOLICITADA", "ASIGNADA", "EN_RUTA", "EN_SITIO"];
 // ── Página ────────────────────────────────────────────────────────────────────
 
 export default async function SoportePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
-  const cuentas = await prisma.cuenta.findMany({
-    where: { perfil_id: user.id, estado: { not: "BAJA_DEFINITIVA" } },
-    select: { id: true, descripcion: true },
-    orderBy: { descripcion: "asc" },
-  });
-
-  const [solicitudesRaw, otsRaw1, otsRaw2] = await Promise.all([
+  const [cuentas, solicitudesRaw, ots] = await Promise.all([
+    prisma.cuenta.findMany({
+      where: { perfil_id: userId, estado: { not: "BAJA_DEFINITIVA" } },
+      select: { id: true, descripcion: true },
+      orderBy: { descripcion: "asc" },
+    }),
     prisma.solicitudMantenimiento.findMany({
-      where: { cuenta: { perfil_id: user.id } },
+      where: { cuenta: { perfil_id: userId } },
       include: { cuenta: { select: { id: true, descripcion: true } } },
       orderBy: { creada_en: "desc" },
     }),
     prisma.ordenTrabajo.findMany({
-      where: { perfil_id: user.id },
-      orderBy: { created_at: "desc" },
-    }),
-    prisma.ordenTrabajo.findMany({
-      where: { cuenta: { perfil_id: user.id } },
+      where: {
+        OR: [
+          { perfil_id: userId },
+          { cuenta: { perfil_id: userId } },
+        ],
+      },
       orderBy: { created_at: "desc" },
     }),
   ]);
-
-  // Deduplicar OTs
-  const otsMap = new Map<string, (typeof otsRaw1)[0]>();
-  [...otsRaw1, ...otsRaw2].forEach((o) => otsMap.set(o.id, o));
-  const ots = [...otsMap.values()].sort(
-    (a, b) => b.created_at.getTime() - a.created_at.getTime()
-  );
 
   const otsActivas   = ots.filter((o) => OT_ACTIVOS.includes(o.estado));
   const otsHistorial = ots.filter((o) => !OT_ACTIVOS.includes(o.estado));
@@ -96,7 +86,7 @@ export default async function SoportePage() {
             Tus solicitudes de asistencia y visitas técnicas.
           </p>
         </div>
-        <SolicitarOTButton cuentas={cuentas} perfil_id={user.id} />
+        <SolicitarOTButton cuentas={cuentas} perfil_id={userId} />
       </div>
 
       {/* ── Sin actividad ──────────────────────────────────────────────────── */}

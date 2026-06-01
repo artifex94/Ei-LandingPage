@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NuevoEmpleadoForm } from "@/components/admin/NuevoEmpleadoForm";
 import { siteConfig } from "@/config/site";
 
-export const metadata = { title: "Nuevo empleado — Admin" };
+export const metadata = { title: "Nuevo empleado" };
 
 export default async function NuevoEmpleadoPage() {
   const supabase = await createClient();

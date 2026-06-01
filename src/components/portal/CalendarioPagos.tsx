@@ -210,7 +210,7 @@ export function CalendarioPagos({ pagos, anio, cuentaId, eventosHeatmap }: Props
               {cfg.esAccionable && pago && (
                 <button
                   onClick={() => setPagoSeleccionado({ mes: numMes, pago })}
-                  className="w-full text-center bg-orange-600 hover:bg-orange-500 active:bg-orange-700 transition-colors py-1.5 text-[10px] font-bold text-white tracking-wide mt-auto"
+                  className="w-full text-center bg-orange-500 hover:bg-orange-600 active:bg-orange-700 transition-colors py-1.5 text-[10px] font-bold text-slate-900 tracking-wide mt-auto"
                   aria-label={`Pagar ${nombreMes} — ${importeStr}`}
                 >
                   PAGAR

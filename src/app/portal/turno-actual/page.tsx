@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { TurnoCheckinClient } from "./TurnoCheckinClient";
 
-export const metadata = { title: "Turno actual — Portal EI" };
+export const metadata = { title: "Turno actual" };
 
 function startOfToday() {
   const d = new Date(); d.setHours(0, 0, 0, 0); return d;
@@ -13,12 +13,10 @@ function endOfToday() {
 }
 
 export default async function TurnoActualPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const empleado = await prisma.empleado.findUnique({
-    where: { perfil_id: user.id },
+    where: { perfil_id: userId },
     select: { id: true, puede_monitorear: true },
   });
   if (!empleado) redirect("/portal/dashboard");
@@ -53,7 +51,7 @@ export default async function TurnoActualPage() {
       {!turnoHoy ? (
         <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center">
           <p className="text-slate-400">No tenés un turno asignado para hoy.</p>
-          <p className="text-xs text-slate-600 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Si creés que hay un error, consultá con Ramiro.
           </p>
         </div>

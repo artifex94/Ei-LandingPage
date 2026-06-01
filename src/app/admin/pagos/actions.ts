@@ -1,9 +1,7 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit, registrarAuditTx } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
@@ -134,26 +132,29 @@ export async function confirmarTransferencia(
   prevState: ConfirmarResult,
   formData: FormData
 ): Promise<ConfirmarResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") return { error: "Sin permisos de administrador." };
+  const admin = await requireAdmin();
 
   const pagoId = formData.get("pago_id") as string;
   if (!pagoId) return { error: "ID de pago inválido." };
 
   try {
-    await prisma.pago.update({
-      where: { id: pagoId },
-      data: {
-        estado: "PAGADO",
-        acreditado_en: new Date(),
-        registrado_por: perfil.nombre ?? "Admin",
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.pago.update({
+        where: { id: pagoId },
+        data: {
+          estado: "PAGADO",
+          acreditado_en: new Date(),
+          registrado_por: admin.nombre ?? "Admin",
+        },
+      });
+      await registrarAuditTx(tx, {
+        admin_id: admin.id,
+        admin_nombre: admin.nombre ?? "Admin",
+        accion: "TRANSFERENCIA_CONFIRMADA",
+        entidad: "pago",
+        entidad_id: pagoId,
+        state_transition: { prior_state: "PROCESANDO", new_state: "PAGADO" },
+      });
     });
   } catch (e: unknown) {
     // P2025: registro no encontrado

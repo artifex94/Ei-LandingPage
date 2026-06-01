@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AltaClienteForm } from "@/components/admin/AltaClienteForm";
+
+export const metadata: Metadata = { title: "Nuevo cliente" };
 
 export default function NuevoClientePage() {
   return (

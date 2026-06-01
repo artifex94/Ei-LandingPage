@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { IniciarButton, ResolverButton, ReopenButton } from "./AccionesForm";
 import { NuevaSolicitudAdminDialog } from "@/components/admin/NuevaSolicitudAdminDialog";
+
+export const metadata: Metadata = { title: "Mantenimiento" };
 
 const ESTADO_CONFIG: Record<string, { label: string; cls: string }> = {
   PENDIENTE:   { label: "Pendiente",   cls: "bg-amber-900/40 text-amber-400 border-amber-800/40" },
@@ -150,7 +153,7 @@ export default async function MantenimientoPage({
                   </span>
                   {s.cuenta.perfil.telefono && (
                     <a
-                      href={`https://wa.me/549${s.cuenta.perfil.telefono}`}
+                      href={`https://wa.me/549${s.cuenta.perfil.telefono.replace(/\D/g, "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-green-400 hover:text-green-300 transition-colors"

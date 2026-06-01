@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SolicitudCambioForm } from "@/components/portal/SolicitudCambioForm";
+
+export const metadata: Metadata = { title: "Mi perfil" };
 
 const CATEGORIA_LABEL: Record<string, string> = {
   ALARMA_MONITOREO: "Alarma y monitoreo",
@@ -31,14 +34,10 @@ const CAMPO_LABEL: Record<string, string> = {
 };
 
 export default async function PerfilPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const perfil = await prisma.perfil.findUnique({
-    where: { id: user.id },
+    where: { id: userId },
     include: {
       solicitudes_cambio: {
         orderBy: { created_at: "desc" },

@@ -193,7 +193,7 @@ export function PagoModal({ pago, cuentaId, nombreMes, onClose }: Props) {
         href={taloUrl ?? ""}
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl px-5 py-4 min-h-[56px] text-base flex items-center justify-center gap-2"
+        className="w-full bg-orange-500 hover:bg-orange-600 text-slate-900 font-semibold rounded-xl px-5 py-4 min-h-[56px] text-base flex items-center justify-center gap-2"
       >
         Ir a Talo Pay →
       </a>
@@ -219,7 +219,7 @@ export function PagoModal({ pago, cuentaId, nombreMes, onClose }: Props) {
       </p>
       <button
         onClick={onClose}
-        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl px-5 py-3 min-h-[48px] text-base"
+        className="w-full bg-orange-500 hover:bg-orange-600 text-slate-900 font-semibold rounded-xl px-5 py-3 min-h-[48px] text-base"
       >
         Cerrar
       </button>

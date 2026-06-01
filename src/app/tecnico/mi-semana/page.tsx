@@ -1,21 +1,18 @@
-import { redirect } from "next/navigation";
 import { startOfWeek, endOfWeek, addDays, addWeeks, format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { disponibilidadDefault, rangosASlots } from "@/lib/disponibilidad-utils";
 import { MiSemanaClient } from "./MiSemanaClient";
 
-export const metadata = { title: "Mi semana — Panel Técnico" };
+export const metadata = { title: "Mi semana" };
 
 export default async function MiSemanaPage({
   searchParams,
 }: {
   searchParams: Promise<{ semana?: string }>;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const { semana } = await searchParams;
   const offset = Math.max(-4, Math.min(4, parseInt(semana ?? "0") || 0));
@@ -27,7 +24,7 @@ export default async function MiSemanaPage({
   const [tareasSemana, disponibilidadSemana] = await Promise.all([
     prisma.tareaAgendada.findMany({
       where: {
-        tecnico_id: user.id,
+        tecnico_id: userId,
         fecha: { gte: lunes, lte: domingo },
         estado: { not: "CANCELADA" },
       },
@@ -36,7 +33,7 @@ export default async function MiSemanaPage({
     }),
     prisma.disponibilidadTecnico.findMany({
       where: {
-        tecnico_id: user.id,
+        tecnico_id: userId,
         fecha: { gte: lunes, lte: domingo },
       },
     }),

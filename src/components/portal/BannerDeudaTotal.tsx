@@ -38,7 +38,7 @@ export function BannerDeudaTotal({ deudas }: Props) {
         </div>
         <button
           onClick={() => setModalAbierto(true)}
-          className="w-full sm:w-auto shrink-0 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl px-6 py-4 min-h-[60px] text-lg transition-colors"
+          className="w-full sm:w-auto shrink-0 bg-orange-500 hover:bg-orange-600 text-slate-900 font-bold rounded-xl px-6 py-4 min-h-[60px] text-lg transition-colors"
         >
           Regularizar pagos
         </button>

@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
 import { PagoManualBulkForm } from "@/components/admin/PagoManualBulkForm";
 import { ConfirmarTransferenciaForm } from "@/components/admin/ConfirmarTransferenciaForm";
 import { EditarPagoDialog } from "@/components/admin/EditarPagoDialog";
 import { METODO_LABEL as METODO_LABELS } from "@/lib/constants/payment";
+
+export const metadata: Metadata = { title: "Pagos" };
 
 const ESTADO_CONFIG: Record<string, { bg: string; label: string }> = {
   PAGADO:     { bg: "bg-green-900/40 text-green-400",  label: "Pagado" },
@@ -110,7 +113,7 @@ export default async function PagosAdminPage({
             <h2 className="text-lg font-semibold text-white">
               Transferencias a verificar
             </h2>
-            <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-orange-500 text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full">
               {transferenciasPendientes.length}
             </span>
           </div>
@@ -257,10 +260,22 @@ export default async function PagosAdminPage({
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-white font-bold">${Number(p.importe).toLocaleString("es-AR")}</span>
-                    <span className="text-slate-400 text-xs">
-                      {p.metodo ? METODO_LABELS[p.metodo] ?? p.metodo : "—"}
-                      {p.acreditado_en && ` · ${new Date(p.acreditado_en).toLocaleDateString("es-AR")}`}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-400 text-xs">
+                        {p.metodo ? METODO_LABELS[p.metodo] ?? p.metodo : "—"}
+                        {p.acreditado_en && ` · ${new Date(p.acreditado_en).toLocaleDateString("es-AR")}`}
+                      </span>
+                      <EditarPagoDialog pago={{
+                        id: p.id,
+                        mes: p.mes,
+                        anio: p.anio,
+                        importe: Number(p.importe),
+                        estado: p.estado,
+                        metodo: p.metodo ?? null,
+                        cuentaNombre: p.cuenta.perfil.nombre,
+                        cuentaDesc: p.cuenta.descripcion,
+                      }} />
+                    </div>
                   </div>
                 </div>
               );
@@ -279,10 +294,21 @@ export default async function PagosAdminPage({
             {cuentasSinPago.map((c) => (
               <div
                 key={c.id}
-                className="bg-slate-800 rounded-xl border border-slate-700 px-5 py-4 flex items-center justify-between gap-4"
+                className={`bg-slate-800 rounded-xl border px-5 py-4 flex items-center justify-between gap-4 ${
+                  c.estado === "SUSPENDIDA_PAGO"
+                    ? "border-amber-700/50"
+                    : "border-slate-700"
+                }`}
               >
                 <div>
-                  <p className="font-medium text-white">{c.descripcion}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium text-white">{c.descripcion}</p>
+                    {c.estado === "SUSPENDIDA_PAGO" && (
+                      <span className="text-[10px] font-bold text-amber-400 bg-amber-900/40 border border-amber-700/50 px-1.5 py-0.5 rounded">
+                        SUSPENDIDA
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-slate-400">{c.perfil.nombre}</p>
                 </div>
                 <PagoManualBulkForm

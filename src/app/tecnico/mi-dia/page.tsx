@@ -1,17 +1,14 @@
-import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { disponibilidadDefault } from "@/lib/disponibilidad-utils";
 import { MiDiaClient } from "./MiDiaClient";
 
-export const metadata = { title: "Mi día — Panel Técnico" };
+export const metadata = { title: "Mi día" };
 
 export default async function MiDiaPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -21,7 +18,7 @@ export default async function MiDiaPage() {
   const [tareas, disponibilidadHoy] = await Promise.all([
     prisma.tareaAgendada.findMany({
       where: {
-        tecnico_id: user.id,
+        tecnico_id: userId,
         fecha: { gte: hoy, lt: manana },
         estado: { not: "CANCELADA" },
       },
@@ -29,7 +26,7 @@ export default async function MiDiaPage() {
       orderBy: [{ hora_inicio: "asc" }],
     }),
     prisma.disponibilidadTecnico.findMany({
-      where: { tecnico_id: user.id, fecha: hoy },
+      where: { tecnico_id: userId, fecha: hoy },
       orderBy: { desde: "asc" },
     }),
   ]);

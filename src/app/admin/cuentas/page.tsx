@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import type { EstadoCuenta } from "@/generated/prisma/client";
+
+export const metadata: Metadata = { title: "Cuentas" };
 
 const ESTADO_COLORES: Record<string, string> = {
   ACTIVA:           "bg-green-900/40 text-green-400",
@@ -68,7 +71,7 @@ export default async function CuentasAdminPage({
     <section aria-labelledby="cuentas-heading">
       <div className="flex items-center justify-between gap-4 mb-6">
         <h1 id="cuentas-heading" className="text-2xl font-bold text-white">
-          Cuentas ({cuentas.length})
+          Cuentas ({total})
         </h1>
         <a
           href="/api/admin/export?tipo=cuentas"
@@ -182,7 +185,7 @@ export default async function CuentasAdminPage({
           <div className="flex gap-2">
             {pagina > 1 && (
               <a
-                href={`/admin/cuentas?pagina=${pagina - 1}${estado ? `&estado=${estado}` : ""}${q ? `&q=${q}` : ""}`}
+                href={`/admin/cuentas?pagina=${pagina - 1}${estado ? `&estado=${encodeURIComponent(estado)}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
                 className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 ← Anterior
@@ -190,7 +193,7 @@ export default async function CuentasAdminPage({
             )}
             {pagina < totalPaginas && (
               <a
-                href={`/admin/cuentas?pagina=${pagina + 1}${estado ? `&estado=${estado}` : ""}${q ? `&q=${q}` : ""}`}
+                href={`/admin/cuentas?pagina=${pagina + 1}${estado ? `&estado=${encodeURIComponent(estado)}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
                 className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 Siguiente →

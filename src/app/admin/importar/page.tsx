@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { CsvUploader } from "@/components/admin/CsvUploader";
+
+export const metadata: Metadata = { title: "Importar" };
 
 export default function ImportarPage() {
   return (

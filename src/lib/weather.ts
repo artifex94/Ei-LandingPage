@@ -37,8 +37,7 @@ export interface DayForecast {
 
 export function wmoToCondition(
   code: number,
-  maxTemp: number,
-  maxWind: number
+  maxTemp: number
 ): WeatherCondition {
   // Temperatura extrema sobreescribe condición despejada/parcialmente nublada
   if (code <= 3) {
@@ -153,7 +152,7 @@ export async function fetchWeatherForecast(): Promise<DayForecast[] | null> {
       const precipProb = precipitation_probability_max[i] ?? 0;
       const precipSum  = Math.round((precipitation_sum[i] ?? 0) * 10) / 10;
       const code       = weather_code[i];
-      const condition  = wmoToCondition(code, maxTemp, maxWind);
+      const condition  = wmoToCondition(code, maxTemp);
       const safety     = getSafetyLevel(condition, maxTemp, maxWind);
 
       return {

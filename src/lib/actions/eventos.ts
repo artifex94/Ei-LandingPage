@@ -1,6 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
+import { registrarAudit } from "@/lib/audit";
+import { requireAdminWithName as requireAdmin } from "@/lib/actions/auth";
+import type { EstadoEventoSync } from "@/generated/prisma/client";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -91,4 +95,58 @@ export async function getEventosHeatmap(
   return Array.from(byDia.entries())
     .map(([fecha, { total, tipo }]) => ({ fecha, total, tipo }))
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
+// ── Mutación: actualizar estado de evento ──────────────────────────────────────
+
+const ESTADOS_VALIDOS = new Set<string>([
+  "NUEVO", "EN_PROCESO", "EN_ESPERA", "EN_PROCESO_DESDE_ESPERA",
+  "EN_PROCESO_MULTIPLE", "PROCESADO", "PROCESADO_NO_ALERTA",
+  "PROCESADO_MODO_PRUEBA", "PROCESADO_MODO_OFF",
+]);
+
+export async function actualizarEstadoEvento(
+  id: string,
+  nuevoEstado: string,
+  resolucion?: string,
+): Promise<{ error?: string }> {
+  const admin = await requireAdmin();
+  if (!admin) return { error: "Sin permisos." };
+
+  if (!ESTADOS_VALIDOS.has(nuevoEstado)) {
+    return { error: "Estado no válido." };
+  }
+
+  const evento = await prisma.eventoAlarma.findUnique({
+    where: { id },
+    select: { estado: true },
+  });
+
+  if (!evento) return { error: "Evento no encontrado." };
+
+  await prisma.eventoAlarma.update({
+    where: { id },
+    data: {
+      estado: nuevoEstado as EstadoEventoSync,
+      ...(resolucion !== undefined ? { resolucion } : {}),
+    },
+  });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre,
+    accion: "EVENTO_ESTADO_ACTUALIZADO",
+    entidad: "evento_alarma",
+    entidad_id: id,
+    detalle: { resolucion },
+    state_transition: {
+      prior_state: evento.estado,
+      new_state: nuevoEstado,
+    },
+  });
+
+  revalidatePath("/admin/eventos");
+  revalidatePath(`/admin/eventos/${id}`);
+
+  return {};
 }

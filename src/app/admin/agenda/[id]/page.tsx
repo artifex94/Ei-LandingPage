@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { prisma } from "@/lib/prisma/client";
 import { EditarTareaForm } from "./EditarTareaForm";
 
-export const metadata = { title: "Editar tarea — Admin EI" };
+export const metadata = { title: "Editar tarea" };
 
 export default async function EditarTareaPage({
   params,

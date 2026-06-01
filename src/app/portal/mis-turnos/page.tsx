@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
-export const metadata = { title: "Mis turnos — Portal EI" };
+export const metadata = { title: "Mis turnos" };
 
 const FRANJA_LABEL: Record<string, string> = {
   MANANA: "Mañana (06–14)",
@@ -31,12 +31,10 @@ function addDays(d: Date, n: number) {
 }
 
 export default async function MisTurnosPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const empleado = await prisma.empleado.findUnique({
-    where: { perfil_id: user.id },
+    where: { perfil_id: userId },
     select: { id: true },
   });
   if (!empleado) redirect("/portal/dashboard");

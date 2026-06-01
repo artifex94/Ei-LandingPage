@@ -1,18 +1,15 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
-export const metadata: Metadata = { title: "Mis Facturas — Portal" };
+export const metadata: Metadata = { title: "Mis facturas" };
 
 export default async function FacturasPortalPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const facturas = await prisma.factura.findMany({
     where: {
-      perfil_id: user.id,
+      perfil_id: userId,
       estado:    { in: ["EMITIDA_MANUAL", "EMITIDA_WSFE"] },
     },
     orderBy: { periodo_desde: "desc" },

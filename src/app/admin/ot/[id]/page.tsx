@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma/client";
 import { AsignarTecnicoForm } from "@/components/admin/ot/AsignarTecnicoForm";
 import { CambiarEstadoOTButtons } from "@/components/admin/ot/CambiarEstadoOTButtons";
 
-export const metadata: Metadata = { title: "Detalle OT — Admin" };
+export const metadata: Metadata = { title: "Detalle de OT" };
 
 const ESTADO_LABEL: Record<string, string> = {
   SOLICITADA: "Solicitada", ASIGNADA: "Asignada", EN_RUTA: "En ruta",
@@ -147,10 +147,40 @@ export default async function OTDetallePage({
       {/* GPS */}
       {(ot.gps_checkin_lat || ot.gps_salida_lat) && (
         <Card titulo="GPS">
-          <div className="space-y-1 text-xs font-mono text-slate-400">
-            {ot.gps_salida_lat   && <p>Salida:  {String(ot.gps_salida_lat)}, {String(ot.gps_salida_lng)}</p>}
-            {ot.gps_checkin_lat  && <p>Llegada: {String(ot.gps_checkin_lat)}, {String(ot.gps_checkin_lng)}</p>}
-            {ot.gps_checkout_lat && <p>Salida del sitio: {String(ot.gps_checkout_lat)}, {String(ot.gps_checkout_lng)}</p>}
+          <div className="space-y-2 text-xs font-mono text-slate-400">
+            {ot.gps_salida_lat && (
+              <a
+                href={`https://www.google.com/maps?q=${ot.gps_salida_lat},${ot.gps_salida_lng}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 hover:text-slate-200 transition-colors"
+              >
+                <span className="text-slate-500">Salida:</span>
+                {String(ot.gps_salida_lat)}, {String(ot.gps_salida_lng)}
+                <span className="text-indigo-400 text-[10px]">↗ Maps</span>
+              </a>
+            )}
+            {ot.gps_checkin_lat && (
+              <a
+                href={`https://www.google.com/maps?q=${ot.gps_checkin_lat},${ot.gps_checkin_lng}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 hover:text-slate-200 transition-colors"
+              >
+                <span className="text-slate-500">Llegada:</span>
+                {String(ot.gps_checkin_lat)}, {String(ot.gps_checkin_lng)}
+                <span className="text-indigo-400 text-[10px]">↗ Maps</span>
+              </a>
+            )}
+            {ot.gps_checkout_lat && (
+              <a
+                href={`https://www.google.com/maps?q=${ot.gps_checkout_lat},${ot.gps_checkout_lng}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 hover:text-slate-200 transition-colors"
+              >
+                <span className="text-slate-500">Salida del sitio:</span>
+                {String(ot.gps_checkout_lat)}, {String(ot.gps_checkout_lng)}
+                <span className="text-indigo-400 text-[10px]">↗ Maps</span>
+              </a>
+            )}
           </div>
         </Card>
       )}

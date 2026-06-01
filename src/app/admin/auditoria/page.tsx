@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
+
+export const metadata: Metadata = { title: "Auditoría" };
 
 const ACCION_LABELS: Record<string, { label: string; color: string }> = {
   CUENTA_CREADA:        { label: "Cuenta creada",       color: "text-green-400 bg-green-900/30" },
@@ -47,7 +50,7 @@ export default async function AuditoriaPage({
           href="/admin/auditoria"
           className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
             !accionFiltro
-              ? "bg-orange-500 text-white"
+              ? "bg-orange-500 text-slate-900"
               : "bg-slate-700 text-slate-300 hover:bg-slate-600"
           }`}
         >
@@ -59,7 +62,7 @@ export default async function AuditoriaPage({
             href={`/admin/auditoria?accion=${key}`}
             className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
               accionFiltro === key
-                ? "bg-orange-500 text-white"
+                ? "bg-orange-500 text-slate-900"
                 : "bg-slate-700 text-slate-300 hover:bg-slate-600"
             }`}
           >

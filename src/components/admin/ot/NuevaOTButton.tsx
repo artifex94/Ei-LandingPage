@@ -5,8 +5,6 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { crearOT } from "@/lib/actions/ot";
 import type { TipoOT, Prioridad } from "@/generated/prisma/client";
 
-type EmpleadoConPerfil = { id: string; perfil: { nombre: string } };
-
 const TIPOS = [
   { value: "INSTALACION", label: "Instalación" },
   { value: "CORRECTIVO",  label: "Correctivo" },
@@ -20,7 +18,7 @@ const PRIORIDADES = [
   { value: "ALTA",  label: "Alta" },
 ] as const;
 
-export function NuevaOTButton({ empleados }: { empleados: EmpleadoConPerfil[] }) {
+export function NuevaOTButton() {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);

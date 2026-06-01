@@ -1,28 +1,28 @@
 import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { LogoutButton } from "@/components/ui/LogoutButton";
 import { TecnicoTabNav } from "@/components/tecnico/TecnicoTabNav";
 
 export const metadata: Metadata = {
-  title: "Panel Técnico — EI",
+  title: {
+    default: "Panel Técnico — EI",
+    template: "%s — Técnico EI",
+  },
   robots: { index: false, follow: false },
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1 };
 
 export default async function TecnicoLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const perfil = await prisma.perfil.findUnique({
-    where: { id: user.id },
-    select: { nombre: true, rol: true, empleado: { select: { puede_instalar: true } } },
+  const { userId, perfil } = await requireSesion();
+  const empleado = await prisma.empleado.findFirst({
+    where: { perfil_id: userId },
+    select: { puede_instalar: true },
   });
 
-  if (!perfil || (perfil.rol !== "ADMIN" && perfil.rol !== "TECNICO" && !perfil.empleado?.puede_instalar)) {
+  if (perfil.rol !== "ADMIN" && perfil.rol !== "TECNICO" && !empleado?.puede_instalar) {
     redirect("/portal/dashboard");
   }
 
@@ -40,7 +40,7 @@ export default async function TecnicoLayout({ children }: { children: React.Reac
             </div>
             <div>
               <span className="text-sm font-semibold text-white block leading-tight">Panel Técnico</span>
-              <span className="text-[9px] text-slate-600 font-mono tracking-widest uppercase">Escobar Instalaciones</span>
+              <span className="text-[9px] text-slate-400 font-mono tracking-widest uppercase">Escobar Instalaciones</span>
             </div>
           </Link>
           <div className="flex items-center gap-3">

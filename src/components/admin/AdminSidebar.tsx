@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,7 +17,7 @@ import { LogoutButton } from "@/components/ui/LogoutButton";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
-type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes" | "altasUsuarioPendientes";
+type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes" | "altasUsuarioPendientes" | "eventosSinProcesar";
 
 interface NavItem {
   href: string;
@@ -67,7 +67,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Operaciones",
     items: [
       { href: "/admin/ot",        label: "Órdenes de trabajo", icon: ClipboardList, badge: "otsPendientes" },
-      { href: "/admin/eventos",   label: "Eventos alarma",     icon: Bell },
+      { href: "/admin/eventos",   label: "Eventos alarma",     icon: Bell,          badge: "eventosSinProcesar" },
       { href: "/admin/tecnicos",  label: "Técnicos",           icon: UserCog },
       { href: "/admin/agenda",    label: "Agenda",             icon: CalendarCheck },
       { href: "/admin/empleados", label: "Empleados",          icon: HardHat },
@@ -179,6 +179,7 @@ const BADGE_COLOR: Record<BadgeKey, string> = {
   cuentasEnMora:           "bg-red-500",
   otsPendientes:           "bg-amber-500",
   altasUsuarioPendientes:  "bg-orange-500",
+  eventosSinProcesar:      "bg-red-600",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -362,6 +363,7 @@ export function AdminSidebar({
   cuentasEnMora = 0,
   otsPendientes = 0,
   altasUsuarioPendientes = 0,
+  eventosSinProcesar = 0,
 }: {
   nombreAdmin: string;
   pendingSolicitudes?: number;
@@ -369,6 +371,7 @@ export function AdminSidebar({
   cuentasEnMora?: number;
   otsPendientes?: number;
   altasUsuarioPendientes?: number;
+  eventosSinProcesar?: number;
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -404,9 +407,10 @@ export function AdminSidebar({
     cuentasEnMora,
     otsPendientes,
     altasUsuarioPendientes,
+    eventosSinProcesar,
   };
 
-  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes + altasUsuarioPendientes;
+  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes + altasUsuarioPendientes + eventosSinProcesar;
 
   return (
     <>
@@ -452,7 +456,7 @@ export function AdminSidebar({
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
               Escobar Instalaciones
             </p>
-            <p className="text-[10px] text-slate-600 mt-0.5">Panel de administración</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Panel de administración</p>
           </div>
           <button
             onClick={() => setDrawerOpen(false)}

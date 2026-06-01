@@ -1,14 +1,13 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { addDays, format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { fetchWeatherForecast } from "@/lib/weather";
 import { VehiculoSection } from "./VehiculoSection";
 import { DayCard } from "./DayCard";
 
-export const metadata = { title: "Dashboard — Panel Técnico" };
+export const metadata = { title: "Dashboard" };
 
 const PRIORIDAD_BORDER: Record<string, string> = {
   ALTA: "border-l-red-500", MEDIA: "border-l-amber-500", BAJA: "border-l-slate-600",
@@ -26,23 +25,21 @@ const ESTADO_LABEL: Record<string, string> = {
 };
 
 export default async function TecnicoDashboardPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const hoyFin = new Date(); hoyFin.setHours(23, 59, 59, 999);
   const finVentana = addDays(hoy, 6);
 
   const empleado = await prisma.empleado.findFirst({
-    where: { perfil_id: user.id },
+    where: { perfil_id: userId },
     select: { id: true },
   });
 
   const [tareas, vehiculosActivos, vehiculosOcupados, reservaHoy, pronostico] = await Promise.all([
     prisma.tareaAgendada.findMany({
       where: {
-        tecnico_id: user.id,
+        tecnico_id: userId,
         fecha:  { gte: hoy, lte: finVentana },
         estado: { not: "CANCELADA" },
       },

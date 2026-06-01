@@ -7,7 +7,7 @@ import { EmpleadosTable } from "@/components/admin/empleados/EmpleadosTable";
 import { siteConfig } from "@/config/site";
 import type { RolEmpleado } from "@/generated/prisma/client";
 
-export const metadata: Metadata = { title: "Equipo — Admin" };
+export const metadata: Metadata = { title: "Equipo" };
 
 const TABS: { key: string; label: string }[] = [
   { key: "todos",          label: "Todos" },
@@ -63,7 +63,7 @@ export default async function TrabajadoresPage({
         </div>
         <Link
           href="/admin/trabajadores/nuevo"
-          className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors shrink-0"
+          className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-slate-900 px-4 py-2 rounded-lg transition-colors shrink-0"
         >
           + Nuevo trabajador
         </Link>

@@ -64,7 +64,6 @@ function AsignarSelector({
       ) : (
         <div className="flex gap-1">
           <select
-            // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
             defaultValue=""
             onChange={(e) => {
@@ -297,7 +296,7 @@ export function CalendarioTurnos({
               <td className="px-3 py-3 border-r border-slate-700 align-top sticky left-0 bg-slate-900 z-10">
                 <p className="font-semibold text-slate-200">{FRANJA_LABEL[franja]}</p>
                 <p className="text-slate-500 mt-0.5">{FRANJA_HORAS[franja]}</p>
-                <p className="text-slate-600 mt-1 font-medium">8 hs completas</p>
+                <p className="text-slate-500 mt-1 font-medium">8 hs completas</p>
               </td>
 
               {/* Celdas de días */}
