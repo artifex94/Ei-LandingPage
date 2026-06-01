@@ -8,6 +8,10 @@ import { prisma } from "@/lib/prisma/client";
 import { registrarAudit, registrarAuditTx } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
 
+// Señaliza que el pago cambió de estado entre el snapshot y el borrado
+// (control de concurrencia optimista en anularPago).
+class PagoModificadoError extends Error {}
+
 export interface ConfirmarResult {
   ok?: boolean;
   error?: string;
@@ -85,30 +89,42 @@ export async function anularPago(pagoId: string): Promise<{ error?: string }> {
   if (!pago) return { error: "Pago no encontrado." };
   if (pago.estado === "PROCESANDO") return { error: "No se puede anular un pago en proceso de acreditación." };
 
-  // Audit + delete atómicos: o queda el rastro y se borra el pago, o no ocurre
-  // ninguna de las dos cosas. registrarAuditTx propaga errores para revertir.
-  await prisma.$transaction(async (tx) => {
-    await registrarAuditTx(tx, {
-      admin_id: admin.id,
-      admin_nombre: admin.nombre,
-      accion: "PAGO_ANULADO",
-      entidad: "pago",
-      entidad_id: pagoId,
-      detalle: {
-        cuenta_id: pago.cuenta_id,
-        mes: pago.mes,
-        anio: pago.anio,
-        importe: Number(pago.importe),
-        estado: pago.estado,
-        metodo: pago.metodo,
-        ref_externa: pago.ref_externa,
-        acreditado_en: pago.acreditado_en,
-        registrado_por: pago.registrado_por,
-        factura_id: pago.factura_id,
-      },
+  // Audit + delete atómicos, con concurrencia optimista: el delete solo procede
+  // si el estado sigue siendo el del snapshot. Si un webhook de pago (MP/Talo)
+  // cambió el pago entremedio, deleteMany afecta 0 filas y abortamos la
+  // transacción (revirtiendo el audit) en vez de borrar un pago recién acreditado.
+  try {
+    await prisma.$transaction(async (tx) => {
+      await registrarAuditTx(tx, {
+        admin_id: admin.id,
+        admin_nombre: admin.nombre,
+        accion: "PAGO_ANULADO",
+        entidad: "pago",
+        entidad_id: pagoId,
+        detalle: {
+          cuenta_id: pago.cuenta_id,
+          mes: pago.mes,
+          anio: pago.anio,
+          importe: Number(pago.importe),
+          estado: pago.estado,
+          metodo: pago.metodo,
+          ref_externa: pago.ref_externa,
+          acreditado_en: pago.acreditado_en,
+          registrado_por: pago.registrado_por,
+          factura_id: pago.factura_id,
+        },
+      });
+      const { count } = await tx.pago.deleteMany({
+        where: { id: pagoId, estado: pago.estado },
+      });
+      if (count !== 1) throw new PagoModificadoError();
     });
-    await tx.pago.delete({ where: { id: pagoId } });
-  });
+  } catch (e) {
+    if (e instanceof PagoModificadoError) {
+      return { error: "El pago cambió de estado mientras lo anulabas. Recargá y reintentá." };
+    }
+    throw e;
+  }
 
   revalidatePath("/admin/pagos");
   return {};

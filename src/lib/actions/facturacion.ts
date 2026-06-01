@@ -4,23 +4,14 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import type { CondicionIVA } from "@/generated/prisma/client";
-import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { prepararBorradoresFactura } from "@/lib/facturacion/preparar-borradores";
-
-async function getAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  return perfil?.rol === "ADMIN" ? perfil : null;
-}
+import { requireAdmin } from "@/lib/auth/session";
 
 // ── Generar borradores manualmente (sin esperar el cron) ──────────────────────
 
 export async function generarBorradoresMes(anio: number, mes: number) {
-  const admin = await getAdmin();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const desde = new Date(anio, mes - 1, 1);
   const hasta = new Date(anio, mes, 0); // último día del mes
@@ -36,8 +27,7 @@ export async function actualizarDatosFiscales(
   perfil_id: string,
   datos: { cuit?: string; condicion_iva?: string; razon_social?: string }
 ) {
-  const admin = await getAdmin();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const perfil = await prisma.perfil.update({
     where: { id: perfil_id },
@@ -68,8 +58,7 @@ export async function marcarEmitidaManual(
   numero_oficial: string,
   pdf_file: FormData
 ) {
-  const admin = await getAdmin();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const file = pdf_file.get("pdf") as File | null;
   if (!file) throw new Error("Se requiere el PDF de la factura");
@@ -136,8 +125,7 @@ export async function marcarEmitidaManual(
 // ── Anular factura ────────────────────────────────────────────────────────────
 
 export async function anularFactura(factura_id: string, motivo: string) {
-  const admin = await getAdmin();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const factura = await prisma.factura.update({
     where: { id: factura_id },
@@ -166,8 +154,7 @@ export async function editarItemFactura(
   precio_unit: number,
   descripcion?: string
 ) {
-  const admin = await getAdmin();
-  if (!admin) throw new Error("No autorizado");
+  await requireAdmin();
 
   const item = await prisma.facturaItem.update({
     where: { id: item_id },
@@ -194,8 +181,7 @@ export async function editarItemFactura(
 // ── Activar / desactivar facturación para un titular ─────────────────────────
 
 export async function toggleRequiereFactura(perfil_id: string, valor: boolean) {
-  const admin = await getAdmin();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   await prisma.perfil.update({
     where: { id: perfil_id },

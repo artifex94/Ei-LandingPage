@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
+import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { enviarWhatsApp } from "@/lib/twilio";
@@ -26,11 +27,6 @@ async function getUsuario() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   return prisma.perfil.findUnique({ where: { id: user.id } });
-}
-
-async function getAdmin() {
-  const perfil = await getUsuario();
-  return perfil?.rol === "ADMIN" ? perfil : null;
 }
 
 // ── Crear OT (admin o cliente) ────────────────────────────────────────────────
@@ -82,8 +78,7 @@ export async function asignarTecnico(
   fecha_visita: Date,
   reservar_vehiculo = true
 ) {
-  const admin = await getAdmin();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const otAntes = await prisma.ordenTrabajo.findUnique({ where: { id: ot_id } });
   if (!otAntes) throw new Error("OT no encontrada");
@@ -344,8 +339,7 @@ export async function actualizarOT(
     fecha_visita?: Date;
   }
 ) {
-  const admin = await getAdmin();
-  if (!admin) throw new Error("No autorizado");
+  await requireAdmin();
 
   const ot = await prisma.ordenTrabajo.update({
     where: { id: ot_id },

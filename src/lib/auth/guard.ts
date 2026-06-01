@@ -28,7 +28,7 @@ import { puedeAcceder, type Rol } from "@/lib/auth/policy";
 /** Contexto inyectado al handler una vez superada la autorización. */
 export type CtxAccion = { id: string; nombre: string; rol: Rol };
 
-const SIN_PERMISO = { error: "No tenés permisos para esta acción." } as const;
+const SIN_PERMISO: { error: string } = { error: "No tenés permisos para esta acción." };
 
 /**
  * Envuelve un Server Action exigiendo uno de los `roles`. FAIL-CLOSED.

@@ -73,29 +73,33 @@ export async function ejecutarCierreMensual(
   for (const cuenta of overridesExpirados) {
     const tieneDeuda = cuenta.pagos.length > 0;
 
-    await prisma.cuenta.update({
-      where: { id: cuenta.id },
-      data: {
-        ...(tieneDeuda ? { estado: "SUSPENDIDA_PAGO" as const } : {}),
-        override_activo: false,
-        override_expira: null,
-        override_justificacion: null,
-      },
-    });
+    // Cambio de estado + auditoría atómicos: nunca queda la cuenta modificada
+    // sin su registro de auditoría (ni al revés).
+    await prisma.$transaction(async (tx) => {
+      await tx.cuenta.update({
+        where: { id: cuenta.id },
+        data: {
+          ...(tieneDeuda ? { estado: "SUSPENDIDA_PAGO" as const } : {}),
+          override_activo: false,
+          override_expira: null,
+          override_justificacion: null,
+        },
+      });
 
-    await prisma.auditLog.create({
-      data: {
-        admin_id: "system",
-        admin_nombre: "Cron automático",
-        accion: tieneDeuda ? "OVERRIDE_EXPIRED_SUSPENDED" : "OVERRIDE_EXPIRED_CLEAN",
-        entidad: "cuenta",
-        entidad_id: cuenta.id,
-        detalle: JSON.stringify({ descripcion: cuenta.descripcion, deuda_pagos: cuenta.pagos.length }),
-        state_transition: JSON.stringify({
-          prior_state: "ACTIVE_OVERRIDE",
-          new_state: tieneDeuda ? "SUSPENDIDA_PAGO" : cuenta.estado,
-        }),
-      },
+      await tx.auditLog.create({
+        data: {
+          admin_id: "system",
+          admin_nombre: "Cron automático",
+          accion: tieneDeuda ? "OVERRIDE_EXPIRED_SUSPENDED" : "OVERRIDE_EXPIRED_CLEAN",
+          entidad: "cuenta",
+          entidad_id: cuenta.id,
+          detalle: JSON.stringify({ descripcion: cuenta.descripcion, deuda_pagos: cuenta.pagos.length }),
+          state_transition: JSON.stringify({
+            prior_state: "ACTIVE_OVERRIDE",
+            new_state: tieneDeuda ? "SUSPENDIDA_PAGO" : cuenta.estado,
+          }),
+        },
+      });
     });
 
     if (tieneDeuda) overridesRevertidos++;
