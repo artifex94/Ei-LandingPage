@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { CalendarioTurnos } from "@/components/admin/turnos/CalendarioTurnos";
 
@@ -92,9 +93,9 @@ export default async function TurnosPage({
           <p className="text-slate-300 font-medium">No hay monitores activos.</p>
           <p className="text-sm text-slate-500 mt-2">
             Habilitá empleados como monitores en{" "}
-            <a href="/admin/empleados" className="text-orange-400 underline">
+            <Link href="/admin/empleados" className="text-orange-400 underline">
               Empleados
-            </a>
+            </Link>
             .
           </p>
         </div>

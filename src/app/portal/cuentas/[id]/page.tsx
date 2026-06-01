@@ -40,6 +40,9 @@ function PanelEstado({
   const estadoIcon  = hayProblemas ? "⚠" : hayAdvertencias ? "◎" : "✓";
 
   function tiempoRelativo(fecha: Date): string {
+    // Server Component: Date.now() corre una vez en el render del servidor
+    // (no hay re-render en cliente) → resultado estable.
+    // eslint-disable-next-line react-hooks/purity
     const diff = Date.now() - fecha.getTime();
     const min = Math.floor(diff / 60000);
     if (min < 1)   return "hace instantes";

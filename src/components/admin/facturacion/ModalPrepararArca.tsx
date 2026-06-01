@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { Factura, FacturaItem, Perfil } from "@/generated/prisma/client";
 
@@ -98,7 +99,7 @@ export function ModalPrepararArca({
               <span className="text-amber-400 mt-0.5" aria-hidden="true">⚠</span>
               <p className="text-xs text-amber-300">
                 Este titular no tiene CUIT cargado. Completalo en{" "}
-                <a href="/admin/clientes" className="underline">Clientes</a> antes de emitir.
+                <Link href="/admin/clientes" className="underline">Clientes</Link> antes de emitir.
               </p>
             </div>
           )}
