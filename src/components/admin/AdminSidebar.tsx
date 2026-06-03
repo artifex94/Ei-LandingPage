@@ -7,7 +7,7 @@ import {
   Menu, X, ChevronDown,
   LayoutDashboard,
   Users, ShieldCheck, CreditCard, AlertTriangle, Wrench, FilePen,
-  ClipboardList, HardHat, CalendarDays, Truck, UserCog, CalendarCheck,
+  ClipboardList, CalendarDays, Truck, UserCog, CalendarCheck,
   Receipt, Bell, Briefcase,
   FileUp, Database, ScrollText, Radio, Settings, UmbrellaOff,
   UserPlus,
@@ -27,7 +27,7 @@ interface NavItem {
 }
 
 interface NavSection {
-  id: "general" | "clientes" | "trabajadores" | "operaciones" | "finanzas" | "sistema";
+  id: "general" | "pendientes" | "campo" | "monitoreo" | "clientes" | "cobranzas" | "equipo" | "sistema";
   label: string | null;
   items: NavItem[];
 }
@@ -43,55 +43,66 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "pendientes",
+    label: "Pendientes",
+    items: [
+      { href: "/admin/eventos",          label: "Eventos de alarma", icon: Bell,          badge: "eventosSinProcesar" },
+      { href: "/admin/solicitudes-alta", label: "Altas de usuario",  icon: UserPlus,      badge: "altasUsuarioPendientes" },
+      { href: "/admin/mantenimiento",    label: "Mantenimiento",     icon: Wrench,        badge: "pendingMantenimiento" },
+      { href: "/admin/solicitudes-cambio", label: "Cambios de datos", icon: FilePen,      badge: "pendingSolicitudes" },
+    ],
+  },
+  {
+    id: "campo",
+    label: "Campo",
+    items: [
+      { href: "/admin/ot",     label: "Órdenes de trabajo", icon: ClipboardList, badge: "otsPendientes" },
+      { href: "/admin/agenda", label: "Agenda técnica",     icon: CalendarCheck },
+    ],
+  },
+  {
+    id: "monitoreo",
+    label: "Monitoreo",
+    items: [
+      { href: "/admin/turnos",    label: "Turnos",    icon: CalendarDays },
+      { href: "/admin/ausencias", label: "Ausencias", icon: UmbrellaOff },
+    ],
+  },
+  {
     id: "clientes",
     label: "Clientes",
     items: [
-      { href: "/admin/clientes",           label: "Clientes",         icon: Users },
-      { href: "/admin/cuentas",            label: "Cuentas",          icon: ShieldCheck },
-      { href: "/admin/pagos",              label: "Pagos",            icon: CreditCard },
-      { href: "/admin/morosidad",          label: "Morosidad",        icon: AlertTriangle,  badge: "cuentasEnMora" },
-      { href: "/admin/mantenimiento",      label: "Mantenimiento",    icon: Wrench,         badge: "pendingMantenimiento" },
-      { href: "/admin/solicitudes-cambio", label: "Cambios de datos", icon: FilePen,        badge: "pendingSolicitudes" },
-      { href: "/admin/solicitudes-alta",   label: "Altas de usuario", icon: UserPlus,       badge: "altasUsuarioPendientes" },
+      { href: "/admin/clientes",  label: "Clientes",  icon: Users },
+      { href: "/admin/cuentas",   label: "Cuentas",   icon: ShieldCheck },
+      { href: "/admin/morosidad", label: "Morosidad", icon: AlertTriangle, badge: "cuentasEnMora" },
     ],
   },
   {
-    id: "trabajadores",
-    label: "Trabajadores",
+    id: "cobranzas",
+    label: "Cobranzas",
     items: [
-      { href: "/admin/trabajadores", label: "Equipo", icon: Briefcase },
-    ],
-  },
-  {
-    id: "operaciones",
-    label: "Operaciones",
-    items: [
-      { href: "/admin/ot",        label: "Órdenes de trabajo", icon: ClipboardList, badge: "otsPendientes" },
-      { href: "/admin/eventos",   label: "Eventos alarma",     icon: Bell,          badge: "eventosSinProcesar" },
-      { href: "/admin/tecnicos",  label: "Técnicos",           icon: UserCog },
-      { href: "/admin/agenda",    label: "Agenda",             icon: CalendarCheck },
-      { href: "/admin/empleados", label: "Empleados",          icon: HardHat },
-      { href: "/admin/turnos",    label: "Turnos",             icon: CalendarDays },
-      { href: "/admin/ausencias", label: "Ausencias",          icon: UmbrellaOff },
-      { href: "/admin/vehiculo",  label: "Vehículo",           icon: Truck },
-    ],
-  },
-  {
-    id: "finanzas",
-    label: "Finanzas",
-    items: [
+      { href: "/admin/pagos",       label: "Pagos",       icon: CreditCard },
       { href: "/admin/facturacion", label: "Facturación", icon: Receipt },
+    ],
+  },
+  {
+    id: "equipo",
+    label: "Equipo",
+    items: [
+      { href: "/admin/trabajadores", label: "Trabajadores",      icon: Briefcase },
+      { href: "/admin/tecnicos",     label: "Técnicos del portal", icon: UserCog },
+      { href: "/admin/vehiculo",     label: "Vehículo",          icon: Truck },
     ],
   },
   {
     id: "sistema",
     label: "Sistema",
     items: [
-      { href: "/admin/importar",        label: "Importar CSV",    icon: FileUp },
-      { href: "/admin/higienizar",      label: "Higienizar BD",   icon: Database },
-      { href: "/admin/auditoria",       label: "Auditoría",       icon: ScrollText },
-      { href: "/admin/sync-softguard",  label: "SoftGuard",       icon: Radio },
-      { href: "/admin/configuracion",   label: "Configuración",   icon: Settings },
+      { href: "/admin/importar",       label: "Importar datos", icon: FileUp },
+      { href: "/admin/higienizar",     label: "Higienizar BD",  icon: Database },
+      { href: "/admin/auditoria",      label: "Auditoría",      icon: ScrollText },
+      { href: "/admin/sync-softguard", label: "SoftGuard",      icon: Radio },
+      { href: "/admin/configuracion",  label: "Configuración",  icon: Settings },
     ],
   },
 ];
@@ -111,6 +122,42 @@ const SECTION_STYLE = {
     chevron:         "text-slate-600",
     toggleHover:     "hover:bg-slate-800/40",
   },
+  pendientes: {
+    labelColor:      "text-rose-400",
+    dot:             "bg-rose-500",
+    activeBg:        "bg-rose-500/10",
+    activeText:      "text-rose-100",
+    activeBorder:    "border-l-2 border-rose-500",
+    activeIconColor: "text-rose-400",
+    inactiveIcon:    "text-slate-500",
+    hoverBg:         "hover:bg-rose-500/5",
+    chevron:         "text-rose-700",
+    toggleHover:     "hover:bg-rose-500/5",
+  },
+  campo: {
+    labelColor:      "text-indigo-400",
+    dot:             "bg-indigo-500",
+    activeBg:        "bg-indigo-500/10",
+    activeText:      "text-indigo-100",
+    activeBorder:    "border-l-2 border-indigo-500",
+    activeIconColor: "text-indigo-400",
+    inactiveIcon:    "text-slate-500",
+    hoverBg:         "hover:bg-indigo-500/5",
+    chevron:         "text-indigo-600",
+    toggleHover:     "hover:bg-indigo-500/5",
+  },
+  monitoreo: {
+    labelColor:      "text-cyan-400",
+    dot:             "bg-cyan-500",
+    activeBg:        "bg-cyan-500/10",
+    activeText:      "text-cyan-100",
+    activeBorder:    "border-l-2 border-cyan-500",
+    activeIconColor: "text-cyan-400",
+    inactiveIcon:    "text-slate-500",
+    hoverBg:         "hover:bg-cyan-500/5",
+    chevron:         "text-cyan-700",
+    toggleHover:     "hover:bg-cyan-500/5",
+  },
   clientes: {
     labelColor:      "text-blue-400",
     dot:             "bg-blue-500",
@@ -123,19 +170,7 @@ const SECTION_STYLE = {
     chevron:         "text-blue-600",
     toggleHover:     "hover:bg-blue-500/5",
   },
-  operaciones: {
-    labelColor:      "text-indigo-400",
-    dot:             "bg-indigo-500",
-    activeBg:        "bg-indigo-500/10",
-    activeText:      "text-indigo-100",
-    activeBorder:    "border-l-2 border-indigo-500",
-    activeIconColor: "text-indigo-400",
-    inactiveIcon:    "text-slate-500",
-    hoverBg:         "hover:bg-indigo-500/5",
-    chevron:         "text-indigo-600",
-    toggleHover:     "hover:bg-indigo-500/5",
-  },
-  finanzas: {
+  cobranzas: {
     labelColor:      "text-emerald-400",
     dot:             "bg-emerald-500",
     activeBg:        "bg-emerald-500/10",
@@ -147,7 +182,7 @@ const SECTION_STYLE = {
     chevron:         "text-emerald-600",
     toggleHover:     "hover:bg-emerald-500/5",
   },
-  trabajadores: {
+  equipo: {
     labelColor:      "text-amber-400",
     dot:             "bg-amber-500",
     activeBg:        "bg-amber-500/10",
@@ -235,7 +270,7 @@ function NavLink({
       />
       <span className="flex-1 truncate leading-tight">{item.label}</span>
       {badgeCount > 0 && (
-        <span className={`${BADGE_COLOR[item.badge!]} text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none flex-shrink-0`}>
+        <span className={`${BADGE_COLOR[item.badge!]} text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none flex-shrink-0`}>
           {badgeCount > 99 ? "99+" : badgeCount}
         </span>
       )}
@@ -267,13 +302,14 @@ function CollapsibleSection({
       <button
         onClick={onToggle}
         aria-expanded={isOpen}
+        aria-controls={`nav-section-${section.id}`}
         className={`
           w-full flex items-center gap-2 px-3 pt-3.5 pb-1.5 rounded-md
           transition-colors duration-150 ${s.toggleHover}
         `}
       >
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
-        <span className={`text-[10px] font-bold uppercase tracking-widest flex-1 text-left ${s.labelColor}`}>
+        <span className={`text-xs font-bold uppercase tracking-widest flex-1 text-left ${s.labelColor}`}>
           {section.label}
         </span>
         {/* Punto de alerta cuando la sección está cerrada y tiene badges */}
@@ -290,7 +326,7 @@ function CollapsibleSection({
         className="grid transition-[grid-template-rows] duration-200 ease-in-out"
         style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
       >
-        <ul className="overflow-hidden space-y-0.5" role="list">
+        <ul id={`nav-section-${section.id}`} className="overflow-hidden space-y-0.5" role="list">
           {section.items.map((item) => (
             <li key={item.href}>
               <NavLink
@@ -416,7 +452,7 @@ export function AdminSidebar({
     <>
       {/* ── Topbar mobile ─────────────────────────────────────────────────── */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 px-4 h-14 flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
           Escobar · Admin
         </span>
         <button
@@ -442,7 +478,7 @@ export function AdminSidebar({
 
       {/* ── Drawer mobile ─────────────────────────────────────────────────── */}
       <nav
-        aria-label="Navegación del administrador"
+        aria-label="Navegación del administrador (móvil)"
         className={`
           lg:hidden fixed top-0 left-0 bottom-0 z-50 w-64
           bg-slate-900 border-r border-slate-800
@@ -456,7 +492,7 @@ export function AdminSidebar({
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
               Escobar Instalaciones
             </p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Panel de administración</p>
+            <p className="text-xs text-slate-400 mt-0.5">Panel de administración</p>
           </div>
           <button
             onClick={() => setDrawerOpen(false)}
@@ -478,7 +514,7 @@ export function AdminSidebar({
         </div>
 
         <div className="flex-shrink-0 px-4 py-4 border-t border-slate-800 space-y-2">
-          <p className="text-xs text-slate-500 truncate">{nombreAdmin}</p>
+          <p className="text-xs text-slate-400 truncate">{nombreAdmin}</p>
           <LogoutButton variant="sidebar" />
         </div>
       </nav>
@@ -489,10 +525,10 @@ export function AdminSidebar({
         className="hidden lg:flex sticky top-0 h-screen w-56 flex-col bg-slate-900 border-r border-slate-800 flex-shrink-0"
       >
         <div className="px-4 py-5 flex-shrink-0 border-b border-slate-800/60">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
             Escobar Instalaciones
           </p>
-          <p className="text-[9px] text-slate-700 mt-0.5 uppercase tracking-wider">
+          <p className="text-xs text-slate-600 mt-0.5 uppercase tracking-wider">
             Panel de administración
           </p>
         </div>
@@ -507,7 +543,7 @@ export function AdminSidebar({
         </div>
 
         <div className="flex-shrink-0 px-4 py-4 border-t border-slate-800 space-y-2">
-          <p className="text-xs text-slate-500 truncate">{nombreAdmin}</p>
+          <p className="text-xs text-slate-400 truncate">{nombreAdmin}</p>
           <LogoutButton variant="sidebar" />
         </div>
       </nav>
