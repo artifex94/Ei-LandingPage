@@ -129,7 +129,7 @@ export function NuevoEmpleadoForm({ esEscobarAdmin = false }: { esEscobarAdmin?:
             </label>
             <input
               id="emp-color" name="color_calendario" type="color"
-              defaultValue="#6366f1"
+              defaultValue="#64748b"
               className="h-9 w-16 rounded-lg border border-slate-600 bg-slate-700 cursor-pointer p-1"
             />
           </div>

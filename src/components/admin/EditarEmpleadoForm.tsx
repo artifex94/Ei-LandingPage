@@ -186,7 +186,7 @@ export function EditarEmpleadoForm({ empleado, esEscobarAdmin = false }: Props) 
             </label>
             <input
               id="emp-e-color" name="color_calendario" type="color"
-              defaultValue={empleado.color_calendario ?? "#6366f1"}
+              defaultValue={empleado.color_calendario ?? "#64748b"}
               className="h-9 w-full rounded-lg border border-slate-600 bg-slate-700 cursor-pointer p-1"
             />
           </div>
