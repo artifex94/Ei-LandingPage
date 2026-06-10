@@ -38,7 +38,7 @@ export function AprobarButton({ id }: { id: string }) {
       >
         {loading ? "Aprobando..." : "Aprobar"}
       </button>
-      {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+      {error && <p role="alert" className="text-xs text-red-400 mt-1">{error}</p>}
     </div>
   );
 }
@@ -71,7 +71,7 @@ export function RechazarForm({ id }: { id: string }) {
     <form action={action} className="space-y-2 min-w-[200px]">
       <input type="hidden" name="id" value={id} />
       {state?.error && (
-        <p className="text-xs text-red-400">{state.error}</p>
+        <p role="alert" className="text-xs text-red-400">{state.error}</p>
       )}
       <input
         name="notas_admin"
@@ -129,7 +129,7 @@ export function EditarYAprobarForm({ id, valorPropuesto }: Props) {
     <form action={action} className="space-y-2 min-w-[220px]">
       <input type="hidden" name="id" value={id} />
       {state?.error && (
-        <p className="text-xs text-red-400">{state.error}</p>
+        <p role="alert" className="text-xs text-red-400">{state.error}</p>
       )}
       <input
         name="valor_corregido"

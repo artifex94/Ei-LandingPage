@@ -6,9 +6,11 @@ import { es } from "date-fns/locale";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { marcarCompletada, guardarNotas } from "./actions";
+import { UUID_RE } from "@/lib/constants/validation";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
+  if (!UUID_RE.test(id)) return { title: "Tarea" };
   const tarea = await prisma.tareaAgendada.findUnique({ where: { id }, select: { titulo: true } });
   return { title: tarea?.titulo ?? "Tarea" };
 }
@@ -38,6 +40,7 @@ export default async function TareaDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
   const { userId } = await requireSesion();
 
   const tarea = await prisma.tareaAgendada.findUnique({
@@ -84,10 +87,10 @@ export default async function TareaDetallePage({
         <div className="flex items-start justify-between gap-2">
           <h1 className="text-lg font-bold text-white leading-snug">{tarea.titulo}</h1>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${ESTADO_BADGE[tarea.estado]}`}>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ESTADO_BADGE[tarea.estado]}`}>
               {ESTADO_LABEL[tarea.estado]}
             </span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${PRIORIDAD_BADGE[tarea.prioridad]}`}>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${PRIORIDAD_BADGE[tarea.prioridad]}`}>
               {PRIORIDAD_LABEL[tarea.prioridad]}
             </span>
           </div>
@@ -107,7 +110,7 @@ export default async function TareaDetallePage({
       {/* Dirección */}
       {tarea.cuenta && (mapsQuery) && (
         <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
             Dónde
           </p>
           <p className="text-sm text-white">
@@ -117,7 +120,7 @@ export default async function TareaDetallePage({
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-orange-400 hover:text-orange-300 transition-colors"
           >
             Ver en Google Maps ↗
           </a>
@@ -127,7 +130,7 @@ export default async function TareaDetallePage({
       {/* Contacto */}
       {(contactoNombre || contactoTel) && (
         <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
             Contacto
           </p>
           {contactoNombre && (
@@ -163,7 +166,7 @@ export default async function TareaDetallePage({
             await guardarNotas(id, fd.get("notas") as string);
           }}
         >
-          <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          <label className="block text-xs font-bold uppercase tracking-widest text-slate-400">
             Notas del trabajo
           </label>
           <textarea
@@ -171,7 +174,7 @@ export default async function TareaDetallePage({
             defaultValue={tarea.notas_tecnico ?? ""}
             rows={3}
             placeholder="Observaciones, materiales usados, etc."
-            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:outline-2 focus:outline-orange-500 resize-none"
           />
           <button
             type="submit"
@@ -184,7 +187,7 @@ export default async function TareaDetallePage({
 
       {tarea.notas_tecnico && yaCompletada && (
         <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Notas</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Notas</p>
           <p className="text-sm text-slate-300 whitespace-pre-wrap">{tarea.notas_tecnico}</p>
         </div>
       )}

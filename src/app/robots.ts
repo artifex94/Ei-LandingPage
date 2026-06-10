@@ -16,6 +16,7 @@ export default function robots(): MetadataRoute.Robots {
           "/login",
           "/recibo/",
           "/embed/",
+          "/solicitud-alta",
         ],
       },
     ],

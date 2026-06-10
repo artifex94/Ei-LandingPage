@@ -1,7 +1,27 @@
 import type { Metadata } from "next";
 import { CsvUploader } from "@/components/admin/CsvUploader";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
 export const metadata: Metadata = { title: "Importar" };
+
+const TUTORIAL_IMPORTAR = [
+  {
+    titulo: "Dónde descargar el CSV",
+    descripcion: "En SoftGuard andá a Reportes → Exportar clientes. Guardá el archivo y subilo acá tal cual.",
+  },
+  {
+    titulo: "Qué hace la importación",
+    descripcion: "Crea o actualiza cuentas y perfiles de clientes. Si una cuenta ya existe (por código SoftGuard), la actualiza sin duplicar.",
+  },
+  {
+    titulo: "Si hay errores en el CSV",
+    descripcion: "El sistema muestra fila por fila qué falló. Podés corregir el CSV y reimportar solo las filas con problema.",
+  },
+  {
+    titulo: "Después de importar",
+    descripcion: "Revisá en Clientes y Cuentas que los datos quedaron bien. La importación no toca pagos ni solicitudes existentes.",
+  },
+];
 
 export default function ImportarPage() {
   return (
@@ -31,6 +51,12 @@ export default function ImportarPage() {
           <li>zonas — JSON array con zonas/sensores (opcional)</li>
         </ul>
       </div>
+
+      <TutorialContextual
+        section="importar"
+        titulo="Guía rápida — Importar"
+        steps={TUTORIAL_IMPORTAR}
+      />
     </section>
   );
 }

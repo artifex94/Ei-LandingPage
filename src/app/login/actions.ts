@@ -52,6 +52,31 @@ export async function loginConEmail(
   redirect("/portal/dashboard");
 }
 
+
+// ─── Flujo unificado: Email o DNI + contraseña ───────────────────────────────
+
+export async function loginConCredencial(
+  _prev: { error: string } | null,
+  formData: FormData
+): Promise<{ error: string } | null> {
+  const credencial = ((formData.get("credencial") as string) ?? "").trim();
+  const password = formData.get("password") as string;
+
+  if (!credencial || !password) return { error: "Completá todos los campos." };
+
+  const esEmail = credencial.includes("@");
+  const email = esEmail ? credencial.toLowerCase() : `dni_${credencial.replace(/\D/g, "")}@${process.env.ADMIN_EMAIL_DOMAIN!}`;
+
+  const supabase = await createClient();
+  const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) return { error: "Email/DNI o contraseña incorrectos." };
+
+  const perfil = await prisma.perfil.findUnique({ where: { id: authData.user.id } });
+  if (perfil?.rol === "ADMIN") redirect("/admin/dashboard");
+  if (perfil?.rol === "TECNICO") redirect("/tecnico/dashboard");
+  redirect("/portal/dashboard");
+}
 // ─── Flujo 2: Magic link por email ───────────────────────────────────────────
 
 export async function enviarMagicLinkEmail(
@@ -141,7 +166,7 @@ export async function enviarLinkWhatsApp(
   } else {
     enviado = await enviarWhatsApp(
       telefono,
-      `Hola ${nombre}! Tocá este link para ingresar a tu portal de Escobar Instalaciones:\n\n` +
+      `Hola ${nombre}! Tocá este link para ingresar a Mi Central de Escobar Instalaciones:\n\n` +
         `${data.properties.action_link}\n\n` +
         `El link es personal y expira en 1 hora.`
     );

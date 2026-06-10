@@ -7,18 +7,15 @@ export const metadata = { title: "OTs" };
 export default async function OtsPage() {
   const { userId } = await requireSesion();
 
-  const empleado = await prisma.empleado.findFirst({
-    where: { perfil_id: userId },
-    select: { id: true },
-  });
-
-  const [disponiblesRaw, misOTsRaw] = await Promise.all([
+  // empleado y disponibles son independientes — se resuelven en paralelo
+  const [empleado, disponiblesRaw] = await Promise.all([
+    prisma.empleado.findFirst({
+      where: { perfil_id: userId },
+      select: { id: true },
+    }),
     // OTs sin técnico asignado, estado SOLICITADA
     prisma.ordenTrabajo.findMany({
-      where: {
-        estado:     "SOLICITADA",
-        tecnico_id: null,
-      },
+      where: { estado: "SOLICITADA", tecnico_id: null },
       include: {
         cuenta: {
           select: {
@@ -30,30 +27,31 @@ export default async function OtsPage() {
         perfil: { select: { nombre: true, telefono: true } },
       },
       orderBy: [{ prioridad: "desc" }, { created_at: "asc" }],
+      take: 50,
     }),
-
-    // OTs asignadas al técnico en curso
-    empleado
-      ? prisma.ordenTrabajo.findMany({
-          where: {
-            tecnico_id: empleado.id,
-            estado:     { in: ["ASIGNADA", "EN_RUTA", "EN_SITIO"] },
-          },
-          include: {
-            cuenta: {
-              select: {
-                calle: true,
-                localidad: true,
-                perfil: { select: { nombre: true, telefono: true } },
-              },
-            },
-            perfil:  { select: { nombre: true, telefono: true } },
-            tarea:   { select: { id: true } },
-          },
-          orderBy: { fecha_visita: "asc" },
-        })
-      : Promise.resolve([]),
   ]);
+
+  // OTs asignadas al técnico — depende de empleado.id
+  const misOTsRaw = empleado
+    ? await prisma.ordenTrabajo.findMany({
+        where: {
+          tecnico_id: empleado.id,
+          estado:     { in: ["ASIGNADA", "EN_RUTA", "EN_SITIO"] },
+        },
+        include: {
+          cuenta: {
+            select: {
+              calle: true,
+              localidad: true,
+              perfil: { select: { nombre: true, telefono: true } },
+            },
+          },
+          perfil: { select: { nombre: true, telefono: true } },
+          tarea:  { select: { id: true } },
+        },
+        orderBy: { fecha_visita: "asc" },
+      })
+    : [];
 
   function mapOT(ot: typeof disponiblesRaw[0], tareaId?: string | null): OTCard {
     return {

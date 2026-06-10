@@ -2,6 +2,27 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "./AccionesForm";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+import { EmptyStateSuccess } from "@/components/admin/EmptyStateSuccess";
+
+const TUTORIAL_CAMBIOS = [
+  {
+    titulo: "Qué es un cambio de datos",
+    descripcion: "Un cliente solicitó modificar su teléfono, email u otro dato desde el portal. Cada solicitud muestra el valor actual y el propuesto.",
+  },
+  {
+    titulo: "Aprobar directamente",
+    descripcion: '"Aprobar" aplica el cambio propuesto tal cual. Usalo cuando el valor nuevo es correcto y no necesita ajuste.',
+  },
+  {
+    titulo: "Editar y aprobar",
+    descripcion: 'Si el valor propuesto tiene errores (formato de teléfono, typo), usá "Editar y aprobar" para corregirlo antes de guardarlo.',
+  },
+  {
+    titulo: "Rechazar",
+    descripcion: "Rechazá si el cambio no corresponde o hay un problema. El cliente puede volver a solicitarlo.",
+  },
+];
 
 export const metadata: Metadata = { title: "Solicitudes de cambio" };
 
@@ -28,9 +49,10 @@ export default async function SolicitudesCambioPage() {
       </div>
 
       {solicitudes.length === 0 ? (
-        <div className="bg-slate-800 rounded-xl border border-slate-700 p-10 text-center">
-          <p className="text-slate-400">No hay solicitudes pendientes.</p>
-        </div>
+        <EmptyStateSuccess
+          titulo="Sin cambios pendientes"
+          descripcion="Todos los cambios de datos han sido revisados."
+        />
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-slate-400">
@@ -95,6 +117,12 @@ export default async function SolicitudesCambioPage() {
           ))}
         </div>
       )}
+
+      <TutorialContextual
+        section="solicitudes-cambio"
+        titulo="Guía rápida — Cambios de datos"
+        steps={TUTORIAL_CAMBIOS}
+      />
     </div>
   );
 }

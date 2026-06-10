@@ -15,7 +15,7 @@ export interface AgendaActionResult {
 const crearTareaSchema = z.object({
   titulo: z.string().min(2, "El título es obligatorio"),
   descripcion: z.string().optional().transform((v) => v || undefined),
-  tecnico_id: z.string().min(1, "Seleccioná un técnico"),
+  tecnico_id: z.string().uuid("Seleccioná un técnico válido"),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD)"),
   hora_inicio: z.string().optional().transform((v) => v || undefined),
   hora_fin: z.string().optional().transform((v) => v || undefined),
@@ -73,11 +73,11 @@ export async function crearTarea(
 }
 
 const editarTareaSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().uuid("ID de tarea inválido"),
   titulo: z.string().min(2, "El título es obligatorio"),
   descripcion: z.string().optional().transform((v) => v || undefined),
-  tecnico_id: z.string().min(1, "Seleccioná un técnico"),
-  fecha: z.string().min(1, "La fecha es obligatoria"),
+  tecnico_id: z.string().uuid("Seleccioná un técnico válido"),
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD)"),
   hora_inicio: z.string().optional().transform((v) => v || undefined),
   hora_fin: z.string().optional().transform((v) => v || undefined),
   cuenta_id: z.string().optional().transform((v) => v || undefined),

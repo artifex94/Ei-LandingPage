@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { METODO_LABEL } from "@/lib/constants/payment";
+import { DataTable, type Column } from "@/components/ui/DataTable";
 
 export const metadata: Metadata = { title: "Documentos" };
 
@@ -88,6 +89,101 @@ export default async function DocumentosPage({
   function tabHref(t: Tab)   { return `/portal/documentos?tab=${t}`; }
   function anioHref(a: number) { return `/portal/documentos?tab=${tab}&anio=${a}`; }
 
+  type ReciboRow = (typeof pagos)[number];
+  type FacturaRow = (typeof facturas)[number];
+
+  const recibosColumns: Column<ReciboRow>[] = [
+    {
+      id: "mes",
+      header: "Mes",
+      cell: (p) => <span className="text-white capitalize">{MESES_ES[p.mes - 1]}</span>,
+    },
+    {
+      id: "servicio",
+      header: "Servicio",
+      className: "hidden sm:table-cell",
+      cell: (p) => <span className="text-slate-400 text-xs">{p.cuenta.descripcion}</span>,
+    },
+    {
+      id: "importe",
+      header: "Importe",
+      align: "right",
+      cell: (p) => (
+        <span className="font-semibold text-white">
+          ${Number(p.importe).toLocaleString("es-AR")}
+          {p.metodo && (
+            <span className="block text-xs font-normal text-slate-500">
+              {METODO_LABEL[p.metodo] ?? p.metodo}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      id: "acciones",
+      header: "Acciones",
+      srOnlyHeader: true,
+      align: "right",
+      className: "w-16",
+      cell: (p) => (
+        <Link
+          href={`/recibo/${p.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
+          aria-label={`Ver recibo de ${MESES_ES[p.mes - 1]} ${anio}`}
+        >
+          Ver ↗
+        </Link>
+      ),
+    },
+  ];
+
+  const facturasColumns: Column<FacturaRow>[] = [
+    {
+      id: "mes",
+      header: "Mes",
+      cell: (f) => (
+        <span className="text-white capitalize">
+          {new Date(f.periodo_desde).toLocaleDateString("es-AR", { month: "long" })}
+        </span>
+      ),
+    },
+    {
+      id: "numero",
+      header: "Nº",
+      className: "hidden sm:table-cell",
+      cell: (f) => <span className="font-mono text-xs text-slate-400">{f.numero_oficial ?? "—"}</span>,
+    },
+    {
+      id: "total",
+      header: "Total",
+      align: "right",
+      cell: (f) => <span className="font-semibold text-white">${Number(f.total).toLocaleString("es-AR")}</span>,
+    },
+    {
+      id: "acciones",
+      header: "Acciones",
+      srOnlyHeader: true,
+      align: "right",
+      className: "w-16",
+      cell: (f) =>
+        f.pdf_url ? (
+          <a
+            href={f.pdf_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
+            aria-label={`Descargar factura de ${new Date(f.periodo_desde).toLocaleDateString("es-AR", { month: "long" })} ${anio}`}
+          >
+            PDF ↗
+          </a>
+        ) : (
+          <span className="text-xs text-slate-500">Próximamente</span>
+        ),
+    },
+  ];
+
   return (
     <section className="space-y-6" aria-labelledby="docs-heading">
 
@@ -155,129 +251,44 @@ export default async function DocumentosPage({
       {/* ── Tabla de recibos ────────────────────────────────────────────────── */}
       {tab === "recibos" && (
         <>
-          {pagos.length === 0 ? (
-            <EmptyState
-              mensaje={
-                aniosRecibos.length === 0
-                  ? "Aún no tenés pagos registrados."
-                  : `No hay recibos para ${anio}.`
-              }
-              sugerencia={
-                aniosRecibos.length > 1
-                  ? "Probá seleccionando otro año arriba."
-                  : undefined
-              }
-            />
-          ) : (
-            <div className="rounded-xl border border-slate-700 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-800 border-b border-slate-700">
-                  <tr>
-                    <th className="text-left px-4 py-3 text-slate-400 font-medium">Mes</th>
-                    <th className="text-left px-4 py-3 text-slate-400 font-medium hidden sm:table-cell">Servicio</th>
-                    <th className="text-right px-4 py-3 text-slate-400 font-medium">Importe</th>
-                    <th className="px-4 py-3 w-16" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700/50">
-                  {pagos.map((p) => (
-                    <tr key={p.id} className="bg-slate-900 hover:bg-slate-800/50 transition-colors">
-                      <td className="px-4 py-3 text-white capitalize">
-                        {MESES_ES[p.mes - 1]}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400 text-xs hidden sm:table-cell">
-                        {p.cuenta.descripcion}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-white">
-                        ${Number(p.importe).toLocaleString("es-AR")}
-                        {p.metodo && (
-                          <span className="block text-xs font-normal text-slate-500">
-                            {METODO_LABEL[p.metodo] ?? p.metodo}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/recibo/${p.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
-                          aria-label={`Ver recibo de ${MESES_ES[p.mes - 1]} ${anio}`}
-                        >
-                          Ver ↗
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            columns={recibosColumns}
+            rows={pagos}
+            keyExtractor={(p) => p.id}
+            caption={`Recibos de ${anio}`}
+            emptyState={
+              <EmptyState
+                mensaje={
+                  aniosRecibos.length === 0
+                    ? "Aún no tenés pagos registrados."
+                    : `No hay recibos para ${anio}.`
+                }
+                sugerencia={aniosRecibos.length > 1 ? "Probá seleccionando otro año arriba." : undefined}
+              />
+            }
+          />
         </>
       )}
 
       {/* ── Tabla de facturas ───────────────────────────────────────────────── */}
       {tab === "facturas" && (
         <>
-          {facturas.length === 0 ? (
-            <EmptyState
-              mensaje={
-                aniosFacturas.length === 0
-                  ? "Aún no hay facturas emitidas para tu cuenta."
-                  : `No hay facturas para ${anio}.`
-              }
-              sugerencia={
-                aniosFacturas.length > 1
-                  ? "Probá seleccionando otro año arriba."
-                  : undefined
-              }
-            />
-          ) : (
-            <div className="rounded-xl border border-slate-700 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-800 border-b border-slate-700">
-                  <tr>
-                    <th className="text-left px-4 py-3 text-slate-400 font-medium">Mes</th>
-                    <th className="text-left px-4 py-3 text-slate-400 font-medium hidden sm:table-cell">Nº</th>
-                    <th className="text-right px-4 py-3 text-slate-400 font-medium">Total</th>
-                    <th className="px-4 py-3 w-16" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700/50">
-                  {facturas.map((f) => (
-                    <tr key={f.id} className="bg-slate-900 hover:bg-slate-800/50 transition-colors">
-                      <td className="px-4 py-3 text-white capitalize">
-                        {new Date(f.periodo_desde).toLocaleDateString("es-AR", {
-                          month: "long",
-                        })}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-400 hidden sm:table-cell">
-                        {f.numero_oficial ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-white">
-                        ${Number(f.total).toLocaleString("es-AR")}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {f.pdf_url ? (
-                          <a
-                            href={f.pdf_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
-                            aria-label={`Descargar factura de ${new Date(f.periodo_desde).toLocaleDateString("es-AR", { month: "long" })} ${anio}`}
-                          >
-                            PDF ↗
-                          </a>
-                        ) : (
-                          <span className="text-xs text-slate-500">Próximamente</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            columns={facturasColumns}
+            rows={facturas}
+            keyExtractor={(f) => f.id}
+            caption={`Facturas de ${anio}`}
+            emptyState={
+              <EmptyState
+                mensaje={
+                  aniosFacturas.length === 0
+                    ? "Aún no hay facturas emitidas para tu cuenta."
+                    : `No hay facturas para ${anio}.`
+                }
+                sugerencia={aniosFacturas.length > 1 ? "Probá seleccionando otro año arriba." : undefined}
+              />
+            }
+          />
         </>
       )}
 
@@ -307,7 +318,7 @@ function TabButton({
       aria-selected={active}
       className={`
         flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium
-        text-center transition-colors min-h-[40px] flex items-center justify-center
+        text-center transition-colors min-h-[44px] flex items-center justify-center
         ${active ? activeClass : inactiveClass}
       `}
     >

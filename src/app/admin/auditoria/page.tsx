@@ -1,7 +1,25 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { Pagination } from "@/components/ui/Pagination";
 
 export const metadata: Metadata = { title: "Auditoría" };
+
+const TUTORIAL_AUDITORIA = [
+  {
+    titulo: "Para qué sirve",
+    descripcion: "Registra todas las acciones realizadas por administradores: pagos registrados, estados cambiados, clientes creados, etc.",
+  },
+  {
+    titulo: "Filtrar por acción",
+    descripcion: "Usá el filtro de arriba para ver solo un tipo de acción (pagos, solicitudes, etc.) y encontrar cuándo pasó algo puntual.",
+  },
+  {
+    titulo: "No es editable",
+    descripcion: "El log de auditoría es de solo lectura. No se puede modificar ni eliminar. Es la fuente de verdad de cambios históricos.",
+  },
+];
 
 const ACCION_LABELS: Record<string, { label: string; color: string }> = {
   CUENTA_CREADA:        { label: "Cuenta creada",       color: "text-green-400 bg-green-900/30" },
@@ -37,6 +55,66 @@ export default async function AuditoriaPage({
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
 
+  type LogRow = (typeof logs)[number];
+
+  const columns: Column<LogRow>[] = [
+    {
+      id: "fecha",
+      header: "Fecha",
+      cell: (log) => (
+        <span className="text-slate-400 text-xs whitespace-nowrap">
+          {new Date(log.created_at).toLocaleString("es-AR", {
+            day: "2-digit", month: "2-digit", year: "numeric",
+            hour: "2-digit", minute: "2-digit",
+          })}
+        </span>
+      ),
+    },
+    {
+      id: "admin",
+      header: "Admin",
+      cell: (log) => <span className="text-white font-medium text-xs">{log.admin_nombre ?? "—"}</span>,
+    },
+    {
+      id: "accion",
+      header: "Acción",
+      cell: (log) => {
+        const cfg = ACCION_LABELS[log.accion] ?? { label: log.accion, color: "text-slate-400 bg-slate-700" };
+        return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.color}`}>{cfg.label}</span>;
+      },
+    },
+    {
+      id: "entidad",
+      header: "Entidad",
+      cell: (log) => (
+        <span className="text-slate-400 text-xs font-mono">
+          {log.entidad}
+          <br />
+          <span className="opacity-60">{log.entidad_id.slice(0, 12)}…</span>
+        </span>
+      ),
+    },
+    {
+      id: "detalle",
+      header: "Detalle",
+      className: "max-w-xs",
+      cell: (log) => {
+        let detalle: Record<string, unknown> | null = null;
+        try { detalle = log.detalle ? JSON.parse(log.detalle) : null; } catch { /* noop */ }
+        return detalle ? (
+          <details className="text-slate-400 text-xs">
+            <summary className="cursor-pointer hover:text-slate-200 transition-colors">Ver detalle</summary>
+            <pre className="mt-2 text-xs bg-slate-900 rounded p-2 overflow-x-auto whitespace-pre-wrap">
+              {JSON.stringify(detalle, null, 2)}
+            </pre>
+          </details>
+        ) : (
+          <span className="text-slate-400 text-xs">—</span>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -71,92 +149,29 @@ export default async function AuditoriaPage({
         ))}
       </div>
 
-      {/* Tabla */}
-      {logs.length === 0 ? (
-        <p className="text-slate-400 text-sm">Sin registros todavía.</p>
-      ) : (
-        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-900/50 border-b border-slate-700">
-              <tr>
-                <th className="text-left px-4 py-3 font-semibold text-slate-300">Fecha</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-300">Admin</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-300">Acción</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-300">Entidad</th>
-                <th className="text-left px-4 py-3 font-semibold text-slate-300">Detalle</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {logs.map((log) => {
-                const cfg = ACCION_LABELS[log.accion] ?? { label: log.accion, color: "text-slate-400 bg-slate-700" };
-                let detalle: Record<string, unknown> | null = null;
-                try { detalle = log.detalle ? JSON.parse(log.detalle) : null; } catch { /* noop */ }
+      <DataTable
+        columns={columns}
+        rows={logs}
+        keyExtractor={(log) => log.id}
+        caption="Registro de auditoría de acciones"
+        emptyState={<p className="text-slate-400 text-sm">Sin registros todavía.</p>}
+      />
 
-                return (
-                  <tr key={log.id} className="hover:bg-slate-700/30 transition-colors">
-                    <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">
-                      {new Date(log.created_at).toLocaleString("es-AR", {
-                        day: "2-digit", month: "2-digit", year: "numeric",
-                        hour: "2-digit", minute: "2-digit",
-                      })}
-                    </td>
-                    <td className="px-4 py-3 text-white font-medium text-xs">{log.admin_nombre}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.color}`}>
-                        {cfg.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400 text-xs font-mono">
-                      {log.entidad}
-                      <br />
-                      <span className="opacity-60">{log.entidad_id.slice(0, 12)}…</span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400 text-xs max-w-xs">
-                      {detalle ? (
-                        <details>
-                          <summary className="cursor-pointer hover:text-slate-200 transition-colors">
-                            Ver detalle
-                          </summary>
-                          <pre className="mt-2 text-xs bg-slate-900 rounded p-2 overflow-x-auto whitespace-pre-wrap">
-                            {JSON.stringify(detalle, null, 2)}
-                          </pre>
-                        </details>
-                      ) : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Paginación */}
       {totalPaginas > 1 && (
-        <div className="flex items-center justify-between gap-4 pt-2">
-          <span className="text-sm text-slate-400">
-            Página {pagina} de {totalPaginas}
-          </span>
-          <div className="flex gap-2">
-            {pagina > 1 && (
-              <a
-                href={`/admin/auditoria?pagina=${pagina - 1}${accionFiltro ? `&accion=${encodeURIComponent(accionFiltro)}` : ""}`}
-                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                ← Anterior
-              </a>
-            )}
-            {pagina < totalPaginas && (
-              <a
-                href={`/admin/auditoria?pagina=${pagina + 1}${accionFiltro ? `&accion=${encodeURIComponent(accionFiltro)}` : ""}`}
-                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                Siguiente →
-              </a>
-            )}
-          </div>
-        </div>
+        <Pagination
+          page={pagina}
+          pageCount={totalPaginas}
+          makeHref={(n) =>
+            `/admin/auditoria?pagina=${n}${accionFiltro ? `&accion=${encodeURIComponent(accionFiltro)}` : ""}`
+          }
+        />
       )}
+
+      <TutorialContextual
+        section="auditoria"
+        titulo="Guía rápida — Auditoría"
+        steps={TUTORIAL_AUDITORIA}
+      />
     </div>
   );
 }

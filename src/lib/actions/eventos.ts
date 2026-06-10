@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import { requireAdminWithName as requireAdmin } from "@/lib/actions/auth";
+import { UUID_RE } from "@/lib/constants/validation";
 import type { EstadoEventoSync } from "@/generated/prisma/client";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ export async function getEventosHeatmap(
   cuentaId: string,
   anio: number,
 ): Promise<DiaEvento[]> {
+  if (!UUID_RE.test(cuentaId)) return [];
   const desde = new Date(anio, 0, 1);
   const hasta = new Date(anio, 11, 31, 23, 59, 59);
 
@@ -110,11 +112,19 @@ export async function actualizarEstadoEvento(
   nuevoEstado: string,
   resolucion?: string,
 ): Promise<{ error?: string }> {
+  if (!UUID_RE.test(id)) {
+    return { error: "ID de evento inválido." };
+  }
+
   const admin = await requireAdmin();
   if (!admin) return { error: "Sin permisos." };
 
   if (!ESTADOS_VALIDOS.has(nuevoEstado)) {
     return { error: "Estado no válido." };
+  }
+
+  if (resolucion && resolucion.length > 2000) {
+    return { error: "La resolución no puede superar los 2000 caracteres." };
   }
 
   const evento = await prisma.eventoAlarma.findUnique({

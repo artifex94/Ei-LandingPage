@@ -33,23 +33,18 @@ function addDays(d: Date, n: number) {
 export default async function MisTurnosPage() {
   const { userId } = await requireSesion();
 
-  const empleado = await prisma.empleado.findUnique({
-    where: { perfil_id: userId },
-    select: { id: true },
-  });
-  if (!empleado) redirect("/portal/dashboard");
-
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
   const en30 = addDays(hoy, 30);
 
-  const turnos = await prisma.turno.findMany({
-    where: {
-      empleado_id: empleado.id,
-      fecha: { gte: hoy, lte: en30 },
-    },
-    orderBy: [{ fecha: "asc" }, { franja: "asc" }],
-  });
+  const [empleado, turnos] = await Promise.all([
+    prisma.empleado.findUnique({ where: { perfil_id: userId }, select: { id: true } }),
+    prisma.turno.findMany({
+      where: { empleado: { perfil_id: userId }, fecha: { gte: hoy, lte: en30 } },
+      orderBy: [{ fecha: "asc" }, { franja: "asc" }],
+    }),
+  ]);
+  if (!empleado) redirect("/portal/dashboard");
 
   return (
     <div className="space-y-5">
@@ -59,33 +54,40 @@ export default async function MisTurnosPage() {
       </div>
 
       {turnos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center">
-          <p className="text-slate-500">No tenés turnos asignados en los próximos 30 días.</p>
+        <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center space-y-2">
+          <p className="text-slate-400">No tenés turnos asignados en los próximos 30 días.</p>
+          <p className="text-xs text-slate-500">
+            Cuando el equipo asigne un turno aparecerá acá.
+          </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {turnos.map((t) => (
-            <div
-              key={t.id}
-              className="rounded-xl border border-slate-700 bg-slate-800 p-4 flex items-center justify-between gap-3"
-            >
-              <div>
-                <p className="text-sm font-semibold text-white capitalize">
-                  {new Date(t.fecha).toLocaleDateString("es-AR", {
-                    weekday: "long", day: "numeric", month: "long",
-                  })}
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">{FRANJA_LABEL[t.franja] ?? t.franja}</p>
-                {t.notas && (
-                  <p className="text-xs text-slate-500 mt-1">{t.notas}</p>
-                )}
-              </div>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${ESTADO_COLOR[t.estado] ?? "bg-slate-700 text-slate-400"}`}>
-                {ESTADO_LABEL[t.estado] ?? t.estado}
-              </span>
-            </div>
-          ))}
-        </div>
+        <ul role="list" className="space-y-2">
+          {turnos.map((t) => {
+            const fechaLabel = new Date(`${String(t.fecha).slice(0, 10)}T12:00:00`).toLocaleDateString("es-AR", {
+              weekday: "long", day: "numeric", month: "long",
+            });
+            const estadoLabel = ESTADO_LABEL[t.estado] ?? t.estado;
+            return (
+              <li
+                key={t.id}
+                role="listitem"
+                aria-label={`${fechaLabel}, ${FRANJA_LABEL[t.franja] ?? t.franja}, estado: ${estadoLabel}`}
+                className="rounded-xl border border-slate-700 bg-slate-800 p-4 flex items-center justify-between gap-3"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-white capitalize">{fechaLabel}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{FRANJA_LABEL[t.franja] ?? t.franja}</p>
+                  {t.notas && (
+                    <p className="text-xs text-slate-400 mt-1">{t.notas}</p>
+                  )}
+                </div>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${ESTADO_COLOR[t.estado] ?? "bg-slate-700 text-slate-400"}`}>
+                  {estadoLabel}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

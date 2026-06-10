@@ -24,6 +24,7 @@ export default async function SolicitudesPage() {
     where: { cuenta: { perfil_id: userId } },
     include: { cuenta: { select: { id: true, descripcion: true } } },
     orderBy: { creada_en: "desc" },
+    take: 60,
   });
 
   const abiertas = solicitudes.filter((s) => s.estado !== "RESUELTA");

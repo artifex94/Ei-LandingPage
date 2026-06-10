@@ -1,8 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
 export const metadata: Metadata = { title: "Morosidad" };
+
+const TUTORIAL_MOROSIDAD = [
+  {
+    titulo: "Cómo se define un moroso",
+    descripcion: "Cuentas con 2 o más meses de pagos vencidos sin regularizar. Se calcula automáticamente al cargar la página.",
+  },
+  {
+    titulo: "Contactar por WhatsApp",
+    descripcion: "Cada cuenta tiene un botón de WhatsApp que abre un mensaje pre-redactado al titular. Es la forma más rápida de gestionar.",
+  },
+  {
+    titulo: "Regularizar un pago vencido",
+    descripcion: "Cuando el cliente paga, entrá a Pagos → buscá el mes vencido → registralo manualmente. Desaparece del listado de morosidad.",
+  },
+  {
+    titulo: "Suspender una cuenta",
+    descripcion: "Si no hay respuesta, podés cambiar el estado de la cuenta a SUSPENDIDA desde el detalle de la cuenta en Cuentas.",
+  },
+];
 
 const MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -143,7 +163,7 @@ export default async function MorosidadPage() {
                         href={waLink(perfil.telefono, perfil.nombre.split(" ")[0], totalVencido.toLocaleString("es-AR"))}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-green-700 hover:bg-green-600 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 min-h-[40px]"
+                        className="bg-green-700 hover:bg-green-600 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 min-h-[44px]"
                         title="Enviar mensaje por WhatsApp"
                       >
                         <span aria-hidden="true">📱</span>
@@ -168,7 +188,7 @@ export default async function MorosidadPage() {
                               {cuenta.descripcion}
                             </Link>
                             <p className="text-xs text-slate-500 mt-0.5">
-                              Ref: {cuenta.softguard_ref}
+                              Ref: {cuenta.softguard_ref ?? "—"}
                             </p>
                           </div>
                           <p className="text-orange-300 font-bold text-sm shrink-0">
@@ -196,6 +216,12 @@ export default async function MorosidadPage() {
           })}
         </div>
       )}
+
+      <TutorialContextual
+        section="morosidad"
+        titulo="Guía rápida — Morosidad"
+        steps={TUTORIAL_MOROSIDAD}
+      />
     </div>
   );
 }

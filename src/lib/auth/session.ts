@@ -17,7 +17,7 @@ import { puedeAcceder, rutaInicio, type Rol } from "@/lib/auth/policy";
 
 export type Sesion = {
   userId: string;
-  perfil: { id: string; rol: Rol; nombre: string };
+  perfil: { id: string; rol: Rol; nombre: string; email: string | null };
 };
 
 /**
@@ -34,7 +34,7 @@ export async function getSesion(): Promise<Sesion | null> {
 
   const perfil = await prisma.perfil.findUnique({
     where: { id: user.id },
-    select: { id: true, rol: true, nombre: true },
+    select: { id: true, rol: true, nombre: true, email: true },
   });
   if (!perfil) return null;
 
@@ -62,24 +62,14 @@ export async function requireRol(...roles: Rol[]): Promise<Sesion> {
 }
 
 /**
- * Exige rol ADMIN. FAIL-CLOSED: si no es admin, redirige (antes devolvía
- * null, lo que era fail-open si el caller olvidaba chequearlo).
- *
- * Mantiene el retorno del Perfil COMPLETO por retrocompatibilidad con los
- * call sites existentes que leen campos del perfil.
+ * Exige rol ADMIN. FAIL-CLOSED: si no es admin, redirige.
+ * Retorna { id, nombre, email } del perfil autenticado.
  */
-export async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (!perfil || perfil.rol !== "ADMIN") {
-    redirect(rutaInicio((perfil?.rol as Rol | undefined) ?? null));
-  }
-  return perfil;
+export async function requireAdmin(): Promise<{ id: string; nombre: string; email: string | null }> {
+  const sesion = await getSesion();
+  if (!sesion) redirect("/login");
+  if (sesion.perfil.rol !== "ADMIN") redirect(rutaInicio(sesion.perfil.rol));
+  return { id: sesion.perfil.id, nombre: sesion.perfil.nombre, email: sesion.perfil.email };
 }
 
 /** Variante liviana de requireAdmin para auditoría (id + nombre). FAIL-CLOSED. */

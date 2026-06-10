@@ -1,13 +1,35 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SensorItem } from "@/components/portal/SensorItem";
+import { UUID_RE } from "@/lib/constants/validation";
+
+const getCuenta = cache(async (id: string, userId: string) =>
+  prisma.cuenta.findFirst({
+    where: { id, perfil_id: userId },
+    include: {
+      sensores: { orderBy: { codigo_zona: "asc" } },
+      pagos: {
+        where: { anio: new Date().getFullYear() },
+        orderBy: { mes: "desc" },
+      },
+      solicitudes: {
+        where: { estado: { not: "RESUELTA" } },
+        orderBy: { creada_en: "desc" },
+        take: 3,
+      },
+    },
+  })
+);
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const cuenta = await prisma.cuenta.findUnique({ where: { id }, select: { descripcion: true } });
+  if (!UUID_RE.test(id)) return { title: "Mi cuenta" };
+  const { userId } = await requireSesion();
+  const cuenta = await getCuenta(id, userId);
   return { title: cuenta?.descripcion ?? "Mi cuenta" };
 }
 
@@ -102,23 +124,10 @@ export default async function CuentaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
   const { userId } = await requireSesion();
 
-  const cuenta = await prisma.cuenta.findFirst({
-    where: { id, perfil_id: userId },
-    include: {
-      sensores: { orderBy: { codigo_zona: "asc" } },
-      pagos: {
-        where: { anio: new Date().getFullYear() },
-        orderBy: { mes: "desc" },
-      },
-      solicitudes: {
-        where: { estado: { not: "RESUELTA" } },
-        orderBy: { creada_en: "desc" },
-        take: 3,
-      },
-    },
-  });
+  const cuenta = await getCuenta(id, userId);
 
   if (!cuenta) notFound();
 
@@ -151,7 +160,7 @@ export default async function CuentaPage({
               {cuenta.descripcion}
             </h1>
             <p className="text-slate-400 mt-1">
-              Ref. Softguard: {cuenta.softguard_ref}
+              Ref. Softguard: {cuenta.softguard_ref ?? "—"}
             </p>
           </div>
 

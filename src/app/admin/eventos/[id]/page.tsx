@@ -4,6 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { EventoEstadoBadge, ESTADO_LABEL } from "@/components/admin/eventos/EventoEstadoBadge";
 import { actualizarEstadoEvento } from "@/lib/actions/eventos";
+import { UUID_RE } from "@/lib/constants/validation";
 
 export const metadata: Metadata = { title: "Detalle de evento" };
 
@@ -25,6 +26,7 @@ export default async function EventoDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
 
   const [evento, auditLogs] = await Promise.all([
     prisma.eventoAlarma.findUnique({
@@ -52,11 +54,10 @@ export default async function EventoDetallePage({
     "use server";
     const nuevoEstado = formData.get("estado") as string;
     const resolucion = (formData.get("resolucion") as string) || undefined;
-
-    const result = await actualizarEstadoEvento(id, nuevoEstado, resolucion);
-    if (!result.error) {
-      redirect(`/admin/eventos/${id}`);
-    }
+    // Errores se loguean en actualizarEstadoEvento; siempre redirigir
+    // para que el usuario vea el estado actual (sin silencio).
+    await actualizarEstadoEvento(id, nuevoEstado, resolucion);
+    redirect(`/admin/eventos/${id}`);
   }
 
   return (
@@ -65,7 +66,7 @@ export default async function EventoDetallePage({
       <div className="flex items-start gap-4">
         <Link
           href="/admin/eventos"
-          className="text-slate-400 hover:text-white text-sm mt-1 transition-colors"
+          className="text-slate-400 hover:text-white text-sm mt-1 transition-colors min-h-[44px] inline-flex items-center"
         >
           ← Volver
         </Link>
@@ -212,7 +213,7 @@ export default async function EventoDetallePage({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-white font-medium text-xs">{log.accion}</p>
-                      <p className="text-slate-400 text-xs">{log.admin_nombre}</p>
+                      <p className="text-slate-400 text-xs">{log.admin_nombre ?? "—"}</p>
                       {stateTransition && (
                         <p className="text-slate-500 text-xs mt-0.5">
                           {stateTransition.prior_state

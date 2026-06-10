@@ -5,6 +5,9 @@ import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import type { RolEmpleado } from "@/generated/prisma/client";
+import { UUID_RE } from "@/lib/constants/validation";
+
+const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
 
 export async function crearEmpleado(data: {
   perfil_id: string;
@@ -14,6 +17,10 @@ export async function crearEmpleado(data: {
   puede_facturar: boolean;
   color_calendario?: string;
 }) {
+  if (!UUID_RE.test(data.perfil_id)) throw new Error("perfil_id inválido.");
+  if (data.color_calendario && !HEX_COLOR_RE.test(data.color_calendario)) {
+    throw new Error("El color de calendario debe ser un valor hexadecimal válido (#rrggbb).");
+  }
   const admin = await requireAdmin();
 
   const empleado = await prisma.empleado.create({ data });
@@ -33,6 +40,7 @@ export async function crearEmpleado(data: {
 }
 
 export async function toggleEmpleadoActivo(empleado_id: string, activo: boolean) {
+  if (!UUID_RE.test(empleado_id)) throw new Error("ID de empleado inválido.");
   const admin = await requireAdmin();
 
   const empleado = await prisma.empleado.update({
@@ -64,6 +72,10 @@ export async function actualizarEmpleado(
     color_calendario: string;
   }>
 ) {
+  if (!UUID_RE.test(empleado_id)) throw new Error("ID de empleado inválido.");
+  if (data.color_calendario && !HEX_COLOR_RE.test(data.color_calendario)) {
+    throw new Error("El color de calendario debe ser un valor hexadecimal válido (#rrggbb).");
+  }
   const admin = await requireAdmin();
 
   const empleado = await prisma.empleado.update({

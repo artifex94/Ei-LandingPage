@@ -3,6 +3,30 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { IniciarButton, ResolverButton, ReopenButton } from "./AccionesForm";
 import { NuevaSolicitudAdminDialog } from "@/components/admin/NuevaSolicitudAdminDialog";
+import { KanbanBoard } from "./KanbanBoard";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+import { EmptyStateSuccess } from "@/components/admin/EmptyStateSuccess";
+import { StagePipeline } from "@/components/admin/StagePipeline";
+import { Wrench, Loader, CheckCircle2 } from "lucide-react";
+
+const TUTORIAL_MANTENIMIENTO = [
+  {
+    titulo: "Vista lista vs kanban",
+    descripcion: 'Podés ver las solicitudes en lista (con filtros) o en kanban (3 columnas por estado). El kanban es ideal para el seguimiento diario.',
+  },
+  {
+    titulo: "Cambiar el estado",
+    descripcion: '"En proceso" indica que ya están trabajando en la solicitud. "Resuelta" la cierra. Si fue error, podés reabrir.',
+  },
+  {
+    titulo: "Prioridad",
+    descripcion: "Alta (rojo) aparece primero. Podés contactar al cliente directo por WhatsApp desde cada card.",
+  },
+  {
+    titulo: "Nueva solicitud",
+    descripcion: 'El botón "+ Nueva solicitud" permite crear una desde el panel, sin que el cliente la cargue por el portal.',
+  },
+];
 
 export const metadata: Metadata = { title: "Mantenimiento" };
 
@@ -21,10 +45,11 @@ const PRIORIDAD_CONFIG: Record<string, { label: string; cls: string }> = {
 export default async function MantenimientoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string }>;
+  searchParams: Promise<{ estado?: string; vista?: string }>;
 }) {
   const sp = await searchParams;
   const filtroEstado = (sp.estado ?? "abiertas") as "abiertas" | "resueltas" | "todas";
+  const vistaKanban = sp.vista === "kanban";
 
   const whereEstado =
     filtroEstado === "abiertas"
@@ -49,10 +74,13 @@ export default async function MantenimientoPage({
       { prioridad: "desc" },
       { creada_en: "asc" },
     ],
+    take: 200,
   });
 
-  const [cuentaAbiertas, cuentasActivas] = await Promise.all([
-    prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
+  const [countPendiente, countEnProceso, countResuelta, cuentasActivas] = await Promise.all([
+    prisma.solicitudMantenimiento.count({ where: { estado: "PENDIENTE" } }),
+    prisma.solicitudMantenimiento.count({ where: { estado: "EN_PROCESO" } }),
+    prisma.solicitudMantenimiento.count({ where: { estado: "RESUELTA" } }),
     prisma.cuenta.findMany({
       where: { estado: { in: ["ACTIVA", "SUSPENDIDA_PAGO", "EN_MANTENIMIENTO"] } },
       select: {
@@ -65,14 +93,45 @@ export default async function MantenimientoPage({
     }),
   ]);
 
-  const TABS = [
-    { key: "abiertas",   label: `Abiertas${cuentaAbiertas > 0 ? ` (${cuentaAbiertas})` : ""}` },
-    { key: "resueltas",  label: "Resueltas" },
-    { key: "todas",      label: "Todas" },
-  ];
+  const cuentaAbiertas = countPendiente + countEnProceso;
+
+  const PIPELINE_STAGES = [
+    {
+      key: "pendiente",
+      label: "Pendiente",
+      count: countPendiente,
+      href: "/admin/mantenimiento?estado=abiertas&etapa=pendiente",
+      activeCls: "bg-amber-950/50 text-amber-300",
+      countCls: "text-amber-300",
+      icon: Wrench,
+    },
+    {
+      key: "en_proceso",
+      label: "En proceso",
+      count: countEnProceso,
+      href: "/admin/mantenimiento?estado=abiertas&etapa=en_proceso",
+      activeCls: "bg-blue-950/50 text-blue-300",
+      countCls: "text-blue-300",
+      icon: Loader,
+    },
+    {
+      key: "resuelta",
+      label: "Resuelta",
+      count: countResuelta,
+      href: "/admin/mantenimiento?estado=resueltas",
+      activeCls: "bg-emerald-950/50 text-emerald-300",
+      countCls: "text-emerald-300",
+      icon: CheckCircle2,
+    },
+  ] as const;
+
+  const pipelineActiveKey =
+    filtroEstado === "resueltas" ? "resuelta" :
+    filtroEstado === "abiertas"  ? "pendiente" :
+    "pendiente";
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Solicitudes de mantenimiento</h1>
@@ -88,27 +147,60 @@ export default async function MantenimientoPage({
         }))} />
       </div>
 
-      {/* Tabs de filtro */}
-      <div className="flex gap-1 bg-slate-800 rounded-xl p-1 w-fit border border-slate-700">
-        {TABS.map((tab) => (
+      {/* Pipeline de etapas + toggle vista */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <StagePipeline
+          stages={PIPELINE_STAGES}
+          activeKey={pipelineActiveKey}
+        />
+
+        {/* Toggle vista */}
+        <div className="flex gap-1 bg-slate-800/60 rounded-lg p-1 border border-slate-700/60 shrink-0">
           <Link
-            key={tab.key}
-            href={`/admin/mantenimiento?estado=${tab.key}`}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filtroEstado === tab.key
-                ? "bg-slate-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-white"
+            href={`/admin/mantenimiento?estado=${filtroEstado}`}
+            aria-label="Vista lista"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              !vistaKanban ? "bg-slate-700 text-white" : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            {tab.label}
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <rect x="0" y="1" width="12" height="1.5" rx="0.75" fill="currentColor"/>
+              <rect x="0" y="5" width="12" height="1.5" rx="0.75" fill="currentColor"/>
+              <rect x="0" y="9" width="12" height="1.5" rx="0.75" fill="currentColor"/>
+            </svg>
+            Lista
           </Link>
-        ))}
+          <Link
+            href={`/admin/mantenimiento?vista=kanban`}
+            aria-label="Vista kanban"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              vistaKanban ? "bg-slate-700 text-white" : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <rect x="0" y="0" width="3" height="12" rx="0.75" fill="currentColor"/>
+              <rect x="4.5" y="0" width="3" height="12" rx="0.75" fill="currentColor"/>
+              <rect x="9" y="0" width="3" height="12" rx="0.75" fill="currentColor"/>
+            </svg>
+            Kanban
+          </Link>
+        </div>
       </div>
 
-      {solicitudes.length === 0 ? (
-        <div className="bg-slate-800 rounded-xl border border-slate-700 p-10 text-center">
-          <p className="text-slate-400">No hay solicitudes en esta categoría.</p>
-        </div>
+      {vistaKanban ? (
+        <KanbanBoard solicitudes={solicitudes} />
+      ) : solicitudes.length === 0 ? (
+        filtroEstado === "abiertas" ? (
+          <EmptyStateSuccess
+            titulo="Sin solicitudes abiertas"
+            descripcion="Todas las solicitudes de mantenimiento están resueltas."
+            cta={{ label: "Ver historial de resueltas", href: "/admin/mantenimiento?estado=resueltas" }}
+          />
+        ) : (
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-10 text-center">
+            <p className="text-slate-400">No hay solicitudes en esta categoría.</p>
+          </div>
+        )
       ) : (
         <div className="space-y-3">
           {solicitudes.map((s) => {
@@ -191,6 +283,12 @@ export default async function MantenimientoPage({
           })}
         </div>
       )}
+
+      <TutorialContextual
+        section="mantenimiento"
+        titulo="Guía rápida — Mantenimiento"
+        steps={TUTORIAL_MANTENIMIENTO}
+      />
     </div>
   );
 }

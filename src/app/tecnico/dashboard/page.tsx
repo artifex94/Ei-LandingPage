@@ -31,12 +31,11 @@ export default async function TecnicoDashboardPage() {
   const hoyFin = new Date(); hoyFin.setHours(23, 59, 59, 999);
   const finVentana = addDays(hoy, 6);
 
-  const empleado = await prisma.empleado.findFirst({
-    where: { perfil_id: userId },
-    select: { id: true },
-  });
-
-  const [tareas, vehiculosActivos, vehiculosOcupados, reservaHoy, pronostico] = await Promise.all([
+  const [empleado, tareas, vehiculosActivos, vehiculosOcupados, pronostico] = await Promise.all([
+    prisma.empleado.findFirst({
+      where: { perfil_id: userId },
+      select: { id: true },
+    }),
     prisma.tareaAgendada.findMany({
       where: {
         tecnico_id: userId,
@@ -55,19 +54,21 @@ export default async function TecnicoDashboardPage() {
       },
       select: { vehiculo_id: true },
     }),
-    empleado
-      ? prisma.reservaVehiculo.findFirst({
-          where: {
-            empleado_id: empleado.id,
-            desde: { lte: hoyFin },
-            hasta: { gte: hoy },
-            estado: { in: ["RESERVADA", "EN_USO"] },
-          },
-          include: { vehiculo: true },
-        })
-      : null,
     fetchWeatherForecast(),
   ]);
+
+  // reservaHoy depende de empleado.id — se resuelve después del batch principal
+  const reservaHoy = empleado
+    ? await prisma.reservaVehiculo.findFirst({
+        where: {
+          empleado_id: empleado.id,
+          desde: { lte: hoyFin },
+          hasta: { gte: hoy },
+          estado: { in: ["RESERVADA", "EN_USO"] },
+        },
+        include: { vehiculo: true },
+      })
+    : null;
 
   const dias = Array.from({ length: 7 }, (_, i) => {
     const fecha      = addDays(hoy, i);
@@ -102,7 +103,7 @@ export default async function TecnicoDashboardPage() {
         {totalTareas > 0 && (
           <div className="text-right">
             <p className="text-2xl font-bold text-white">{totalCompletadas}/{totalTareas}</p>
-            <p className="text-xs text-slate-500">completadas</p>
+            <p className="text-xs text-slate-400">completadas</p>
           </div>
         )}
       </div>
@@ -206,11 +207,11 @@ export default async function TecnicoDashboardPage() {
                               {t.hora_inicio}{t.hora_fin ? ` – ${t.hora_fin}` : ""}
                             </span>
                           )}
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${pr.cls}`}>{pr.label}</span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${pr.cls}`}>{pr.label}</span>
                         </div>
                         <p className="font-bold text-white mt-1">{t.titulo}</p>
                         {direccion && <p className="text-xs text-slate-400 mt-0.5">{direccion}</p>}
-                        {t.cuenta?.descripcion && <p className="text-xs text-slate-500 mt-0.5">{t.cuenta.descripcion}</p>}
+                        {t.cuenta?.descripcion && <p className="text-xs text-slate-400 mt-0.5">{t.cuenta.descripcion}</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -221,7 +222,7 @@ export default async function TecnicoDashboardPage() {
 
                   {t.descripcion && (
                     <div className="px-4 py-3 bg-slate-900/60 border-t border-slate-700/50">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                         Detalles / Materiales
                       </p>
                       <p className="text-sm text-slate-300 leading-relaxed">{t.descripcion}</p>
@@ -230,14 +231,14 @@ export default async function TecnicoDashboardPage() {
 
                   {t.notas_tecnico && (
                     <div className="px-4 py-2.5 bg-amber-950/20 border-t border-amber-800/30">
-                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Mis notas</p>
+                      <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">Mis notas</p>
                       <p className="text-xs text-amber-200">{t.notas_tecnico}</p>
                     </div>
                   )}
 
                   <div className="px-4 py-2 bg-slate-900/40 border-t border-slate-700/30 flex justify-end">
                     <Link href={`/tecnico/tareas/${t.id}`}
-                      className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+                      className="text-xs text-orange-400 hover:text-orange-300 font-medium transition-colors">
                       Ver tarea completa →
                     </Link>
                   </div>

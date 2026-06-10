@@ -234,13 +234,13 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
                 <label htmlFor="notas-tec" className="block text-xs text-slate-400 mb-1">Notas del trabajo (opcional)</label>
                 <textarea id="notas-tec" value={notasTecnico} onChange={(e) => setNotasTecnico(e.target.value)}
                   rows={3} placeholder="Materiales usados, observaciones…"
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:outline-2 focus:outline-orange-500" />
               </div>
               <div>
                 <label htmlFor="km-final" className="block text-xs text-slate-400 mb-1">Km del vehículo al regresar (opcional)</label>
                 <input id="km-final" type="number" value={kmFinal} onChange={(e) => setKmFinal(e.target.value)}
                   placeholder="Ej: 80450"
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500" />
               </div>
               <button onClick={() => avanzarEstado("COMPLETADA")} disabled={pending}
                 className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg disabled:opacity-50 transition-colors">
@@ -269,7 +269,7 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
             <p className="text-sm font-medium text-slate-300">Fotos ({ot.fotos.length})</p>
             {!completada && (
               <label className="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs transition-colors">
-                + Agregar fotos
+                {pending ? "Subiendo fotos…" : "+ Agregar fotos"}
                 <input type="file" accept="image/*" multiple capture="environment"
                   className="sr-only" onChange={handleFotos} disabled={pending} />
               </label>
@@ -296,8 +296,10 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
 
           {ot.firma_cliente_url ? (
             <div className="rounded-xl bg-white p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={ot.firma_cliente_url} alt="Firma" className="max-h-24 mx-auto" />
+              <div className="h-24 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ot.firma_cliente_url} alt="Firma del cliente" className="max-h-24 mx-auto" />
+              </div>
               <p className="text-xs text-center text-emerald-600 mt-1">Conformidad firmada</p>
             </div>
           ) : firmando ? (
@@ -314,11 +316,11 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
               </div>
               <div className="flex gap-2">
                 <button onClick={limpiarFirma}
-                  className="flex-1 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-700 transition-colors">
+                  className="flex-1 py-2 min-h-[44px] rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-700 transition-colors">
                   Limpiar
                 </button>
                 <button onClick={confirmarFirma} disabled={pending}
-                  className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium disabled:opacity-50 transition-colors">
+                  className="flex-1 py-2 min-h-[44px] rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium disabled:opacity-50 transition-colors">
                   {pending ? "Guardando…" : "Confirmar firma"}
                 </button>
               </div>

@@ -40,7 +40,7 @@ export function TareaCard({ id, titulo, hora_inicio, hora_fin, prioridad, calle,
             <p className="text-xs text-slate-400 mt-0.5 truncate">{direccion}</p>
           )}
         </div>
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${PRIORIDAD_BADGE[prioridad]}`}>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${PRIORIDAD_BADGE[prioridad]}`}>
           {PRIORIDAD_LABEL[prioridad]}
         </span>
       </div>

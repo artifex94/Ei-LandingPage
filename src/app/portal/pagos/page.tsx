@@ -18,30 +18,31 @@ export default async function PagosPage({
   const anioActual = new Date().getFullYear();
   const anio = Number(sp.anio) || anioActual;
 
-  // Años con pagos registrados para este usuario
-  const aniosRaw = await prisma.pago.findMany({
-    where: { cuenta: { perfil_id: user_id } },
-    select: { anio: true },
-    distinct: ["anio"],
-    orderBy: { anio: "desc" },
-  });
+  const [aniosRaw, cuentas] = await Promise.all([
+    // Años con pagos registrados para este usuario
+    prisma.pago.findMany({
+      where: { cuenta: { perfil_id: user_id } },
+      select: { anio: true },
+      distinct: ["anio"],
+      orderBy: { anio: "desc" },
+    }),
+    // Cuentas activas con pagos del año seleccionado
+    prisma.cuenta.findMany({
+      where: { perfil_id: user_id, estado: { not: "BAJA_DEFINITIVA" } },
+      include: {
+        pagos: {
+          where: { anio },
+          orderBy: { mes: "asc" },
+        },
+      },
+      orderBy: { descripcion: "asc" },
+    }),
+  ]);
 
   const aniosDisponibles = [...new Set([
     anioActual,
     ...aniosRaw.map((r) => r.anio),
   ])].sort((a, b) => b - a);
-
-  // Cuentas activas con pagos del año seleccionado
-  const cuentas = await prisma.cuenta.findMany({
-    where: { perfil_id: user_id, estado: { not: "BAJA_DEFINITIVA" } },
-    include: {
-      pagos: {
-        where: { anio },
-        orderBy: { mes: "asc" },
-      },
-    },
-    orderBy: { descripcion: "asc" },
-  });
 
   // Calcular deudas pendientes/vencidas del año seleccionado
   const deudas: { pago: PagoPlano; descripcionCuenta: string }[] = [];

@@ -5,6 +5,7 @@ import { SolicitudAltaForm } from "@/components/SolicitudAltaForm";
 export const metadata: Metadata = {
   title: "Alta de usuario — Escobar Instalaciones",
   description: "Solicitá acceso a tu portal de cliente de Escobar Instalaciones.",
+  robots: { index: false, follow: false },
 };
 
 export default function SolicitudAltaPage() {
@@ -17,10 +18,10 @@ export default function SolicitudAltaPage() {
             <ShieldCheck className="w-4 h-4 text-white" strokeWidth={2.5} />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
               Escobar Instalaciones
             </p>
-            <p className="text-[9px] text-slate-700 uppercase tracking-wider">
+            <p className="text-xs text-slate-400 uppercase tracking-wider">
               Victoria · Entre Ríos
             </p>
           </div>
@@ -45,7 +46,7 @@ export default function SolicitudAltaPage() {
 
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-800 px-6 py-6 text-center">
-        <p className="text-xs text-slate-700">
+        <p className="text-xs text-slate-400">
           ¿Tenés dudas? Escribinos al{" "}
           <a
             href="https://wa.me/5493436575372"

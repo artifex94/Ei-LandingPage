@@ -8,6 +8,7 @@ import { EditarClienteForm } from "@/components/admin/EditarClienteForm";
 import { NuevaCuentaForm } from "@/components/admin/NuevaCuentaForm";
 import { EliminarClienteForm } from "@/components/admin/EliminarClienteForm";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "@/app/admin/solicitudes-cambio/AccionesForm";
+import { UUID_RE } from "@/lib/constants/validation";
 
 const getClientePerfil = cache(async (id: string) => {
   return prisma.perfil.findUnique({
@@ -36,6 +37,7 @@ const getClientePerfil = cache(async (id: string) => {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
+  if (!UUID_RE.test(id)) return { title: "Cliente" };
   const perfil = await getClientePerfil(id);
   return { title: perfil?.nombre ?? "Cliente" };
 }
@@ -75,12 +77,17 @@ export default async function ClienteDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const perfil = await getClientePerfil(id);
+  if (!UUID_RE.test(id)) notFound();
+  const [perfil, tarifaActual] = await Promise.all([
+    getClientePerfil(id),
+    prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" }, select: { monto: true } }),
+  ]);
 
   if (!perfil || perfil.rol !== "CLIENTE") notFound();
 
   const anio = new Date().getFullYear();
   const mes = new Date().getMonth() + 1;
+  const tarifaEstandar = Number(tarifaActual?.monto ?? 0);
 
   return (
     <div className="space-y-8">
@@ -116,7 +123,7 @@ export default async function ClienteDetallePage({
             <Link
               href={`/admin/vista-cliente/${perfil.id}`}
               className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-600 transition-colors"
-              title="Ver el portal exactamente como lo ve el cliente"
+              aria-label="Ver portal del cliente (vista cliente)"
             >
               Ver portal
             </Link>
@@ -127,7 +134,7 @@ export default async function ClienteDetallePage({
         {perfil.telefono && (
           <div className="mb-4">
             <a
-              href={`https://wa.me/${perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${perfil.nombre.split(" ")[0]}, te contactamos de Escobar Instalaciones.`)}`}
+              href={`https://wa.me/549${perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${perfil.nombre.split(" ")[0]}, te contactamos de Escobar Instalaciones.`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-colors"
@@ -156,6 +163,10 @@ export default async function ClienteDetallePage({
         <h2 id="cuentas-heading" className="text-lg font-semibold text-white mb-4">
           Cuentas ({perfil.cuentas.length})
         </h2>
+
+        {perfil.cuentas.length === 0 && (
+          <p className="text-sm text-slate-400 mb-4">Este cliente no tiene cuentas registradas.</p>
+        )}
 
         {perfil.cuentas.length > 0 && (
           <div className="space-y-4 mb-4">
@@ -205,6 +216,7 @@ export default async function ClienteDetallePage({
                     )}
                     <Link
                       href={`/admin/cuentas/${cuenta.id}`}
+                      aria-label={`Ver detalle de ${cuenta.descripcion}`}
                       className="text-orange-400 hover:text-orange-300 text-xs underline underline-offset-2 ml-auto"
                     >
                       Ver detalle →
@@ -234,7 +246,7 @@ export default async function ClienteDetallePage({
                         cuentaId={cuenta.id}
                         mes={mes}
                         anio={anio}
-                        importe={Number(cuenta.costo_mensual)}
+                        importe={Number(cuenta.costo_mensual ?? tarifaEstandar)}
                       />
                     )}
                   </div>

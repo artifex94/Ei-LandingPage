@@ -159,3 +159,72 @@
     clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%);
   }
 }
+
+
+/* ?? Landing experience: performant CSS-only motion ??????????????????????? */
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); opacity: 0.88; }
+  100% { transform: rotate(360deg); opacity: 0.88; }
+}
+
+@keyframes scanline-pass {
+  0% { transform: translateY(-120%); opacity: 0; }
+  15% { opacity: 0.4; }
+  100% { transform: translateY(760%); opacity: 0; }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -10px, 0); }
+}
+
+@keyframes float-delayed {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-8px, 8px, 0); }
+}
+
+@utility radar-sweep {
+  background: conic-gradient(from 0deg, rgba(241,119,32,0.38), transparent 42%, transparent 100%);
+  animation: radar-sweep 8s linear infinite;
+  mask: radial-gradient(circle, transparent 0 34%, black 35% 100%);
+}
+
+@utility scanline {
+  animation: scanline-pass 6s ease-in-out infinite;
+}
+
+@utility animate-float-slow {
+  animation: float-slow 5.5s ease-in-out infinite;
+}
+
+@utility animate-float-delayed {
+  animation: float-delayed 6.5s ease-in-out infinite;
+}
+
+.security-orb {
+  transform: translateZ(0);
+  contain: layout paint;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-tactical-400);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Admin: progreso mensual ─────────────────────────────────────────────── */
+@keyframes admin-progress-fill {
+  from { width: 0% }
+  to   { width: var(--target-width, 0%) }
+}
+@utility admin-progreso-barra {
+  animation: admin-progress-fill 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

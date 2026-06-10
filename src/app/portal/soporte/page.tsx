@@ -54,6 +54,7 @@ export default async function SoportePage() {
       where: { cuenta: { perfil_id: userId } },
       include: { cuenta: { select: { id: true, descripcion: true } } },
       orderBy: { creada_en: "desc" },
+      take: 60,
     }),
     prisma.ordenTrabajo.findMany({
       where: {
@@ -63,6 +64,7 @@ export default async function SoportePage() {
         ],
       },
       orderBy: { created_at: "desc" },
+      take: 50,
     }),
   ]);
 

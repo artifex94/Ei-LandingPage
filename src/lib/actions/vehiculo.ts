@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import { requireAdmin } from "@/lib/auth/session";
 import type { EstadoReserva } from "@/generated/prisma/client";
+import { UUID_RE } from "@/lib/constants/validation";
 
 export async function crearReservaVehiculo(data: {
   vehiculo_id: string;
@@ -48,7 +49,7 @@ export async function crearReservaVehiculo(data: {
 }
 
 const editarVehiculoSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().uuid("ID de vehículo inválido."),
   marca: z.string().min(1, "La marca es obligatoria"),
   modelo: z.string().min(1, "El modelo es obligatorio"),
   anio: z.coerce.number().min(1990).max(2100),
@@ -102,6 +103,11 @@ export async function editarVehiculo(
 }
 
 export async function actualizarKmVehiculo(vehiculo_id: string, km_actual: number) {
+  if (!UUID_RE.test(vehiculo_id)) throw new Error("ID de vehículo inválido.");
+  if (!Number.isInteger(km_actual) || km_actual < 0) {
+    throw new Error("El kilometraje debe ser un número entero positivo.");
+  }
+
   const admin = await requireAdmin();
 
   const vehiculo = await prisma.vehiculo.update({
@@ -127,6 +133,7 @@ export async function cambiarEstadoReserva(
   estado: EstadoReserva,
   km_final?: number
 ) {
+  if (!UUID_RE.test(reserva_id)) throw new Error("ID de reserva inválido.");
   const admin = await requireAdmin();
 
   const reserva = await prisma.reservaVehiculo.update({

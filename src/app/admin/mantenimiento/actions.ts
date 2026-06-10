@@ -3,11 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { requireRol } from "@/lib/auth/session";
+import { UUID_RE } from "@/lib/constants/validation";
 
 // Acciones invocadas como <form action={...}> (retorno void): el guard que
 // redirige (requireRol) es el patrón correcto acá. El wrapper accionAdmin se
 // reserva para actions invocados con useActionState/programáticamente.
 export async function iniciarSolicitud(id: string): Promise<void> {
+  if (!UUID_RE.test(id)) return;
   await requireRol("ADMIN");
   await prisma.solicitudMantenimiento.update({
     where: { id },
@@ -17,6 +19,7 @@ export async function iniciarSolicitud(id: string): Promise<void> {
 }
 
 export async function reabrirSolicitud(id: string): Promise<void> {
+  if (!UUID_RE.test(id)) return;
   await requireRol("ADMIN");
   await prisma.solicitudMantenimiento.update({
     where: { id },
@@ -31,8 +34,8 @@ export async function resolverSolicitud(
 ): Promise<{ error: string } | null> {
   await requireRol("ADMIN");
 
-  const id = formData.get("id") as string;
-  if (!id) return { error: "ID inválido." };
+  const id = (formData.get("id") as string)?.trim();
+  if (!UUID_RE.test(id ?? "")) return { error: "ID inválido." };
 
   await prisma.solicitudMantenimiento.update({
     where: { id },
@@ -58,8 +61,13 @@ export async function crearSolicitudMantenimiento(
   const descripcion = (formData.get("descripcion") as string)?.trim();
   const prioridad = (formData.get("prioridad") as string) ?? "MEDIA";
 
-  if (!cuenta_id || !descripcion) {
+  if (!UUID_RE.test(cuenta_id ?? "")) return { errores: ["Cuenta inválida."] };
+  if (!descripcion) {
     return { errores: ["Descripción obligatoria."] };
+  }
+
+  if (descripcion.length > 800) {
+    return { errores: ["La descripción no puede superar los 800 caracteres."] };
   }
 
   if (!["BAJA", "MEDIA", "ALTA"].includes(prioridad)) {

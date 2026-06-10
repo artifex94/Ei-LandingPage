@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
+import { UUID_RE } from "@/lib/constants/validation";
 
 async function getEmpleado() {
   const supabase = await createClient();
@@ -17,6 +18,7 @@ async function getEmpleado() {
 }
 
 export async function aceptarOT(otId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!UUID_RE.test(otId)) return { ok: false, error: "OT inválida." };
   const empleado = await getEmpleado();
   if (!empleado) return { ok: false, error: "Sin registro de empleado." };
 
@@ -76,6 +78,7 @@ export async function aceptarOT(otId: string): Promise<{ ok: boolean; error?: st
 }
 
 export async function liberarOT(otId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!UUID_RE.test(otId)) return { ok: false, error: "OT inválida." };
   const empleado = await getEmpleado();
   if (!empleado) return { ok: false, error: "Sin registro de empleado." };
 

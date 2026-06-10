@@ -148,14 +148,14 @@ export function CuentaCard({ cuenta }: CuentaCardProps) {
           <h2 className="font-semibold text-slate-200 text-base leading-tight truncate group-hover:text-white transition-colors">
             {cuenta.descripcion}
           </h2>
-          <span className="font-mono text-[10px] text-slate-500 tracking-widest uppercase">
+          <span className="font-mono text-xs text-slate-500 tracking-widest uppercase">
             {CATEGORIA_LABELS[cuenta.categoria] ?? cuenta.categoria}
           </span>
         </div>
 
         {/* Badge de estado */}
         <span
-          className={`shrink-0 font-mono text-[10px] font-bold px-2 py-1 rounded-sm border
+          className={`shrink-0 font-mono text-xs font-bold px-2 py-1 rounded-sm border
                       tracking-widest uppercase ${led.badgeBg} ${led.badgeText} ${led.badgeBorder}`}
         >
           {badgeLabel}
@@ -166,12 +166,12 @@ export function CuentaCard({ cuenta }: CuentaCardProps) {
       {(estadoFinanciero.tipo === "SUSPENDED" || tieneAlerta || estadoFinanciero.tipo === "GRACE_PERIOD") && (
         <div className="px-4 py-3 flex flex-wrap gap-1.5">
           {estadoFinanciero.tipo === "SUSPENDED" && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-sm font-mono uppercase tracking-wider">
+            <span className="flex items-center gap-1 text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-sm font-mono uppercase tracking-wider">
               ▲ Pagar para reactivar
             </span>
           )}
           {tieneAlerta && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-sm font-mono uppercase tracking-wider">
+            <span className="flex items-center gap-1 text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-sm font-mono uppercase tracking-wider">
               ● Mantenimiento pendiente
             </span>
           )}

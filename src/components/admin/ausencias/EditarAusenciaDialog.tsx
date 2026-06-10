@@ -12,6 +12,8 @@ export function EditarAusenciaDialog({ ausencia, nombreEmpleado }: { ausencia: A
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [desde, setDesde] = useState(toDateInput(ausencia.desde));
+  const [hasta, setHasta] = useState(toDateInput(ausencia.hasta));
 
   function handleSubmit(fd: FormData) {
     setError(null);
@@ -26,7 +28,8 @@ export function EditarAusenciaDialog({ ausencia, nombreEmpleado }: { ausencia: A
     <>
       <button
         onClick={() => { setOpen(true); setError(null); }}
-        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+        aria-label={`Editar ausencia de ${nombreEmpleado}`}
+        className="text-xs text-orange-400 hover:text-orange-300 transition-colors px-2 py-1.5 rounded min-h-[36px] flex items-center"
       >
         Editar
       </button>
@@ -35,26 +38,38 @@ export function EditarAusenciaDialog({ ausencia, nombreEmpleado }: { ausencia: A
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
         >
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm space-y-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editar-ausencia-title"
+            className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm space-y-4"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-white">Editar ausencia</h2>
+                <h2 id="editar-ausencia-title" className="text-base font-bold text-white">Editar ausencia</h2>
                 <p className="text-xs text-slate-400 mt-0.5">{nombreEmpleado}</p>
               </div>
-              <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-white text-lg leading-none">×</button>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Cerrar diálogo"
+                className="text-slate-500 hover:text-white text-lg leading-none min-h-[36px] min-w-[36px] flex items-center justify-center rounded"
+              >×</button>
             </div>
 
             <form action={handleSubmit} className="space-y-4">
               <input type="hidden" name="id" value={ausencia.id} />
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Tipo</label>
+                <label htmlFor="ea-tipo" className="block text-xs font-semibold text-slate-400 mb-1.5">Tipo</label>
                 <select
+                  id="ea-tipo"
                   name="tipo"
                   defaultValue={ausencia.tipo}
                   required
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  autoFocus
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
                 >
                   <option value="VACACIONES">Vacaciones</option>
                   <option value="ENFERMEDAD">Enfermedad</option>
@@ -65,35 +80,42 @@ export function EditarAusenciaDialog({ ausencia, nombreEmpleado }: { ausencia: A
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Desde</label>
+                  <label htmlFor="ea-desde" className="block text-xs font-semibold text-slate-400 mb-1.5">Desde</label>
                   <input
+                    id="ea-desde"
                     name="desde"
                     type="date"
                     required
-                    defaultValue={toDateInput(ausencia.desde)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    value={desde}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setDesde(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Hasta</label>
+                  <label htmlFor="ea-hasta" className="block text-xs font-semibold text-slate-400 mb-1.5">Hasta</label>
                   <input
+                    id="ea-hasta"
                     name="hasta"
                     type="date"
                     required
-                    defaultValue={toDateInput(ausencia.hasta)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    value={hasta}
+                    min={desde || new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setHasta(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Notas</label>
+                <label htmlFor="ea-notas" className="block text-xs font-semibold text-slate-400 mb-1.5">Notas</label>
                 <textarea
+                  id="ea-notas"
                   name="notas"
                   rows={2}
                   defaultValue={ausencia.notas ?? ""}
                   placeholder="Motivo, observaciones…"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:outline-2 focus:outline-orange-500 resize-none"
                 />
               </div>
 
@@ -112,7 +134,7 @@ export function EditarAusenciaDialog({ ausencia, nombreEmpleado }: { ausencia: A
                 <button
                   type="submit"
                   disabled={pending}
-                  className="flex-1 text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
+                  className="flex-1 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 px-4 py-2.5 rounded-lg transition-colors"
                 >
                   {pending ? "Guardando…" : "Guardar"}
                 </button>

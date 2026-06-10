@@ -40,10 +40,10 @@ const jsonLd = {
     latitude: siteConfig.contact.latitude,
     longitude: siteConfig.contact.longitude,
   },
-  areaServed: {
-    "@type": "State",
-    name: "Entre Ríos",
-  },
+  areaServed: [
+    { "@type": "City", name: "Victoria" },
+    { "@type": "State", name: "Entre Ríos" },
+  ],
   openingHoursSpecification: {
     "@type": "OpeningHoursSpecification",
     dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
@@ -58,8 +58,9 @@ const jsonLd = {
         "@type": "Offer",
         itemOffered: {
           "@type": "Service",
-          name: "Alarmas Inteligentes",
-          description: "Sistemas anti-intrusión con sensores de movimiento, rotura de cristal y apertura. Control desde smartphone.",
+          name: "Alarmas monitoreadas",
+          description:
+            "Sistemas anti-intrusión con sensores de movimiento, rotura de cristal, apertura, respaldo y aviso remoto.",
         },
       },
       {
@@ -67,7 +68,8 @@ const jsonLd = {
         itemOffered: {
           "@type": "Service",
           name: "Cámaras de Seguridad CCTV",
-          description: "Circuitos cerrados de TV con grabación en la nube, visión nocturna y detección de personas con IA.",
+          description:
+            "Circuitos cerrados de TV con grabación, visión nocturna, acceso remoto y ubicación profesional de cámaras.",
         },
       },
       {
@@ -75,7 +77,8 @@ const jsonLd = {
         itemOffered: {
           "@type": "Service",
           name: "Monitoreo 24 horas",
-          description: "Central de monitoreo permanente con respuesta inmediata ante cualquier evento de seguridad.",
+          description:
+            "Central de monitoreo permanente con respuesta inmediata ante cualquier evento de seguridad.",
         },
       },
       {
@@ -83,15 +86,17 @@ const jsonLd = {
         itemOffered: {
           "@type": "Service",
           name: "Control de Acceso",
-          description: "Gestión de accesos con biometría y tarjetas RFID para empresas, edificios y barrios cerrados.",
+          description:
+            "Gestión de accesos con biometría y tarjetas RFID para empresas, edificios y barrios cerrados.",
         },
       },
       {
         "@type": "Offer",
         itemOffered: {
           "@type": "Service",
-          name: "Domótica",
-          description: "Automatización del hogar: luces, persianas y climatización controlados desde tu dispositivo.",
+          name: "Automatización segura",
+          description:
+            "Automatización útil para luces, portones y rutinas integradas con criterios de seguridad.",
         },
       },
     ],
@@ -107,12 +112,14 @@ export default function Home() {
       />
       <div className="font-sans text-slate-800 bg-slate-900 min-h-screen selection:bg-orange-500 selection:text-white">
         <Navbar />
-        <HeroSection />
-        <FeaturesSection />
-        <ServicesSection />
-        <PortalSection />
-        <ContactSection />
-        <Footer />
+        <main>
+          <HeroSection />
+          <FeaturesSection />
+          <ServicesSection />
+          <PortalSection />
+          <ContactSection />
+          <Footer />
+        </main>
         <FloatingWhatsApp />
       </div>
     </>

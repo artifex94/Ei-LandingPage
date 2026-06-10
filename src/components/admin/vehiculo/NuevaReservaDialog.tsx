@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import type { Empleado, Perfil, Vehiculo } from "@/generated/prisma/client";
+import type { Empleado, Vehiculo } from "@/generated/prisma/client";
 import { crearReservaVehiculo } from "@/lib/actions/vehiculo";
 
 type VehiculoConReservas = Vehiculo & { reservas: unknown[] };
-type EmpleadoConPerfil = Empleado & { perfil: Perfil };
+type EmpleadoConPerfil = Empleado & { perfil: { nombre: string } };
 
 export function NuevaReservaDialog({
   vehiculos,
@@ -64,7 +64,7 @@ export function NuevaReservaDialog({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+        <button className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-medium transition-colors">
           <span aria-hidden="true">+</span> Nueva reserva
         </button>
       </Dialog.Trigger>
@@ -91,7 +91,7 @@ export function NuevaReservaDialog({
                 id="vehiculo_id"
                 name="vehiculo_id"
                 required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500"
               >
                 {vehiculos.map((v) => (
                   <option key={v.id} value={v.id}>
@@ -109,7 +109,7 @@ export function NuevaReservaDialog({
                 id="empleado_id"
                 name="empleado_id"
                 required
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500"
               >
                 <option value="">Seleccionar…</option>
                 {empleados.map((e) => (
@@ -128,7 +128,7 @@ export function NuevaReservaDialog({
                   name="desde"
                   type="datetime-local"
                   required
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500"
                 />
               </div>
               <div>
@@ -140,7 +140,7 @@ export function NuevaReservaDialog({
                   name="hasta"
                   type="datetime-local"
                   required
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500"
                 />
               </div>
             </div>
@@ -154,7 +154,7 @@ export function NuevaReservaDialog({
                 name="km_inicial"
                 type="number"
                 min="0"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500"
               />
             </div>
 
@@ -166,7 +166,7 @@ export function NuevaReservaDialog({
                 id="notas"
                 name="notas"
                 rows={2}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:outline-2 focus:outline-orange-500"
               />
             </div>
 
@@ -178,14 +178,14 @@ export function NuevaReservaDialog({
 
             <div className="flex justify-end gap-3 pt-2">
               <Dialog.Close asChild>
-                <button type="button" className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">
+                <button type="button" className="px-4 py-2.5 min-h-[44px] text-sm text-slate-400 hover:text-white transition-colors">
                   Cancelar
                 </button>
               </Dialog.Close>
               <button
                 type="submit"
                 disabled={pending}
-                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 min-h-[44px] rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {pending ? "Reservando…" : "Reservar"}
               </button>

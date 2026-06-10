@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import type { PagoPlano } from "@/components/portal/CalendarioPagos";
 import {
   crearPreferenciaTodoMP,
@@ -25,10 +25,13 @@ interface Props {
 
 function CopyButton({ texto }: { texto: string }) {
   const [copiado, setCopiado] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
   function copiar() {
     navigator.clipboard.writeText(texto).then(() => {
       setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopiado(false), 2000);
     });
   }
   return (

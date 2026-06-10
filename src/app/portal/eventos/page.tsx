@@ -51,7 +51,7 @@ export default async function EventosPortalPage() {
         <h1 className="text-xl font-bold text-white">Mis eventos</h1>
         <p className="text-sm text-slate-400 mt-0.5">
           {eventos.length > 0
-            ? `Últimos ${eventos.length} eventos de tus cuentas`
+            ? `Últimos ${eventos.length === 100 ? "100+" : eventos.length} eventos de tus cuentas`
             : "Alarmas y eventos recientes de tus cuentas"}
         </p>
       </div>

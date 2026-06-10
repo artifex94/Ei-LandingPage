@@ -4,32 +4,13 @@ import { useMemo, useState, useTransition } from "react";
 import type { Empleado, Perfil, Turno } from "@/generated/prisma/client";
 import { asignarTurno, eliminarTurno } from "@/lib/actions/turnos";
 import { AlertaCobertura } from "./AlertaCobertura";
+import { FRANJA_META, ESTADO_TURNO_META, type Franja, type EstadoTurnoUI } from "@/lib/ui/turno-ui";
 
 type PerfilBasico      = Pick<Perfil, "id" | "nombre">;
 type EmpleadoConPerfil = Empleado & { perfil: PerfilBasico };
 type TurnoConEmpleado  = Turno  & { empleado: EmpleadoConPerfil };
 
 const FRANJAS = ["MANANA", "TARDE", "NOCHE"] as const;
-
-const FRANJA_LABEL: Record<string, string> = {
-  MANANA: "Mañana",
-  TARDE:  "Tarde",
-  NOCHE:  "Noche",
-};
-const FRANJA_HORAS: Record<string, string> = {
-  MANANA: "06 – 14 hs",
-  TARDE:  "14 – 22 hs",
-  NOCHE:  "22 – 06 hs",
-};
-
-// Estilo de chip según estado del turno
-const CHIP_STYLE: Record<string, string> = {
-  PROGRAMADO:  "bg-slate-700 text-slate-200",
-  EN_CURSO:    "bg-emerald-800/70 text-emerald-200 ring-1 ring-emerald-500",
-  COMPLETADO:  "bg-slate-800 text-slate-500 opacity-60",
-  AUSENTE:     "bg-red-900/60 text-red-300",
-  REEMPLAZADO: "bg-amber-900/60 text-amber-300",
-};
 
 // ── Selector inline para agregar un monitor a una celda ──────────────────────
 function AsignarSelector({
@@ -55,7 +36,7 @@ function AsignarSelector({
         <button
           onClick={() => setOpen(true)}
           disabled={disabled}
-          aria-label={`Agregar monitor — ${FRANJA_LABEL[franja]} del ${fecha.toLocaleDateString("es-AR", { timeZone: "UTC" })}`}
+          aria-label={`Agregar monitor — ${FRANJA_META[franja as Franja].label} del ${fecha.toLocaleDateString("es-AR", { timeZone: "UTC" })}`}
           className="flex items-center gap-1 w-full rounded px-2 py-1 text-xs text-slate-500 hover:text-slate-300 border border-dashed border-slate-700 hover:border-slate-500 hover:bg-slate-800 transition-all"
         >
           <span className="text-sm leading-none font-medium">+</span>
@@ -125,34 +106,42 @@ function TurnoCell({
     >
       <div className="space-y-1 min-h-[36px]">
         {/* Chip por cada monitor asignado */}
-        {turnos.map((turno) => (
-          <div
-            key={turno.id}
-            className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${CHIP_STYLE[turno.estado] ?? CHIP_STYLE.PROGRAMADO}`}
-          >
-            {/* Punto de color del empleado */}
-            <span
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: turno.empleado.color_calendario ?? "#6366f1" }}
-              aria-hidden="true"
-            />
-            {/* Nombre */}
-            <span className="truncate flex-1 leading-tight">
-              {turno.empleado.perfil.nombre.split(" ").slice(0, 2).join(" ")}
-            </span>
-            {/* Etiqueta de duración — deja claro que cubre 8 horas completas */}
-            <span className="text-slate-500 text-xs flex-shrink-0 font-mono">8h</span>
-            {/* Quitar */}
-            <button
-              onClick={() => onEliminar(turno.id)}
-              disabled={pending}
-              className="text-slate-500 hover:text-red-400 transition-colors flex-shrink-0 leading-none"
-              aria-label={`Quitar turno de ${turno.empleado.perfil.nombre}`}
+        {turnos.map((turno) => {
+          const estadoMeta = ESTADO_TURNO_META[turno.estado as EstadoTurnoUI] ?? ESTADO_TURNO_META.PROGRAMADO;
+          const EstadoIcon = estadoMeta.Icon;
+          return (
+            <div
+              key={turno.id}
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ${estadoMeta.chip}`}
             >
-              ×
-            </button>
-          </div>
-        ))}
+              {/* Punto de color del empleado */}
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: turno.empleado.color_calendario ?? "#64748b" }}
+                aria-hidden="true"
+              />
+              {/* Nombre */}
+              <span className="truncate flex-1 leading-tight">
+                {turno.empleado.perfil.nombre.split(" ").slice(0, 2).join(" ")}
+              </span>
+              {/* Ícono de estado del turno */}
+              <EstadoIcon
+                className="w-3 h-3 flex-shrink-0 opacity-70"
+                strokeWidth={2.2}
+                aria-label={estadoMeta.label}
+              />
+              {/* Quitar */}
+              <button
+                onClick={() => onEliminar(turno.id)}
+                disabled={pending}
+                className="text-current/60 hover:text-red-400 transition-colors flex-shrink-0 leading-none"
+                aria-label={`Quitar turno de ${turno.empleado.perfil.nombre}`}
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
 
         {/* Botón / selector para agregar más monitores */}
         <AsignarSelector
@@ -290,13 +279,22 @@ export function CalendarioTurnos({
 
         {/* Cuerpo: una fila por franja */}
         <tbody className="divide-y divide-slate-700/50">
-          {FRANJAS.map((franja) => (
+          {FRANJAS.map((franja) => {
+            const meta = FRANJA_META[franja as Franja];
+            const FranjaIcon = meta.Icon;
+            return (
             <tr key={franja}>
-              {/* Etiqueta de franja con horario y duración */}
-              <td className="px-3 py-3 border-r border-slate-700 align-top sticky left-0 bg-slate-900 z-10">
-                <p className="font-semibold text-slate-200">{FRANJA_LABEL[franja]}</p>
-                <p className="text-slate-500 mt-0.5">{FRANJA_HORAS[franja]}</p>
-                <p className="text-slate-500 mt-1 font-medium">8 hs completas</p>
+              {/* Etiqueta de franja con ícono, horario y acento de color */}
+              <td
+                className="px-3 py-3 border-r border-slate-700 align-top sticky left-0 bg-slate-900 z-10"
+                style={{ boxShadow: `inset 3px 0 0 ${meta.rowAccent}` }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <FranjaIcon className={`w-4 h-4 ${meta.iconCls}`} strokeWidth={2} aria-hidden="true" />
+                  <p className="font-semibold text-slate-200">{meta.label}</p>
+                </div>
+                <p className="text-slate-500 mt-1 font-mono text-[11px]">{meta.horario}</p>
+                <p className="text-slate-600 mt-0.5 text-[11px]">8 hs completas</p>
               </td>
 
               {/* Celdas de días */}
@@ -314,7 +312,8 @@ export function CalendarioTurnos({
                 />
               ))}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
 

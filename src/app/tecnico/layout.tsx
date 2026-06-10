@@ -28,6 +28,13 @@ export default async function TecnicoLayout({ children }: { children: React.Reac
 
   return (
     <div className="min-h-screen bg-industrial-900 flex flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-orange-500 focus:text-slate-900 focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold"
+      >
+        Ir al contenido principal
+      </a>
+
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="bg-industrial-800 border-b border-industrial-700 px-4 py-3 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto w-full px-4 flex items-center justify-between">
@@ -40,7 +47,7 @@ export default async function TecnicoLayout({ children }: { children: React.Reac
             </div>
             <div>
               <span className="text-sm font-semibold text-white block leading-tight">Panel Técnico</span>
-              <span className="text-[9px] text-slate-400 font-mono tracking-widest uppercase">Escobar Instalaciones</span>
+              <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">Escobar Instalaciones</span>
             </div>
           </Link>
           <div className="flex items-center gap-3">
@@ -53,7 +60,7 @@ export default async function TecnicoLayout({ children }: { children: React.Reac
       <TecnicoTabNav />
 
       {/* ── Contenido ───────────────────────────────────────────────────────── */}
-      <main className="flex-1 px-4 lg:px-8 py-5 max-w-2xl lg:max-w-7xl mx-auto w-full pb-24 lg:pb-8 text-slate-300">
+      <main id="main-content" className="flex-1 px-4 lg:px-8 py-5 max-w-2xl lg:max-w-7xl mx-auto w-full pb-24 lg:pb-8 text-slate-300">
         {children}
       </main>
 

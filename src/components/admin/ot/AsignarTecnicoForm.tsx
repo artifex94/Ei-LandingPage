@@ -53,7 +53,7 @@ export function AsignarTecnicoForm({
       <div>
         <label htmlFor="tecnico_id" className="block text-xs text-slate-400 mb-1">Técnico</label>
         <select id="tecnico_id" name="tecnico_id" defaultValue={tecnico_actual ?? ""}
-          className="rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          className="rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500">
           <option value="">Seleccionar…</option>
           {tecnicos.map((t) => (
             <option key={t.id} value={t.id}>{t.perfil.nombre}</option>
@@ -65,11 +65,11 @@ export function AsignarTecnicoForm({
         <label htmlFor="fecha_visita_asig" className="block text-xs text-slate-400 mb-1">Fecha y hora</label>
         <input id="fecha_visita_asig" name="fecha_visita" type="datetime-local"
           defaultValue={fechaDefault}
-          className="rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          className="rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500" />
       </div>
 
       <button type="submit" disabled={pending}
-        className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
+        className="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-medium transition-colors disabled:opacity-50">
         {pending ? "Asignando…" : "Asignar"}
       </button>
 

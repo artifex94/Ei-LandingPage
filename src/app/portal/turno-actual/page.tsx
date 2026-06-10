@@ -15,23 +15,24 @@ function endOfToday() {
 export default async function TurnoActualPage() {
   const { userId } = await requireSesion();
 
-  const empleado = await prisma.empleado.findUnique({
-    where: { perfil_id: userId },
-    select: { id: true, puede_monitorear: true },
-  });
-  if (!empleado) redirect("/portal/dashboard");
-
   const hoy = startOfToday();
   const finHoy = endOfToday();
 
-  const turnoHoy = await prisma.turno.findFirst({
-    where: {
-      empleado_id: empleado.id,
-      fecha: { gte: hoy, lte: finHoy },
-      estado: { in: ["PROGRAMADO", "EN_CURSO"] },
-    },
-    orderBy: { franja: "asc" },
-  });
+  const [empleado, turnoHoy] = await Promise.all([
+    prisma.empleado.findUnique({
+      where: { perfil_id: userId },
+      select: { id: true, puede_monitorear: true },
+    }),
+    prisma.turno.findFirst({
+      where: {
+        empleado: { perfil_id: userId },
+        fecha:  { gte: hoy, lte: finHoy },
+        estado: { in: ["PROGRAMADO", "EN_CURSO"] },
+      },
+      orderBy: { franja: "asc" },
+    }),
+  ]);
+  if (!empleado) redirect("/portal/dashboard");
 
   const FRANJA_LABEL: Record<string, string> = {
     MANANA: "Mañana (06–14 hs)",

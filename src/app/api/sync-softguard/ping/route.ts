@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma/client";
+import { getSesion } from "@/lib/auth/session";
 import { registrarAudit } from "@/lib/audit";
 import { getCuentaCount } from "@/lib/softguard/queries";
 
 async function verificarAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  return perfil?.rol === "ADMIN" ? perfil : null;
+  const sesion = await getSesion();
+  if (!sesion || sesion.perfil.rol !== "ADMIN") return null;
+  return { id: sesion.userId, nombre: sesion.perfil.nombre };
 }
 
 export async function POST() {
@@ -39,8 +34,9 @@ export async function POST() {
   });
 
   if (!result.ok) {
+    console.error("[softguard/ping] connection failed:", result.error);
     return NextResponse.json(
-      { ok: false, mock: false, error: result.error, latency_ms },
+      { ok: false, mock: false, error: "Error de conexión con SoftGuard", latency_ms },
       { status: 502 }
     );
   }

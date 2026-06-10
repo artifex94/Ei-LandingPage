@@ -73,8 +73,9 @@ function FilaSensor({ sensor }: { sensor: SensorData }) {
             <input type="hidden" name="activa" value={sensor.activa ? "true" : "false"} />
 
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Etiqueta</label>
+              <label htmlFor={`fs-etiqueta-${sensor.id}`} className="block text-xs text-slate-400 mb-1">Etiqueta</label>
               <input
+                id={`fs-etiqueta-${sensor.id}`}
                 name="etiqueta"
                 defaultValue={sensor.etiqueta}
                 required
@@ -83,8 +84,8 @@ function FilaSensor({ sensor }: { sensor: SensorData }) {
             </div>
 
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Tipo</label>
-              <select name="tipo" defaultValue={sensor.tipo} className={`${inputCls} w-44`}>
+              <label htmlFor={`fs-tipo-${sensor.id}`} className="block text-xs text-slate-400 mb-1">Tipo</label>
+              <select id={`fs-tipo-${sensor.id}`} name="tipo" defaultValue={sensor.tipo} className={`${inputCls} w-44`}>
                 {TIPOS_SENSOR.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
@@ -92,8 +93,8 @@ function FilaSensor({ sensor }: { sensor: SensorData }) {
             </div>
 
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Batería</label>
-              <select name="bateria" defaultValue={sensor.bateria ?? ""} className={`${inputCls} w-32`}>
+              <label htmlFor={`fs-bateria-${sensor.id}`} className="block text-xs text-slate-400 mb-1">Batería</label>
+              <select id={`fs-bateria-${sensor.id}`} name="bateria" defaultValue={sensor.bateria ?? ""} className={`${inputCls} w-32`}>
                 {BATERIAS.map((b) => (
                   <option key={b.value} value={b.value}>{b.label}</option>
                 ))}
@@ -249,8 +250,9 @@ function NuevoSensorForm({ cuentaId }: { cuentaId: string }) {
         <input type="hidden" name="cuenta_id" value={cuentaId} />
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Código de zona</label>
+          <label htmlFor="ns-codigo-zona" className="block text-xs text-slate-400 mb-1">Código de zona</label>
           <input
+            id="ns-codigo-zona"
             name="codigo_zona"
             placeholder="Ej: Z01"
             required
@@ -259,8 +261,9 @@ function NuevoSensorForm({ cuentaId }: { cuentaId: string }) {
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Etiqueta</label>
+          <label htmlFor="ns-etiqueta" className="block text-xs text-slate-400 mb-1">Etiqueta</label>
           <input
+            id="ns-etiqueta"
             name="etiqueta"
             placeholder="Ej: Puerta garage"
             required
@@ -269,8 +272,8 @@ function NuevoSensorForm({ cuentaId }: { cuentaId: string }) {
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Tipo</label>
-          <select name="tipo" className={`${inputCls} w-44`}>
+          <label htmlFor="ns-tipo" className="block text-xs text-slate-400 mb-1">Tipo</label>
+          <select id="ns-tipo" name="tipo" className={`${inputCls} w-44`}>
             {TIPOS_SENSOR.map((t) => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
@@ -278,8 +281,8 @@ function NuevoSensorForm({ cuentaId }: { cuentaId: string }) {
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Batería</label>
-          <select name="bateria" defaultValue="" className={`${inputCls} w-32`}>
+          <label htmlFor="ns-bateria" className="block text-xs text-slate-400 mb-1">Batería</label>
+          <select id="ns-bateria" name="bateria" defaultValue="" className={`${inputCls} w-32`}>
             {BATERIAS.map((b) => (
               <option key={b.value} value={b.value}>{b.label}</option>
             ))}
@@ -378,20 +381,20 @@ function MobileSensorCard({ sensor }: { sensor: SensorData }) {
           <input type="hidden" name="activa" value={sensor.activa ? "true" : "false"} />
 
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Etiqueta</label>
-            <input name="etiqueta" defaultValue={sensor.etiqueta} required className={`${inputCls} w-full`} />
+            <label htmlFor={`ms-etiqueta-${sensor.id}`} className="block text-xs text-slate-400 mb-1">Etiqueta</label>
+            <input id={`ms-etiqueta-${sensor.id}`} name="etiqueta" defaultValue={sensor.etiqueta} required className={`${inputCls} w-full`} />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Tipo</label>
-            <select name="tipo" defaultValue={sensor.tipo} className={`${inputCls} w-full`}>
+            <label htmlFor={`ms-tipo-${sensor.id}`} className="block text-xs text-slate-400 mb-1">Tipo</label>
+            <select id={`ms-tipo-${sensor.id}`} name="tipo" defaultValue={sensor.tipo} className={`${inputCls} w-full`}>
               {TIPOS_SENSOR.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Batería</label>
-            <select name="bateria" defaultValue={sensor.bateria ?? ""} className={`${inputCls} w-full`}>
+            <label htmlFor={`ms-bateria-${sensor.id}`} className="block text-xs text-slate-400 mb-1">Batería</label>
+            <select id={`ms-bateria-${sensor.id}`} name="bateria" defaultValue={sensor.bateria ?? ""} className={`${inputCls} w-full`}>
               {BATERIAS.map((b) => (
                 <option key={b.value} value={b.value}>{b.label}</option>
               ))}

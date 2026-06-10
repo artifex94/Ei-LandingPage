@@ -178,11 +178,14 @@ export function CalendarioPagos({ pagos, anio, cuentaId, eventosHeatmap }: Props
                 </span>
                 <div className={`${cfg.badgeBg} flex items-center gap-0.5 rounded-full px-1.5 py-0.5`}>
                   {cfg.icono && (
-                    <span className="text-[10px] text-white leading-none" aria-hidden="true">
+                    <span
+                      className={`text-xs text-white leading-none${estado === "PROCESANDO" ? " inline-block animate-spin" : ""}`}
+                      aria-hidden="true"
+                    >
                       {cfg.icono}
                     </span>
                   )}
-                  <span className="text-[9px] font-bold text-white leading-none">
+                  <span className="text-xs font-bold text-white leading-none">
                     {cfg.etiqueta}
                   </span>
                 </div>
@@ -190,7 +193,7 @@ export function CalendarioPagos({ pagos, anio, cuentaId, eventosHeatmap }: Props
 
               {/* Importe */}
               {importeStr && (
-                <span className="text-[10px] text-slate-400 px-2.5 pb-1 leading-none">
+                <span className="text-xs text-slate-400 px-2.5 pb-1 leading-none">
                   {importeStr}
                 </span>
               )}
@@ -210,7 +213,7 @@ export function CalendarioPagos({ pagos, anio, cuentaId, eventosHeatmap }: Props
               {cfg.esAccionable && pago && (
                 <button
                   onClick={() => setPagoSeleccionado({ mes: numMes, pago })}
-                  className="w-full text-center bg-orange-500 hover:bg-orange-600 active:bg-orange-700 transition-colors py-1.5 text-[10px] font-bold text-slate-900 tracking-wide mt-auto"
+                  className="w-full text-center bg-orange-500 hover:bg-orange-600 active:bg-orange-700 transition-colors py-3 text-xs font-bold text-slate-900 tracking-wide mt-auto"
                   aria-label={`Pagar ${nombreMes} — ${importeStr}`}
                 >
                   PAGAR
@@ -234,7 +237,7 @@ export function CalendarioPagos({ pagos, anio, cuentaId, eventosHeatmap }: Props
                 style={{ backgroundColor: color, boxShadow: tipo !== "vacio" ? `0 0 4px ${color}66` : "none" }}
                 aria-hidden="true"
               />
-              <span className="text-[10px] text-slate-400">{label}</span>
+              <span className="text-xs text-slate-400">{label}</span>
             </div>
           );
         })}
@@ -249,12 +252,12 @@ export function CalendarioPagos({ pagos, anio, cuentaId, eventosHeatmap }: Props
               />
             ))}
           </div>
-          <span className="text-[10px] text-slate-400">intensidad →</span>
+          <span className="text-xs text-slate-400">intensidad →</span>
         </div>
       </div>
 
       {!hayEventos && (
-        <p className="mt-3 text-[11px] text-slate-500 italic">
+        <p className="mt-3 text-xs text-slate-400 italic">
           El historial de actividad del sistema de alarma estará disponible
           una vez que se establezca conexión con SoftGuard.
         </p>
@@ -295,7 +298,7 @@ function DayGrid({ mes, anio, diasEnMes, eventosMap, hoy, nombreMes, hayDatos }:
       {/* Tooltip del día seleccionado */}
       <div className="min-h-[16px]">
         {tooltip && (
-          <p className="text-[9px] text-slate-300 leading-none truncate">{tooltip}</p>
+          <p className="text-xs text-slate-300 leading-none truncate">{tooltip}</p>
         )}
       </div>
 
@@ -304,6 +307,7 @@ function DayGrid({ mes, anio, diasEnMes, eventosMap, hoy, nombreMes, hayDatos }:
         className="grid grid-cols-7 gap-[2px]"
         aria-hidden="true"
         onMouseLeave={() => setTooltip(null)}
+        onClick={(e) => { if (e.target === e.currentTarget) setTooltip(null); }}
       >
         {Array.from({ length: diasEnMes }, (_, i) => {
           const dia = i + 1;
@@ -333,9 +337,11 @@ function DayGrid({ mes, anio, diasEnMes, eventosMap, hoy, nombreMes, hayDatos }:
           return (
             <div
               key={dia}
-              className={`aspect-square rounded-[2px] cursor-default transition-transform hover:scale-125 hover:z-10 relative ${animClass}`}
+              className={`aspect-square rounded-[2px] cursor-pointer transition-transform hover:scale-125 hover:z-10 relative ${animClass}`}
               style={{ backgroundColor: bg }}
               onMouseEnter={() => setTooltip(tooltipTxt)}
+              onClick={() => setTooltip((prev) => (prev === tooltipTxt ? null : tooltipTxt))}
+              title={tooltipTxt}
             />
           );
         })}

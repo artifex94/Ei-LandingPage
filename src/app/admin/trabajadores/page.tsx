@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { EmpleadosTable } from "@/components/admin/empleados/EmpleadosTable";
 import { siteConfig } from "@/config/site";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+
+const TUTORIAL_TRABAJADORES = [
+  {
+    titulo: "Roles del equipo",
+    descripcion: "Admin: acceso total. Técnico: gestiona OTs y tareas. Monitor: procesa eventos de alarma. Facturador: acceso a facturación.",
+  },
+  {
+    titulo: "Capacidades adicionales",
+    descripcion: "Un empleado puede tener múltiples capacidades habilitadas (puede_instalar, puede_monitorear, puede_facturar) más allá de su rol principal.",
+  },
+  {
+    titulo: "Crear un trabajador",
+    descripcion: 'El botón "+ Nuevo" crea el usuario en Supabase Auth y el perfil en la base de datos. El empleado recibe un email para configurar su contraseña.',
+  },
+];
 import type { RolEmpleado } from "@/generated/prisma/client";
 
 export const metadata: Metadata = { title: "Equipo" };
@@ -29,10 +44,8 @@ export default async function TrabajadoresPage({
 }: {
   searchParams: Promise<{ rol?: string }>;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const esEscobarAdmin = user.email === siteConfig.contact.email;
+  const adminPerfil = await requireAdmin();
+  const esEscobarAdmin = adminPerfil.email === siteConfig.contact.email;
 
   const sp = await searchParams;
   const filtroRol = sp.rol ?? "todos";
@@ -63,7 +76,7 @@ export default async function TrabajadoresPage({
         </div>
         <Link
           href="/admin/trabajadores/nuevo"
-          className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-slate-900 px-4 py-2 rounded-lg transition-colors shrink-0"
+          className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-slate-900 px-4 py-2 min-h-[44px] flex items-center rounded-lg transition-colors shrink-0"
         >
           + Nuevo trabajador
         </Link>
@@ -89,6 +102,12 @@ export default async function TrabajadoresPage({
         empleados={empleados}
         rolLabel={ROL_LABEL}
         basePath="/admin/trabajadores"
+      />
+
+      <TutorialContextual
+        section="trabajadores"
+        titulo="Guía rápida — Equipo"
+        steps={TUTORIAL_TRABAJADORES}
       />
     </div>
   );

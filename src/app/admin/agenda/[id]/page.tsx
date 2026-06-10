@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma/client";
 import { EditarTareaForm } from "./EditarTareaForm";
+import { UUID_RE } from "@/lib/constants/validation";
 
 export const metadata = { title: "Editar tarea" };
 
@@ -11,6 +12,7 @@ export default async function EditarTareaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
 
   const [tarea, tecnicos, cuentas] = await Promise.all([
     prisma.tareaAgendada.findUnique({

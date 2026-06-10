@@ -290,7 +290,7 @@ export function WeatherCard({ day }: { day: DayForecast }) {
         {/* Día */}
         <div className="mb-1.5">
           <p
-            className="text-[9px] font-black uppercase tracking-[0.15em] leading-none"
+            className="text-xs font-black uppercase tracking-[0.15em] leading-none"
             style={{ color: tw ? "rgba(255,255,255,0.65)" : "rgba(30,41,59,0.65)" }}
           >
             {day.isToday ? "HOY" : day.dayLabel}
@@ -302,7 +302,7 @@ export function WeatherCard({ day }: { day: DayForecast }) {
             {day.dayNumber}
           </p>
           <p
-            className="text-[9px] leading-none -mt-0.5"
+            className="text-xs leading-none -mt-0.5"
             style={{ color: tw ? "rgba(255,255,255,0.55)" : "rgba(30,41,59,0.5)" }}
           >
             {day.monthLabel}
@@ -333,7 +333,7 @@ export function WeatherCard({ day }: { day: DayForecast }) {
 
           {/* Label condición */}
           <p
-            className="text-[9px] font-semibold mt-0.5 leading-tight"
+            className="text-xs font-semibold mt-0.5 leading-tight"
             style={{ color: tw ? "rgba(255,255,255,0.8)" : "rgba(30,41,59,0.7)" }}
           >
             {theme.label}

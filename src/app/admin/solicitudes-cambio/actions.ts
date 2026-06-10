@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { requireAdmin } from "@/lib/auth/session";
 import { accionAdmin } from "@/lib/auth/guard";
+import { UUID_RE } from "@/lib/constants/validation";
 
 /** Verifica unicidad del valor nuevo para campos únicos (telefono, email) */
 async function verificarUnicidad(
@@ -33,6 +34,7 @@ async function verificarUnicidad(
 
 export const aprobarCambio = accionAdmin(
   async (ctx, id: string): Promise<{ error?: string }> => {
+    if (!UUID_RE.test(id)) return { error: "ID de solicitud inválido." };
     const solicitud = await prisma.solicitudCambioInfo.findUnique({
       where: { id },
       include: { perfil: true },

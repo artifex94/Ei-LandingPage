@@ -6,7 +6,10 @@ import { TablaFacturasBorradores } from "./TablaFacturasBorradores";
 import { TablaFacturasEmitidas } from "./TablaFacturasEmitidas";
 import { TablaTitularesFacturacion, type TitularFacturacion } from "./TablaTitularesFacturacion";
 
-type FacturaConRelaciones = Factura & { perfil: Perfil; items: FacturaItem[] };
+type FacturaConRelaciones = Factura & {
+  perfil: Pick<Perfil, "id" | "nombre">;
+  items: Pick<FacturaItem, "id" | "descripcion" | "cantidad" | "precio_unit" | "subtotal">[];
+};
 
 const TABS = [
   { key: "borradores", label: "Borradores" },
@@ -38,13 +41,13 @@ export function FacturacionTabs({
             onClick={() => setTab(t.key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               tab === t.key
-                ? "border-indigo-500 text-indigo-400"
+                ? "border-orange-500 text-orange-400"
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
             {t.label}
             {t.key === "borradores" && borradores.length > 0 && (
-              <span className="ml-2 text-xs bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">
+              <span className="ml-2 text-xs bg-orange-500 text-slate-900 px-1.5 py-0.5 rounded-full">
                 {borradores.length}
               </span>
             )}

@@ -32,7 +32,7 @@ export function EventoEstadoBadge({ estado, size = "sm" }: EventoEstadoBadgeProp
   const label = ESTADO_LABEL[estado] ?? estado;
   const sizeClass = size === "md"
     ? "text-xs font-semibold px-2.5 py-1 rounded-full"
-    : "text-[10px] font-semibold px-2 py-0.5 rounded-full";
+    : "text-xs font-semibold px-2 py-0.5 rounded-full";
 
   return (
     <span

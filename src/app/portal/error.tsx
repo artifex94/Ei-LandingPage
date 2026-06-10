@@ -28,13 +28,13 @@ export default function PortalError({
         <div className="flex gap-3 justify-center pt-2">
           <button
             onClick={reset}
-            className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors min-h-[40px]"
+            className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px]"
           >
             Reintentar
           </button>
           <Link
             href="/portal/dashboard"
-            className="bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors min-h-[40px] flex items-center"
+            className="bg-orange-500 hover:bg-orange-600 text-slate-900 px-4 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex items-center"
           >
             Ir al inicio
           </Link>

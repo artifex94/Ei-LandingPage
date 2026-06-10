@@ -48,18 +48,18 @@ export function TurnoCheckinClient({
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-slate-700 bg-slate-800 p-5 space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Turno asignado</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Turno asignado</p>
         <p className="text-lg font-bold text-white">{franja}</p>
 
         <div className="grid grid-cols-2 gap-3 mt-2">
           <div className={`rounded-lg p-3 text-center ${checkinAt ? "bg-slate-800 border border-slate-700" : "bg-slate-800/40 border border-slate-800"}`}>
-            <p className="text-xs text-slate-500">Inicio</p>
+            <p className="text-xs text-slate-400">Inicio</p>
             <p className={`text-sm font-bold ${checkinAt ? "text-white" : "text-slate-700"}`}>
               {checkinAt ? fmt(checkinAt) : "—"}
             </p>
           </div>
           <div className={`rounded-lg p-3 text-center ${checkoutAt ? "bg-slate-800 border border-slate-700" : "bg-slate-800/40 border border-slate-800"}`}>
-            <p className="text-xs text-slate-500">Fin</p>
+            <p className="text-xs text-slate-400">Fin</p>
             <p className={`text-sm font-bold ${checkoutAt ? "text-white" : "text-slate-700"}`}>
               {checkoutAt ? fmt(checkoutAt) : "—"}
             </p>
@@ -75,7 +75,7 @@ export function TurnoCheckinClient({
         <button
           onClick={handleCheckin}
           disabled={pending}
-          className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg disabled:opacity-50 transition-colors"
+          className="w-full py-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-slate-900 font-bold text-lg disabled:opacity-50 transition-colors"
         >
           Iniciar turno
         </button>

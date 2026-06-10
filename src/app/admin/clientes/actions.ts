@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
+import { UUID_RE } from "@/lib/constants/validation";
 import type { CategoriaCuenta, CondicionIVA, TipoTitular } from "@/generated/prisma/enums";
 
 export interface ClienteActionResult {
@@ -256,7 +257,7 @@ export async function altaClienteConCuenta(
 // ── Actualizar datos del cliente directamente ─────────────────────────────────
 
 const actualizarClienteSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().uuid("ID de cliente inválido"),
   nombre: z.string().min(2, "El nombre es obligatorio"),
   dni: z.string().optional().transform((v) => v || undefined),
   telefono: z.string().optional().transform((v) => v || undefined),
@@ -339,7 +340,7 @@ export async function eliminarCliente(
   if (!admin) return { errores: ["Sin permisos de administrador."] };
 
   const id = (formData.get("id") as string ?? "").trim();
-  if (!id) return { errores: ["ID inválido."] };
+  if (!UUID_RE.test(id)) return { errores: ["ID inválido."] };
 
   const perfil = await prisma.perfil.findUnique({
     where: { id },

@@ -5,13 +5,14 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import { requireAdminWithName as requireAdmin } from "@/lib/actions/auth";
+import { UUID_RE } from "@/lib/constants/validation";
 
 const crearSchema = z.object({
   empleado_id: z.string().uuid(),
   tipo: z.enum(["VACACIONES", "ENFERMEDAD", "PERSONAL", "FERIADO"]),
   desde: z.string().date(),
   hasta: z.string().date(),
-  notas: z.string().optional(),
+  notas: z.string().max(500).optional(),
 });
 
 export async function crearAusencia(formData: FormData) {
@@ -52,6 +53,8 @@ export async function aprobarAusencia(ausenciaId: string) {
   const admin = await requireAdmin();
   if (!admin) return { error: "Sin permisos." };
 
+  if (!UUID_RE.test(ausenciaId)) return { error: "ID inválido." };
+
   await prisma.ausencia.update({ where: { id: ausenciaId }, data: { aprobada: true } });
 
   await registrarAudit({
@@ -68,7 +71,7 @@ const editarSchema = z.object({
   tipo: z.enum(["VACACIONES", "ENFERMEDAD", "PERSONAL", "FERIADO"]),
   desde: z.string().date(),
   hasta: z.string().date(),
-  notas: z.string().optional(),
+  notas: z.string().max(500).optional(),
 });
 
 export async function editarAusencia(formData: FormData) {
@@ -109,6 +112,8 @@ export async function editarAusencia(formData: FormData) {
 export async function eliminarAusencia(ausenciaId: string) {
   const admin = await requireAdmin();
   if (!admin) return { error: "Sin permisos." };
+
+  if (!UUID_RE.test(ausenciaId)) return { error: "ID inválido." };
 
   await prisma.ausencia.delete({ where: { id: ausenciaId } });
 

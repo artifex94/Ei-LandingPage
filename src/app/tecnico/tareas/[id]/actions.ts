@@ -4,8 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
+import { UUID_RE } from "@/lib/constants/validation";
 
 async function requireTecnicoOwner(tareaId: string) {
+  if (!UUID_RE.test(tareaId)) return null;
   const { userId } = await requireSesion();
 
   const tarea = await prisma.tareaAgendada.findUnique({ where: { id: tareaId } });
@@ -28,6 +30,7 @@ export async function marcarCompletada(tareaId: string) {
 }
 
 export async function guardarNotas(tareaId: string, notas: string) {
+  if (notas.length > 2000) return { error: "Las notas no pueden superar los 2000 caracteres." };
   const ctx = await requireTecnicoOwner(tareaId);
   if (!ctx) return { error: "Sin permisos." };
 

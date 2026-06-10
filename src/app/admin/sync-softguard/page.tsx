@@ -4,6 +4,22 @@ import { getCuentaCount } from "@/lib/softguard/queries";
 import { isMockMode } from "@/lib/softguard/client";
 import { SoftGuardPingPanel } from "@/components/admin/SoftGuardSyncStatus";
 import { prisma } from "@/lib/prisma/client";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+
+const TUTORIAL_SOFTGUARD = [
+  {
+    titulo: "Modo mock vs modo real",
+    descripcion: "Mock: los datos vienen de la base de datos local (para desarrollo). Real: conecta directamente a SoftGuard via VPN/LAN.",
+  },
+  {
+    titulo: "Verificar conectividad",
+    descripcion: 'El botón "Ping" comprueba si SoftGuard responde. Si falla, verificá que la VPN o la red local estén activas.',
+  },
+  {
+    titulo: "Reimportar datos",
+    descripcion: "Si SoftGuard tiene cuentas o cambios nuevos, usá Importar datos para sincronizar. La conexión en tiempo real es solo de lectura.",
+  },
+];
 
 export const metadata: Metadata = {
   title: "SoftGuard",
@@ -109,6 +125,12 @@ export default async function SyncSoftGuardPage() {
           para el script DDL de las vistas y los pasos de configuración en SQL Server.
         </p>
       </section>
+
+      <TutorialContextual
+        section="sync-softguard"
+        titulo="Guía rápida — SoftGuard"
+        steps={TUTORIAL_SOFTGUARD}
+      />
     </div>
   );
 }

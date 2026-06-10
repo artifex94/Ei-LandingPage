@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit, registrarAuditTx } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
+import { UUID_RE } from "@/lib/constants/validation";
 
 // Señaliza que el pago cambió de estado entre el snapshot y el borrado
 // (control de concurrencia optimista en anularPago).
@@ -21,7 +22,7 @@ export interface PagoEditResult {
 }
 
 const editarPagoSchema = z.object({
-  pago_id: z.string().min(1),
+  pago_id: z.string().uuid("ID de pago inválido."),
   estado: z.enum(["PENDIENTE", "PAGADO", "VENCIDO", "PROCESANDO"]),
   importe: z.coerce.number().min(0),
   metodo: z.enum(["EFECTIVO", "CHEQUE", "MERCADOPAGO", "TALO_CVU", "TRANSFERENCIA_BANCARIA"]).optional().nullable(),
@@ -78,6 +79,7 @@ export async function editarPago(
 }
 
 export async function anularPago(pagoId: string): Promise<{ error?: string }> {
+  if (!UUID_RE.test(pagoId)) return { error: "ID de pago inválido." };
   const admin = await requireAdmin();
   if (!admin) return { error: "Sin permisos de administrador." };
 
@@ -134,8 +136,8 @@ export async function confirmarTransferencia(
 ): Promise<ConfirmarResult> {
   const admin = await requireAdmin();
 
-  const pagoId = formData.get("pago_id") as string;
-  if (!pagoId) return { error: "ID de pago inválido." };
+  const pagoId = (formData.get("pago_id") as string ?? "").trim();
+  if (!UUID_RE.test(pagoId)) return { error: "ID de pago inválido." };
 
   try {
     await prisma.$transaction(async (tx) => {

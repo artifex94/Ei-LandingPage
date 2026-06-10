@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma/client";
 import { requireAdmin } from "@/lib/auth/session";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { RefreshButton } from "@/components/admin/RefreshButton";
+import { EstadoSistemaBar } from "@/components/admin/EstadoSistemaBar";
+import { AreaContextBar } from "@/components/admin/AreaContextBar";
 
 export const metadata: Metadata = {
   title: {
@@ -65,7 +67,16 @@ export default async function AdminLayout({
           tabIndex={-1}
           className="relative flex-1 p-4 sm:p-6 lg:p-8 overflow-auto pt-16 lg:pt-8"
         >
+          <EstadoSistemaBar
+            eventosSinProcesar={eventosSinProcesar}
+            pendingMantenimiento={pendingMantenimiento}
+            altasUsuarioPendientes={altasUsuarioPendientes}
+            pendingSolicitudes={pendingSolicitudes}
+            cuentasEnMora={cuentasEnMora}
+            otsPendientes={otsPendientes}
+          />
           <RefreshButton />
+          <AreaContextBar />
           {children}
         </main>
       </div>

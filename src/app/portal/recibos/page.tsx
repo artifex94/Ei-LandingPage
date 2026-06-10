@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Receipt } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { METODO_LABEL } from "@/lib/constants/payment";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const metadata: Metadata = { title: "Mis recibos" };
 
@@ -23,7 +26,55 @@ export default async function RecibosPortalPage() {
       cuenta: { select: { descripcion: true } },
     },
     orderBy: [{ anio: "desc" }, { mes: "desc" }],
+    take: 120,
   });
+
+  type ReciboRow = (typeof pagos)[number];
+
+  const columns: Column<ReciboRow>[] = [
+    {
+      id: "periodo",
+      header: "Período",
+      cell: (p) => <span className="text-white capitalize">{MESES_ES[p.mes - 1]} {p.anio}</span>,
+    },
+    {
+      id: "servicio",
+      header: "Servicio",
+      cell: (p) => <span className="text-slate-400 text-xs">{p.cuenta.descripcion}</span>,
+    },
+    {
+      id: "importe",
+      header: "Importe",
+      align: "right",
+      cell: (p) => (
+        <span className="font-semibold text-white">
+          ${Number(p.importe).toLocaleString("es-AR")}
+          {p.metodo && (
+            <span className="block text-xs font-normal text-slate-500">
+              {METODO_LABEL[p.metodo] ?? p.metodo}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      id: "acciones",
+      header: "Acciones",
+      srOnlyHeader: true,
+      align: "right",
+      cell: (p) => (
+        <Link
+          href={`/recibo/${p.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
+          aria-label={`Ver recibo de ${MESES_ES[p.mes - 1]} ${p.anio}`}
+        >
+          Ver recibo ↗
+        </Link>
+      ),
+    },
+  ];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -34,55 +85,13 @@ export default async function RecibosPortalPage() {
         </p>
       </div>
 
-      {pagos.length === 0 ? (
-        <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-12 text-center">
-          <p className="text-slate-400">No hay pagos registrados todavía.</p>
-        </div>
-      ) : (
-        <div className="rounded-lg border border-slate-700 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-800 border-b border-slate-700">
-              <tr>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">Período</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">Servicio</th>
-                <th className="text-right px-4 py-3 text-slate-400 font-medium">Importe</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/50">
-              {pagos.map((p) => (
-                <tr key={p.id} className="bg-slate-900 hover:bg-slate-800/50 transition-colors">
-                  <td className="px-4 py-3 text-white capitalize">
-                    {MESES_ES[p.mes - 1]} {p.anio}
-                  </td>
-                  <td className="px-4 py-3 text-slate-400 text-xs">
-                    {p.cuenta.descripcion}
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-white">
-                    ${Number(p.importe).toLocaleString("es-AR")}
-                    {p.metodo && (
-                      <span className="block text-xs font-normal text-slate-500">
-                        {METODO_LABEL[p.metodo] ?? p.metodo}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/recibo/${p.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-                      aria-label={`Ver recibo de ${MESES_ES[p.mes - 1]} ${p.anio}`}
-                    >
-                      Ver recibo ↗
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        rows={pagos}
+        keyExtractor={(p) => p.id}
+        caption="Mis recibos de pago"
+        emptyState={<EmptyState icon={Receipt} title="No hay pagos registrados todavía." />}
+      />
     </div>
   );
 }

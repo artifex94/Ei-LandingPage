@@ -16,7 +16,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select ref={ref} className={`${baseClasses} ${errorClasses} ${className}`} {...props}>
           {children}
         </select>
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+        {error && <p role="alert" className="text-red-400 text-xs mt-1">{error}</p>}
       </div>
     );
   }

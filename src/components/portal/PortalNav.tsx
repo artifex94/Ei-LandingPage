@@ -93,6 +93,7 @@ function DesktopLink({ nav, pathname }: { nav: NavDef; pathname: string }) {
   return (
     <Link
       href={nav.href}
+      aria-current={active ? "page" : undefined}
       className={`
         relative flex items-center gap-1.5 py-1 px-0.5 text-sm font-medium
         min-h-[44px] transition-colors duration-150 group
@@ -122,6 +123,7 @@ function BottomNavItem({ nav, pathname }: { nav: NavDef; pathname: string }) {
   return (
     <Link
       href={nav.href}
+      aria-current={active ? "page" : undefined}
       className={`
         flex-1 flex flex-col items-center justify-center gap-1
         min-h-[56px] py-2 rounded-sm transition-colors duration-150
@@ -129,7 +131,7 @@ function BottomNavItem({ nav, pathname }: { nav: NavDef; pathname: string }) {
       `}
     >
       <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-      <span className={`text-[10px] leading-none font-mono tracking-wide ${active ? "font-semibold" : "font-medium"}`}>
+      <span className={`text-xs leading-none font-mono tracking-wide ${active ? "font-semibold" : "font-medium"}`}>
         {nav.mobileLabel}
       </span>
     </Link>
@@ -162,11 +164,11 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
             </div>
             <div>
               <span className="text-sm font-semibold text-white block leading-tight">Escobar Instalaciones</span>
-              <span className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">Mi Portal</span>
+              <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">Mi Central</span>
             </div>
           </Link>
 
-          <nav aria-label="Navegación principal del portal" className="flex items-center gap-5">
+          <nav aria-label="Navegación principal de Mi Central" className="flex items-center gap-5">
             {desktopItems.map((nav) => (
               <DesktopLink key={nav.href} nav={nav} pathname={pathname} />
             ))}

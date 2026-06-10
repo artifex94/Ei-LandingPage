@@ -3,10 +3,12 @@
 import { useState, useTransition } from "react";
 import { aprobarAusencia, eliminarAusencia } from "@/lib/actions/ausencias";
 import { EditarAusenciaDialog } from "./EditarAusenciaDialog";
-import type { Ausencia, Empleado, Perfil } from "@/generated/prisma/client";
+import type { Ausencia, Empleado } from "@/generated/prisma/client";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { Badge } from "@/components/ui/Badge";
 
 type AusenciaConEmpleado = Ausencia & {
-  empleado: Empleado & { perfil: Perfil };
+  empleado: Empleado & { perfil: { nombre: string } };
 };
 
 export function AusenciasTable({
@@ -23,13 +25,8 @@ export function AusenciasTable({
 
   const hoy = new Date(hoyIso + "T00:00:00Z");
 
-  if (ausencias.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center">
-        <p className="text-slate-500">No hay ausencias registradas.</p>
-      </div>
-    );
-  }
+  const fmt = (d: Date) =>
+    new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
 
   function handleAprobar(id: string) {
     setError(null);
@@ -47,6 +44,73 @@ export function AusenciasTable({
     });
   }
 
+  const columns: Column<AusenciaConEmpleado>[] = [
+    {
+      id: "empleado",
+      header: "Empleado",
+      cell: (a) => (
+        <>
+          <p className="font-medium text-white">{a.empleado.perfil.nombre}</p>
+          {a.notas && <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{a.notas}</p>}
+        </>
+      ),
+    },
+    {
+      id: "tipo",
+      header: "Tipo",
+      className: "hidden sm:table-cell",
+      cell: (a) => <span className="text-slate-400">{tipoLabel[a.tipo] ?? a.tipo}</span>,
+    },
+    {
+      id: "periodo",
+      header: "Período",
+      cell: (a) => (
+        <span className="text-slate-300 text-xs whitespace-nowrap">
+          {fmt(a.desde)} — {fmt(a.hasta)}
+        </span>
+      ),
+    },
+    {
+      id: "estado",
+      header: "Estado",
+      align: "center",
+      cell: (a) =>
+        a.aprobada ? (
+          <Badge variant="success">Aprobada</Badge>
+        ) : (
+          <Badge variant="warning">Pendiente</Badge>
+        ),
+    },
+    {
+      id: "acciones",
+      header: "Acciones",
+      align: "center",
+      cell: (a) => (
+        <div className="flex items-center justify-center gap-2">
+          <EditarAusenciaDialog ausencia={a} nombreEmpleado={a.empleado.perfil.nombre} />
+          {!a.aprobada && (
+            <button
+              onClick={() => handleAprobar(a.id)}
+              disabled={pending}
+              aria-label={`Aprobar ausencia de ${a.empleado.perfil.nombre}`}
+              className="text-xs text-emerald-400 hover:text-emerald-300 disabled:opacity-50 transition-colors px-2 py-1.5 rounded min-h-[36px] flex items-center"
+            >
+              Aprobar
+            </button>
+          )}
+          <button
+            onClick={() => handleEliminar(a.id)}
+            disabled={pending}
+            aria-label={`Eliminar ausencia de ${a.empleado.perfil.nombre}`}
+            className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors px-2 py-1.5 rounded min-h-[36px] flex items-center"
+          >
+            Eliminar
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-3">
       {error && (
@@ -54,85 +118,20 @@ export function AusenciasTable({
           {error}
         </p>
       )}
-      <div className="rounded-xl border border-slate-700 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-800 border-b border-slate-700">
-            <tr>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Empleado
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell">
-                Tipo
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Período
-              </th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Estado
-              </th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800">
-            {ausencias.map((a) => {
-              const esActiva = new Date(a.hasta) >= hoy;
-              const fmt = (d: Date) =>
-                new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
-
-              return (
-                <tr key={a.id} className={`hover:bg-slate-800/40 transition-colors ${!esActiva ? "opacity-50" : ""}`}>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-white">{a.empleado.perfil.nombre}</p>
-                    {a.notas && (
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{a.notas}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-400 hidden sm:table-cell">
-                    {tipoLabel[a.tipo] ?? a.tipo}
-                  </td>
-                  <td className="px-4 py-3 text-slate-300 text-xs whitespace-nowrap">
-                    {fmt(a.desde)} — {fmt(a.hasta)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {a.aprobada ? (
-                      <span className="text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">
-                        Aprobada
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-semibold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">
-                        Pendiente
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <EditarAusenciaDialog ausencia={a} nombreEmpleado={a.empleado.perfil.nombre} />
-                      {!a.aprobada && (
-                        <button
-                          onClick={() => handleAprobar(a.id)}
-                          disabled={pending}
-                          className="text-xs text-emerald-400 hover:text-emerald-300 disabled:opacity-50 transition-colors"
-                        >
-                          Aprobar
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleEliminar(a.id)}
-                        disabled={pending}
-                        className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={ausencias}
+        keyExtractor={(a) => a.id}
+        caption="Ausencias registradas"
+        rowClassName={(a) =>
+          `hover:bg-slate-800/40 ${new Date(a.hasta) >= hoy ? "" : "opacity-50"}`
+        }
+        emptyState={
+          <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center">
+            <p className="text-slate-500">No hay ausencias registradas.</p>
+          </div>
+        }
+      />
     </div>
   );
 }

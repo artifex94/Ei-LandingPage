@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { requireSesion } from "@/lib/actions/auth";
 import { prisma } from "@/lib/prisma/client";
+import { UUID_RE } from "@/lib/constants/validation";
 
 // ─── Mercado Pago ─────────────────────────────────────────────────────────────
 
@@ -12,6 +13,9 @@ export async function crearPreferenciaMercadoPago(
   mes: number,
   anio: number
 ): Promise<{ checkoutUrl: string } | { error: string }> {
+  if (!UUID_RE.test(cuentaId)) return { error: "Cuenta inválida." };
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) return { error: "Mes inválido." };
+  if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) return { error: "Año inválido." };
   const { userId: user_id } = await requireSesion();
 
   const pago = await prisma.pago.findUnique({
@@ -72,6 +76,9 @@ export async function crearIntencionTalo(
   mes: number,
   anio: number
 ): Promise<{ paymentUrl: string } | { error: string }> {
+  if (!UUID_RE.test(cuentaId)) return { error: "Cuenta inválida." };
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) return { error: "Mes inválido." };
+  if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) return { error: "Año inválido." };
   const { userId: user_id } = await requireSesion();
 
   const pago = await prisma.pago.findUnique({
@@ -150,6 +157,9 @@ export async function avisarTransferencia(
   mes: number,
   anio: number
 ): Promise<{ ok: boolean } | { error: string }> {
+  if (!UUID_RE.test(cuentaId)) return { error: "Cuenta inválida." };
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) return { error: "Mes inválido." };
+  if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) return { error: "Año inválido." };
   const { userId: user_id } = await requireSesion();
 
   const pago = await prisma.pago.findUnique({
@@ -191,6 +201,7 @@ export async function crearPreferenciaTodoMP(
   if (pagoIds.length > MAX_PAGOS_BULK) {
     return { error: `No podés seleccionar más de ${MAX_PAGOS_BULK} pagos a la vez.` };
   }
+  if (pagoIds.some((id) => !UUID_RE.test(id))) return { error: "IDs de pago inválidos." };
 
   const { userId: user_id } = await requireSesion();
 
@@ -254,6 +265,7 @@ export async function avisarTransferenciaTodo(
   if (pagoIds.length > MAX_PAGOS_BULK) {
     return { error: `No podés seleccionar más de ${MAX_PAGOS_BULK} pagos a la vez.` };
   }
+  if (pagoIds.some((id) => !UUID_RE.test(id))) return { error: "IDs de pago inválidos." };
 
   const { userId: user_id } = await requireSesion();
 

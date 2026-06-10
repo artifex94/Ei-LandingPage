@@ -11,8 +11,8 @@ import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
   title: {
-    default: "Mi Portal — Escobar Instalaciones",
-    template: "%s — Portal EI",
+    default: "Mi Central — Escobar Instalaciones",
+    template: "%s — Mi Central EI",
   },
   robots: "noindex, nofollow",
 };

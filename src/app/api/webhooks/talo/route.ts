@@ -9,11 +9,12 @@ function validarFirmaTalo(body: string, signature: string): boolean {
   const hash = crypto.createHmac("sha256", secret).update(body).digest("hex");
   const expected = `sha256=${hash}`;
 
+  const expectedBuf = Buffer.from(expected, "utf8");
+  const signatureBuf = Buffer.from(signature, "utf8");
+  if (expectedBuf.length !== signatureBuf.length) return false;
+
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(expected),
-      Buffer.from(signature)
-    );
+    return crypto.timingSafeEqual(expectedBuf, signatureBuf);
   } catch {
     return false;
   }
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
 
   if (evento.type === "payment.completed") {
     const externalId = evento.data?.external_id;
-    if (externalId) {
+    if (externalId != null && (typeof externalId === "string" || typeof externalId === "number")) {
       const { count } = await prisma.pago.updateMany({
         where: { ref_externa: String(externalId) },
         data: {

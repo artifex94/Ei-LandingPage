@@ -41,7 +41,7 @@ export function SolicitudAltaForm() {
         <form action={action} className="space-y-6">
           {/* Error list */}
           {state.errores && state.errores.length > 0 && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 space-y-1">
+            <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 space-y-1">
               {state.errores.map((e, i) => (
                 <p key={i} className="text-red-400 text-sm">
                   {e}
@@ -176,6 +176,7 @@ export function SolicitudAltaForm() {
                     name="razon_social"
                     type="text"
                     placeholder="Nombre o empresa"
+                    tabIndex={requiereFactura ? undefined : -1}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
@@ -191,6 +192,7 @@ export function SolicitudAltaForm() {
                     inputMode="numeric"
                     maxLength={11}
                     placeholder="Sin guiones (11 dígitos)"
+                    tabIndex={requiereFactura ? undefined : -1}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
@@ -202,6 +204,7 @@ export function SolicitudAltaForm() {
                   <select
                     id="condicion_iva"
                     name="condicion_iva"
+                    tabIndex={requiereFactura ? undefined : -1}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors appearance-none"
                   >
                     <option value="">Seleccioná una opción</option>

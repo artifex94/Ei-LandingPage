@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/session";
 import { NuevoEmpleadoForm } from "@/components/admin/NuevoEmpleadoForm";
 import { siteConfig } from "@/config/site";
 
 export const metadata = { title: "Nuevo trabajador" };
 
 export default async function NuevoTrabajadorPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const esEscobarAdmin = user?.email === siteConfig.contact.email;
+  const adminPerfil = await requireAdmin();
+  const esEscobarAdmin = adminPerfil.email === siteConfig.contact.email;
 
   return (
     <div className="max-w-xl">

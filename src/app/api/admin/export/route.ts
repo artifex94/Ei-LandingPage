@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { createClient } from "@/lib/supabase/server";
+import { getSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
 async function verificarAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  return perfil?.rol === "ADMIN" ? perfil : null;
+  const sesion = await getSesion();
+  if (!sesion || sesion.perfil.rol !== "ADMIN") return null;
+  return sesion.perfil;
 }
 
 export async function GET(req: NextRequest) {
@@ -145,6 +143,7 @@ export async function GET(req: NextRequest) {
         cuenta: { include: { perfil: { select: { nombre: true, telefono: true, email: true } } } },
       },
       orderBy: [{ cuenta: { perfil: { nombre: "asc" } } }, { anio: "asc" }, { mes: "asc" }],
+      take: 10_000,
     });
 
     rows = pagosVencidos.map((p) => ({

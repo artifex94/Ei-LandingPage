@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { crearOT } from "@/lib/actions/ot";
 import type { TipoOT, Prioridad } from "@/generated/prisma/client";
@@ -22,6 +22,9 @@ export function NuevaOTButton() {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,7 +51,9 @@ export function NuevaOTButton() {
           fecha_visita: fecha_str ? new Date(fecha_str) : undefined,
           notas_admin:  notas || undefined,
         });
-        setOpen(false);
+        setSuccess(true);
+        clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => { setOpen(false); setSuccess(false); }, 1500);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error desconocido");
       }
@@ -58,7 +63,7 @@ export function NuevaOTButton() {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+        <button className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-medium transition-colors">
           <span aria-hidden="true">+</span> Nueva OT
         </button>
       </Dialog.Trigger>
@@ -74,62 +79,69 @@ export function NuevaOTButton() {
             Creá una OT para asignar al técnico.
           </Dialog.Description>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+          {success ? (
+            <div className="text-center space-y-3 py-4">
+              <p className="text-green-400 text-3xl" aria-hidden="true">✓</p>
+              <p className="text-white font-semibold">¡OT creada!</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="ot-tipo" className="block text-sm font-medium text-slate-300 mb-1">
+                    Tipo <span className="text-red-400" aria-hidden="true">*</span>
+                  </label>
+                  <select id="ot-tipo" name="tipo" required
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500">
+                    <option value="">Seleccionar…</option>
+                    {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="ot-prioridad" className="block text-sm font-medium text-slate-300 mb-1">Prioridad</label>
+                  <select id="ot-prioridad" name="prioridad" defaultValue="MEDIA"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500">
+                    {PRIORIDADES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label htmlFor="ot-tipo" className="block text-sm font-medium text-slate-300 mb-1">
-                  Tipo <span className="text-red-400" aria-hidden="true">*</span>
+                <label htmlFor="ot-descripcion" className="block text-sm font-medium text-slate-300 mb-1">
+                  Descripción <span className="text-red-400" aria-hidden="true">*</span>
                 </label>
-                <select id="ot-tipo" name="tipo" required
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  <option value="">Seleccionar…</option>
-                  {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
+                <textarea id="ot-descripcion" name="descripcion" required rows={3}
+                  placeholder="Describí el trabajo a realizar…"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:outline-2 focus:outline-orange-500" />
               </div>
+
               <div>
-                <label htmlFor="ot-prioridad" className="block text-sm font-medium text-slate-300 mb-1">Prioridad</label>
-                <select id="ot-prioridad" name="prioridad" defaultValue="MEDIA"
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  {PRIORIDADES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
+                <label htmlFor="ot-fecha" className="block text-sm font-medium text-slate-300 mb-1">Fecha de visita (opcional)</label>
+                <input id="ot-fecha" name="fecha_visita" type="datetime-local"
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500" />
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="ot-descripcion" className="block text-sm font-medium text-slate-300 mb-1">
-                Descripción <span className="text-red-400" aria-hidden="true">*</span>
-              </label>
-              <textarea id="ot-descripcion" name="descripcion" required rows={3}
-                placeholder="Describí el trabajo a realizar…"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
+              <div>
+                <label htmlFor="ot-notas" className="block text-sm font-medium text-slate-300 mb-1">Notas internas (opcional)</label>
+                <textarea id="ot-notas" name="notas_admin" rows={2}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:outline-2 focus:outline-orange-500" />
+              </div>
 
-            <div>
-              <label htmlFor="ot-fecha" className="block text-sm font-medium text-slate-300 mb-1">Fecha de visita (opcional)</label>
-              <input id="ot-fecha" name="fecha_visita" type="datetime-local"
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
+              {error && (
+                <p role="alert" className="text-sm text-red-400 bg-red-400/10 rounded px-3 py-2">{error}</p>
+              )}
 
-            <div>
-              <label htmlFor="ot-notas" className="block text-sm font-medium text-slate-300 mb-1">Notas internas (opcional)</label>
-              <textarea id="ot-notas" name="notas_admin" rows={2}
-                className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
-
-            {error && (
-              <p role="alert" className="text-sm text-red-400 bg-red-400/10 rounded px-3 py-2">{error}</p>
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-              <Dialog.Close asChild>
-                <button type="button" className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Cancelar</button>
-              </Dialog.Close>
-              <button type="submit" disabled={pending}
-                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
-                {pending ? "Creando…" : "Crear OT"}
-              </button>
-            </div>
-          </form>
+              <div className="flex justify-end gap-3 pt-2">
+                <Dialog.Close asChild>
+                  <button type="button" className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Cancelar</button>
+                </Dialog.Close>
+                <button type="submit" disabled={pending}
+                  className="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-medium transition-colors disabled:opacity-50">
+                  {pending ? "Creando…" : "Crear OT"}
+                </button>
+              </div>
+            </form>
+          )}
 
           <Dialog.Close asChild>
             <button className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors" aria-label="Cerrar">✕</button>

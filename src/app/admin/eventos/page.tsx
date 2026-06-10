@@ -1,7 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
-import { EventoEstadoBadge, ESTADO_LABEL } from "@/components/admin/eventos/EventoEstadoBadge";
+import { EventoEstadoBadge } from "@/components/admin/eventos/EventoEstadoBadge";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+import { EmptyStateSuccess } from "@/components/admin/EmptyStateSuccess";
+import { StagePipeline } from "@/components/admin/StagePipeline";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { Pagination } from "@/components/ui/Pagination";
+import { Bell, Loader, PauseCircle, CheckCircle2 } from "lucide-react";
+
+const TUTORIAL_EVENTOS = [
+  {
+    titulo: "Qué es un evento de alarma",
+    descripcion: "Es una señal que llegó desde SoftGuard: robo, pánico, falla, test. Cada evento tiene tipo, zona y operador que lo procesó.",
+  },
+  {
+    titulo: "Eventos NUEVO — acción urgente",
+    descripcion: "Los que aparecen en rojo aún no fueron procesados. El operador de monitoreo debe abrirlos y registrar la acción tomada.",
+  },
+  {
+    titulo: "Procesar un evento",
+    descripcion: "Abrí el evento, completá las notas de intervención y cambiá el estado a EN_PROCESO o CERRADO según corresponda.",
+  },
+  {
+    titulo: "Diferencia con mantenimiento",
+    descripcion: "Eventos son señales automáticas de alarma. Mantenimiento son solicitudes de asistencia técnica que hace el cliente.",
+  },
+];
 
 export const metadata: Metadata = { title: "Eventos de alarma" };
 
@@ -67,7 +92,7 @@ export default async function EventosPage({
       : {}),
   };
 
-  const [total, eventos] = await Promise.all([
+  const [total, eventos, countsByEstado] = await Promise.all([
     prisma.eventoAlarma.count({ where }),
     prisma.eventoAlarma.findMany({
       where,
@@ -84,9 +109,64 @@ export default async function EventosPage({
       skip: (pagina - 1) * POR_PAGINA,
       take: POR_PAGINA,
     }),
+    prisma.eventoAlarma.groupBy({
+      by: ["estado"],
+      _count: { estado: true },
+    }),
   ]);
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
+
+  const countEst = (e: string) =>
+    countsByEstado.find((r) => r.estado === e)?._count.estado ?? 0;
+
+  const EVENTO_STAGES = [
+    {
+      key: "NUEVO",
+      label: "Nuevo",
+      count: countEst("NUEVO"),
+      href: buildHrefStatic({ estado: "NUEVO" }),
+      activeCls: "bg-red-950/50 text-red-300",
+      countCls: "text-red-300",
+      icon: Bell,
+    },
+    {
+      key: "EN_PROCESO",
+      label: "En proceso",
+      count: countEst("EN_PROCESO") + countEst("EN_PROCESO_MULTIPLE") + countEst("EN_PROCESO_DESDE_ESPERA"),
+      href: buildHrefStatic({ estado: "EN_PROCESO" }),
+      activeCls: "bg-blue-950/50 text-blue-300",
+      countCls: "text-blue-300",
+      icon: Loader,
+    },
+    {
+      key: "EN_ESPERA",
+      label: "En espera",
+      count: countEst("EN_ESPERA"),
+      href: buildHrefStatic({ estado: "EN_ESPERA" }),
+      activeCls: "bg-amber-950/50 text-amber-300",
+      countCls: "text-amber-300",
+      icon: PauseCircle,
+    },
+    {
+      key: "CERRADO",
+      label: "Cerrado",
+      count: countEst("CERRADO"),
+      href: buildHrefStatic({ estado: "CERRADO" }),
+      activeCls: "bg-slate-700 text-slate-300",
+      countCls: "text-slate-400",
+      icon: CheckCircle2,
+    },
+  ] as const;
+
+  function buildHrefStatic(overrides: Record<string, string | undefined>) {
+    const params = new URLSearchParams();
+    const merged = { estado, periodo, q, ...overrides };
+    for (const [k, v] of Object.entries(merged)) {
+      if (v) params.set(k, v);
+    }
+    return `/admin/eventos?${params.toString()}`;
+  }
 
   function buildHref(overrides: Record<string, string | undefined>) {
     const params = new URLSearchParams();
@@ -96,6 +176,108 @@ export default async function EventosPage({
     }
     return `/admin/eventos?${params.toString()}`;
   }
+
+  type EventoRow = (typeof eventos)[number];
+
+  const columns: Column<EventoRow>[] = [
+    {
+      id: "fecha",
+      header: "Fecha",
+      cell: (ev) => (
+        <span className="text-slate-300 text-xs whitespace-nowrap">
+          {new Date(ev.fecha_evento).toLocaleString("es-AR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      ),
+    },
+    {
+      id: "cuenta",
+      header: "Cuenta",
+      className: "hidden sm:table-cell",
+      cell: (ev) => (
+        <>
+          <p className="text-white text-xs font-medium">
+            {ev.cuenta?.perfil.nombre ?? ev.softguard_ref}
+          </p>
+          <p className="text-slate-500 text-xs">{ev.cuenta?.descripcion}</p>
+        </>
+      ),
+    },
+    {
+      id: "evento",
+      header: "Evento",
+      cell: (ev) => (
+        <>
+          <p className="text-white text-xs font-medium">{ev.descripcion}</p>
+          <p className="text-slate-400 text-xs font-mono">{ev.codigo}</p>
+        </>
+      ),
+    },
+    {
+      id: "zona",
+      header: "Zona",
+      className: "hidden md:table-cell",
+      cell: (ev) => <span className="text-slate-400 text-xs">{ev.zona ?? "—"}</span>,
+    },
+    {
+      id: "estado",
+      header: "Estado",
+      align: "center",
+      cell: (ev) => <EventoEstadoBadge estado={ev.estado} />,
+    },
+    {
+      id: "notif",
+      header: "Notif.",
+      align: "center",
+      className: "hidden lg:table-cell",
+      cell: (ev) =>
+        ev.notificado_cliente ? (
+          <span className="text-emerald-400 text-xs" aria-label="Notificado">✓</span>
+        ) : (
+          <span className="text-slate-500 text-xs" aria-label="No notificado">—</span>
+        ),
+    },
+    {
+      id: "acciones",
+      header: "Acciones",
+      srOnlyHeader: true,
+      align: "right",
+      cell: (ev) => (
+        <Link
+          href={`/admin/eventos/${ev.id}`}
+          className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
+          aria-label={`Ver detalle del evento ${ev.descripcion}`}
+        >
+          Ver →
+        </Link>
+      ),
+    },
+  ];
+
+  const emptyNode =
+    estado === "NUEVO" ? (
+      <EmptyStateSuccess
+        titulo="¡Central limpia!"
+        descripcion="No hay eventos de alarma sin procesar. El sistema está monitoreado al 100%."
+        cta={{ label: "Ver todos los eventos", href: "/admin/eventos" }}
+      />
+    ) : (
+      <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center">
+        <p className="text-slate-400">No hay eventos que coincidan con los filtros.</p>
+        <p className="text-xs text-slate-500 mt-1">
+          Ajustá los filtros o{" "}
+          <Link href="/admin/eventos" className="text-orange-400 hover:text-orange-300">
+            limpiá la búsqueda
+          </Link>
+          .
+        </p>
+      </div>
+    );
 
   return (
     <section aria-labelledby="eventos-heading">
@@ -110,13 +292,20 @@ export default async function EventosPage({
         </div>
         <Link
           href="/admin/sync-softguard"
-          className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors shrink-0"
+          className="text-sm text-orange-400 hover:text-orange-300 transition-colors shrink-0"
         >
           Sincronizar →
         </Link>
       </div>
 
-      {/* Filtros */}
+      {/* Pipeline de estados */}
+      <StagePipeline
+        stages={EVENTO_STAGES}
+        activeKey={estado ?? "NUEVO"}
+        className="mb-6"
+      />
+
+      {/* Filtros de búsqueda y período */}
       <form method="GET" className="flex flex-wrap gap-3 mb-6">
         <input
           name="q"
@@ -126,19 +315,8 @@ export default async function EventosPage({
           aria-label="Buscar por nombre de cuenta o código de evento"
           className="flex-1 min-w-[160px] bg-slate-700 border border-slate-600 text-white placeholder:text-slate-400 rounded-lg px-3 py-2 text-sm min-h-[44px] focus:outline-2 focus:outline-orange-500"
         />
-        <select
-          name="estado"
-          defaultValue={estado ?? ""}
-          aria-label="Filtrar por estado"
-          className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm min-h-[44px] focus:outline-2 focus:outline-orange-500"
-        >
-          <option value="">Todos los estados</option>
-          {ESTADOS.map((e) => (
-            <option key={e} value={e}>
-              {ESTADO_LABEL[e] ?? e}
-            </option>
-          ))}
-        </select>
+        {/* Estado oculto para que el form no pise el pipeline */}
+        {estado && <input type="hidden" name="estado" value={estado} />}
         <select
           name="periodo"
           defaultValue={periodo ?? ""}
@@ -166,140 +344,29 @@ export default async function EventosPage({
         )}
       </form>
 
-      {eventos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center">
-          <p className="text-slate-400">No hay eventos que coincidan con los filtros.</p>
-          <p className="text-xs text-slate-500 mt-1">
-            Ajustá los filtros o{" "}
-            <Link href="/admin/eventos" className="text-indigo-400 hover:text-indigo-300">
-              limpiá la búsqueda
-            </Link>
-            .
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className="rounded-xl border border-slate-700 overflow-hidden">
-            <table className="w-full text-sm" aria-label="Tabla de eventos de alarma">
-              <thead className="bg-slate-800 border-b border-slate-700">
-                <tr>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider"
-                  >
-                    Fecha
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell"
-                  >
-                    Cuenta
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider"
-                  >
-                    Evento
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell"
-                  >
-                    Zona
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-center px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider"
-                  >
-                    Estado
-                  </th>
-                  <th
-                    scope="col"
-                    className="text-center px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden lg:table-cell"
-                  >
-                    Notif.
-                  </th>
-                  <th scope="col" className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {eventos.map((ev) => (
-                  <tr key={ev.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="px-4 py-3 text-slate-300 text-xs whitespace-nowrap">
-                      {new Date(ev.fecha_evento).toLocaleString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td className="px-4 py-3 hidden sm:table-cell">
-                      <p className="text-white text-xs font-medium">
-                        {ev.cuenta?.perfil.nombre ?? ev.softguard_ref}
-                      </p>
-                      <p className="text-slate-500 text-xs">{ev.cuenta?.descripcion}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-white text-xs font-medium">{ev.descripcion}</p>
-                      <p className="text-slate-400 text-xs font-mono">{ev.codigo}</p>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400 text-xs hidden md:table-cell">
-                      {ev.zona ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <EventoEstadoBadge estado={ev.estado} />
-                    </td>
-                    <td className="px-4 py-3 text-center hidden lg:table-cell">
-                      {ev.notificado_cliente ? (
-                        <span className="text-emerald-400 text-xs" aria-label="Notificado">✓</span>
-                      ) : (
-                        <span className="text-slate-500 text-xs" aria-label="No notificado">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/admin/eventos/${ev.id}`}
-                        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-                        aria-label={`Ver detalle del evento ${ev.descripcion}`}
-                      >
-                        Ver →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <DataTable
+        columns={columns}
+        rows={eventos}
+        keyExtractor={(ev) => ev.id}
+        caption="Tabla de eventos de alarma"
+        emptyState={emptyNode}
+      />
 
-          {/* Paginación */}
-          {totalPaginas > 1 && (
-            <div className="flex items-center justify-between gap-4 pt-4 mt-4 border-t border-slate-700">
-              <span className="text-sm text-slate-400">
-                Página {pagina} de {totalPaginas} · {total} evento{total !== 1 ? "s" : ""}
-              </span>
-              <nav aria-label="Paginación de eventos" className="flex gap-2">
-                {pagina > 1 && (
-                  <Link
-                    href={buildHref({ pagina: String(pagina - 1) })}
-                    className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    ← Anterior
-                  </Link>
-                )}
-                {pagina < totalPaginas && (
-                  <Link
-                    href={buildHref({ pagina: String(pagina + 1) })}
-                    className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Siguiente →
-                  </Link>
-                )}
-              </nav>
-            </div>
-          )}
-        </>
+      {totalPaginas > 1 && (
+        <div className="pt-4 mt-4 border-t border-slate-700">
+          <Pagination
+            page={pagina}
+            pageCount={totalPaginas}
+            makeHref={(n) => buildHref({ pagina: String(n) })}
+          />
+        </div>
       )}
+
+      <TutorialContextual
+        section="eventos"
+        titulo="Guía rápida — Eventos de alarma"
+        steps={TUTORIAL_EVENTOS}
+      />
     </section>
   );
 }

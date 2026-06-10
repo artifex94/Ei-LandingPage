@@ -77,7 +77,7 @@ export function TecnicoTabNav({ mobile = false }: Props) {
               }`}
             >
               <Icon className="w-5 h-5" strokeWidth={active ? 2.2 : 1.8} />
-              <span className={`text-[10px] leading-none ${active ? "font-semibold" : "font-medium"}`}>
+              <span className={`text-xs leading-none ${active ? "font-semibold" : "font-medium"}`}>
                 {"mobileLabel" in tab ? tab.mobileLabel : tab.label}
               </span>
             </Link>

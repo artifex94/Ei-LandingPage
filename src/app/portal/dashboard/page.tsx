@@ -28,13 +28,13 @@ export default async function DashboardPage() {
       <div className="mb-8 pb-5 border-b border-industrial-700">
         <div className="flex items-center gap-2 mb-1">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 animate-led-idle flex-shrink-0" aria-hidden="true" />
-          <span className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">Portal activo</span>
+          <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">Central activa</span>
         </div>
         <h1 id="dashboard-heading" className="text-2xl font-bold text-white">
           Hola, {perfil.nombre.split(" ")[0]}
         </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Servicios contratados con Escobar Instalaciones
+        <p className="text-slate-400 text-sm mt-1">
+          Estado de tu cuenta y servicios contratados con Escobar Instalaciones
         </p>
       </div>
 
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
 
       {/* Acciones rápidas */}
       <nav aria-label="Accesos rápidos" className="mt-8 pt-6 border-t border-industrial-700/50">
-        <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-3">
+        <p className="text-xs text-slate-400 font-mono tracking-widest uppercase mb-3">
           Accesos rápidos
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

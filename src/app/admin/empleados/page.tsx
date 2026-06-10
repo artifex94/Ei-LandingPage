@@ -29,7 +29,7 @@ export default async function EmpleadosPage() {
         </div>
         <Link
           href="/admin/empleados/nuevo"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-semibold transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-semibold transition-colors"
         >
           + Nuevo empleado
         </Link>

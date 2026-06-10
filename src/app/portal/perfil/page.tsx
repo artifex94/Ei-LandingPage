@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SolicitudCambioForm } from "@/components/portal/SolicitudCambioForm";
+import { DataTable, type Column } from "@/components/ui/DataTable";
 
 export const metadata: Metadata = { title: "Mi perfil" };
 
@@ -62,6 +63,46 @@ export default async function PerfilPage() {
   });
 
   if (!perfil) redirect("/login");
+
+  type SolicitudRow = (typeof perfil.solicitudes_cambio)[number];
+
+  const solicitudColumns: Column<SolicitudRow>[] = [
+    {
+      id: "campo",
+      header: "Campo",
+      className: "px-5",
+      cell: (s) => <span className="text-slate-300">{CAMPO_LABEL[s.campo] ?? s.campo}</span>,
+    },
+    {
+      id: "valor",
+      header: "Valor propuesto",
+      className: "px-5 hidden sm:table-cell",
+      cell: (s) => <span className="block text-slate-300 truncate max-w-[200px]">{s.valor_nuevo}</span>,
+    },
+    {
+      id: "estado",
+      header: "Estado",
+      className: "px-5",
+      cell: (s) => (
+        <div>
+          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${ESTADO_CAMBIO_ESTILOS[s.estado] ?? "bg-slate-700 text-slate-300"}`}>
+            {s.estado}
+          </span>
+          {s.notas_admin && <p className="text-xs text-slate-400 mt-1">{s.notas_admin}</p>}
+        </div>
+      ),
+    },
+    {
+      id: "fecha",
+      header: "Fecha",
+      className: "px-5 hidden md:table-cell",
+      cell: (s) => (
+        <span className="text-slate-400 whitespace-nowrap">
+          {new Date(s.created_at).toLocaleDateString("es-AR")}
+        </span>
+      ),
+    },
+  ];
 
   // Determinar qué campos tienen solicitud pendiente
   const pendientesPorCampo = new Set(
@@ -191,47 +232,12 @@ export default async function PerfilPage() {
             Historial de solicitudes
           </h2>
 
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left text-xs font-medium text-slate-400 px-5 py-3">Campo</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-5 py-3 hidden sm:table-cell">Valor propuesto</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-5 py-3">Estado</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-5 py-3 hidden md:table-cell">Fecha</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/50">
-                {perfil.solicitudes_cambio.map((s) => (
-                  <tr key={s.id}>
-                    <td className="px-5 py-3 text-slate-300">
-                      {CAMPO_LABEL[s.campo] ?? s.campo}
-                    </td>
-                    <td className="px-5 py-3 text-slate-300 hidden sm:table-cell truncate max-w-[200px]">
-                      {s.valor_nuevo}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div>
-                        <span
-                          className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                            ESTADO_CAMBIO_ESTILOS[s.estado] ?? "bg-slate-700 text-slate-300"
-                          }`}
-                        >
-                          {s.estado}
-                        </span>
-                        {s.notas_admin && (
-                          <p className="text-xs text-slate-400 mt-1">{s.notas_admin}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-slate-400 hidden md:table-cell whitespace-nowrap">
-                      {new Date(s.created_at).toLocaleDateString("es-AR")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={solicitudColumns}
+            rows={perfil.solicitudes_cambio}
+            keyExtractor={(s) => s.id}
+            caption="Historial de solicitudes de cambio"
+          />
         </section>
       )}
     </div>

@@ -101,7 +101,7 @@ function TarjetaDisponible({ ot, onAceptar, cargando }: {
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
             <span className="text-xs text-slate-500 font-mono">#{String(ot.numero).padStart(4, "0")}</span>
             <span className="text-xs font-medium text-slate-300">{TIPO_LABEL[ot.tipo]}</span>
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${PRIORIDAD_BADGE[ot.prioridad]}`}>
+            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${PRIORIDAD_BADGE[ot.prioridad]}`}>
               {ot.prioridad}
             </span>
           </div>
@@ -149,7 +149,7 @@ function TarjetaDisponible({ ot, onAceptar, cargando }: {
         <button
           disabled={cargando}
           onClick={() => onAceptar(ot.id)}
-          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
         >
           {cargando ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -187,7 +187,7 @@ function TarjetaMia({ ot, onLiberar, cargando }: {
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
             <span className="text-xs text-slate-500 font-mono">#{String(ot.numero).padStart(4, "0")}</span>
             <span className="text-xs font-medium text-slate-300">{TIPO_LABEL[ot.tipo]}</span>
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ESTADO_BADGE[ot.estado] ?? ""}`}>
+            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${ESTADO_BADGE[ot.estado] ?? ""}`}>
               {ESTADO_LABEL[ot.estado]}
             </span>
           </div>
@@ -213,7 +213,7 @@ function TarjetaMia({ ot, onLiberar, cargando }: {
       <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700/40 bg-slate-900/20">
         <Link
           href={`/tecnico/ot/${ot.id}`}
-          className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium"
+          className="text-xs text-orange-400 hover:text-orange-300 transition-colors font-medium"
         >
           Ver detalle →
         </Link>
@@ -283,7 +283,7 @@ export function OtsClient({ disponibles, misOTs, tieneEmpleado }: Props) {
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold text-white uppercase tracking-wide">Disponibles</h2>
           {disponibles.length > 0 && (
-            <span className="bg-indigo-600/30 text-indigo-300 text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-orange-500/20 text-orange-300 text-xs font-bold px-2 py-0.5 rounded-full">
               {disponibles.length}
             </span>
           )}

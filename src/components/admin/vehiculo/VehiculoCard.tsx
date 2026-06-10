@@ -49,13 +49,13 @@ export function VehiculoCard({ vehiculo }: { vehiculo: Vehiculo }) {
               <button
                 onClick={guardarKm}
                 disabled={pending}
-                className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-sm disabled:opacity-50"
+                className="px-3 py-1 rounded bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm disabled:opacity-50 min-h-[44px] flex items-center"
               >
                 Guardar
               </button>
               <button
                 onClick={() => { setEditandoKm(false); setKm(vehiculo.km_actual.toString()); }}
-                className="text-sm text-slate-400 hover:text-white"
+                className="text-sm text-slate-400 hover:text-white min-h-[44px] flex items-center"
               >
                 Cancelar
               </button>
@@ -66,7 +66,7 @@ export function VehiculoCard({ vehiculo }: { vehiculo: Vehiculo }) {
               className="text-right group"
               aria-label="Editar kilómetros"
             >
-              <p className="text-2xl font-bold text-white group-hover:text-indigo-300 transition-colors">
+              <p className="text-2xl font-bold text-white group-hover:text-orange-300 transition-colors">
                 {vehiculo.km_actual.toLocaleString("es-AR")} km
               </p>
               <p className="text-xs text-slate-500 group-hover:text-slate-400">click para actualizar</p>
