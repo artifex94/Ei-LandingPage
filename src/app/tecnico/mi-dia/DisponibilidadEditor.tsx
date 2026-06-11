@@ -1,46 +1,68 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus, X } from "lucide-react";
 import { guardarDisponibilidad } from "@/lib/actions/disponibilidad";
 import {
-  rangosASlots, slotsARangos, slotAHora, TOTAL_SLOTS,
+  PRESETS,
+  disponibilidadDefault,
+  normalizarRangos,
+  presetActivo,
+  rangosAHoras,
+  rangosAResumen,
+  type Rango,
 } from "@/lib/disponibilidad-utils";
+import { BarraDisponibilidad } from "./BarraDisponibilidad";
 
-interface Rango { desde: string; hasta: string }
+export interface DiaStrip {
+  iso: string;   // "yyyy-MM-dd"
+  dia: string;   // "lun"
+  num: string;   // "12"
+  esHoy: boolean;
+}
 
 interface Props {
-  fechaISO: string;
-  rangosIniciales: Rango[];
+  dias: DiaStrip[];
+  dispPorFecha: Record<string, Rango[]>;
+  /** Día a abrir de entrada (viene de ?fecha=); si está, el editor arranca expandido. */
+  fechaInicial?: string;
 }
 
-const SLOT_MIN_INICIO = 0; // 06:00
-
-function toggleSlot(slots: boolean[], idx: number): boolean[] {
-  const next = [...slots];
-  next[idx] = !next[idx];
-  return next;
-}
+const inputTimeCls =
+  "bg-industrial-800 border border-industrial-700 rounded-md px-2.5 py-2 text-sm font-mono " +
+  "text-white min-h-[44px] focus:outline-none focus:border-tactical-500 " +
+  "focus:ring-2 focus:ring-tactical-500/20 transition-colors";
 
 /**
- * Editor de disponibilidad del día: resumen de una línea, colapsado por
- * defecto; al expandir muestra el timeline de slots de 30 min con
- * auto-guardado optimista (useTransition + setState).
+ * Editor híbrido de disponibilidad: presets de un tap + franjas Desde–Hasta
+ * con la rueda de hora nativa + barra visual de solo lectura. Permite editar
+ * hoy o cualquier día de las próximas dos semanas, con autosave.
  */
-export function DisponibilidadEditor({ fechaISO, rangosIniciales }: Props) {
-  const [slots, setSlots] = useState<boolean[]>(() => rangosASlots(rangosIniciales));
-  const [abierto, setAbierto] = useState(false);
+export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props) {
+  const fechaValida = fechaInicial && dias.some((d) => d.iso === fechaInicial);
+
+  const [disp, setDisp] = useState<Record<string, Rango[]>>(dispPorFecha);
+  const [fechaSel, setFechaSel] = useState<string>(
+    fechaValida ? fechaInicial! : dias[0]?.iso ?? ""
+  );
+  const [abierto, setAbierto] = useState(Boolean(fechaValida));
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const guardar = useCallback((nuevosSlots: boolean[]) => {
+  const rangosDia = disp[fechaSel] ?? disponibilidadDefault();
+  const diaSel = dias.find((d) => d.iso === fechaSel);
+  const preset = presetActivo(rangosDia);
+
+  const guardar = useCallback((fecha: string, rangos: Rango[]) => {
+    const norm = normalizarRangos(rangos);
+    setDisp((prev) => ({ ...prev, [fecha]: norm }));
     setGuardando(true);
     setGuardado(false);
     setErrorGuardado(null);
     startTransition(async () => {
-      const res = await guardarDisponibilidad(fechaISO, slotsARangos(nuevosSlots));
+      const res = await guardarDisponibilidad(fecha, norm);
       setGuardando(false);
       if (res.ok) {
         setGuardado(true);
@@ -48,24 +70,38 @@ export function DisponibilidadEditor({ fechaISO, rangosIniciales }: Props) {
         setErrorGuardado(res.error ?? "No se pudo guardar.");
       }
     });
-  }, [fechaISO]);
+  }, []);
 
-  const manejarToggle = useCallback((idx: number) => {
-    const nuevosSlots = toggleSlot(slots, idx);
-    setSlots(nuevosSlots);
-    guardar(nuevosSlots);
-  }, [slots, guardar]);
+  function seleccionarDia(iso: string) {
+    setFechaSel(iso);
+    setGuardado(false);
+    setErrorGuardado(null);
+  }
 
-  const totalSlots = slots.filter(Boolean).length;
-  const horasDisponibles = totalSlots / 2;
+  function aplicarPreset(rangos: Rango[]) {
+    guardar(fechaSel, rangos);
+  }
 
-  // Rango legible del resumen (primer y último slot disponibles)
-  const primerIdx = slots.indexOf(true);
-  const ultimoIdx = slots.lastIndexOf(true);
-  const resumenRango =
-    primerIdx === -1
-      ? "Sin disponibilidad cargada"
-      : `Disponible ${slotAHora(primerIdx)}–${slotAHora(ultimoIdx + 1)}`;
+  // onChange actualiza el borrador sin guardar; onBlur normaliza y persiste
+  function cambiarFranja(idx: number, campo: "desde" | "hasta", valor: string) {
+    setDisp((prev) => {
+      const rangos = [...(prev[fechaSel] ?? disponibilidadDefault())];
+      rangos[idx] = { ...rangos[idx], [campo]: valor };
+      return { ...prev, [fechaSel]: rangos };
+    });
+  }
+
+  function confirmarFranjas() {
+    guardar(fechaSel, disp[fechaSel] ?? disponibilidadDefault());
+  }
+
+  function agregarFranja() {
+    guardar(fechaSel, [...rangosDia, { desde: "08:00", hasta: "12:00" }]);
+  }
+
+  function eliminarFranja(idx: number) {
+    guardar(fechaSel, rangosDia.filter((_, i) => i !== idx));
+  }
 
   return (
     <section
@@ -81,27 +117,27 @@ export function DisponibilidadEditor({ fechaISO, rangosIniciales }: Props) {
       >
         <div className="flex items-center gap-2 min-w-0">
           <span
-            className={`inline-block h-1.5 w-1.5 rounded-full flex-shrink-0 ${horasDisponibles > 0 ? "bg-emerald-400" : "bg-slate-600"}`}
+            className={`inline-block h-1.5 w-1.5 rounded-full flex-shrink-0 ${rangosAHoras(rangosDia) > 0 ? "bg-emerald-400" : "bg-slate-600"}`}
             aria-hidden="true"
           />
           <h2
             id="disponibilidad-heading"
             className="text-xs font-bold uppercase tracking-widest text-slate-400 truncate"
           >
-            Mi disponibilidad
+            Disponibilidad{diaSel && !diaSel.esHoy ? ` · ${diaSel.dia} ${diaSel.num}` : ""}
           </h2>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="text-xs text-slate-400 font-mono tabular-nums">
-            {resumenRango} · {horasDisponibles}h
+        <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
+          <span className="text-xs text-slate-400 font-mono tabular-nums truncate">
+            {rangosAResumen(rangosDia)}
           </span>
           {guardando && <span className="text-xs text-slate-500">Guardando…</span>}
           {guardado && !guardando && <span className="text-xs text-emerald-400">✓</span>}
           {errorGuardado && !guardando && (
-            <span role="alert" className="text-xs text-red-400">⚠ {errorGuardado}</span>
+            <span role="alert" className="text-xs text-red-400">⚠</span>
           )}
           <ChevronDown
-            className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${abierto ? "rotate-180" : ""}`}
+            className={`w-4 h-4 text-slate-500 flex-shrink-0 transition-transform duration-200 ${abierto ? "rotate-180" : ""}`}
             aria-hidden="true"
           />
         </div>
@@ -109,75 +145,122 @@ export function DisponibilidadEditor({ fechaISO, rangosIniciales }: Props) {
 
       {/* ── Editor expandido ── */}
       {abierto && (
-        <div id="disponibilidad-editor" className="px-4 pb-4">
-          <div className="flex items-center justify-end mb-2">
+        <div id="disponibilidad-editor" className="px-4 pb-4 space-y-4">
+
+          {/* Strip de días */}
+          <div
+            className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1"
+            role="tablist"
+            aria-label="Elegir día a configurar"
+          >
+            {dias.map((d) => {
+              const activo = d.iso === fechaSel;
+              return (
+                <button
+                  key={d.iso}
+                  role="tab"
+                  aria-selected={activo}
+                  onClick={() => seleccionarDia(d.iso)}
+                  className={`flex-shrink-0 flex flex-col items-center justify-center min-h-[48px] min-w-[48px] px-2 rounded-sm border transition-colors ${
+                    activo
+                      ? "bg-tactical-500/15 border-tactical-500/40 text-tactical-300"
+                      : "bg-industrial-800 border-industrial-700 text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider leading-none">
+                    {d.esHoy ? "HOY" : d.dia}
+                  </span>
+                  <span className="text-sm font-mono font-bold tabular-nums leading-tight">
+                    {d.num}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Presets de un tap */}
+          <div className="grid grid-cols-2 gap-2">
+            {PRESETS.map((p) => {
+              const activo = preset === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => aplicarPreset(p.rangos)}
+                  aria-pressed={activo}
+                  className={`min-h-[44px] px-3 rounded-sm border text-xs font-bold uppercase tracking-widest
+                              transition-all duration-150 ease-mech-press
+                              ${activo
+                                ? "bg-tactical-500/15 border-tactical-500/40 text-tactical-300"
+                                : "bg-industrial-800 border-industrial-700 border-b-[3px] border-b-industrial-950 active:border-b active:translate-y-[2px] text-slate-300 hover:text-white"
+                              }`}
+                >
+                  {activo && <span aria-hidden="true" className="mr-1">✓</span>}
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Franjas personalizadas */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              Franjas personalizadas
+            </p>
+            {rangosDia.length === 0 && (
+              <p className="text-xs text-slate-500 italic">
+                Sin franjas — el día está marcado como no disponible.
+              </p>
+            )}
+            {rangosDia.map((r, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input
+                  type="time"
+                  min="06:00"
+                  max="22:00"
+                  step={1800}
+                  value={r.desde}
+                  onChange={(e) => cambiarFranja(idx, "desde", e.target.value)}
+                  onBlur={confirmarFranjas}
+                  aria-label={`Franja ${idx + 1}: desde`}
+                  className={inputTimeCls}
+                />
+                <span className="text-slate-500 text-sm" aria-hidden="true">–</span>
+                <input
+                  type="time"
+                  min="06:00"
+                  max="22:00"
+                  step={1800}
+                  value={r.hasta}
+                  onChange={(e) => cambiarFranja(idx, "hasta", e.target.value)}
+                  onBlur={confirmarFranjas}
+                  aria-label={`Franja ${idx + 1}: hasta`}
+                  className={inputTimeCls}
+                />
+                <button
+                  onClick={() => eliminarFranja(idx)}
+                  aria-label={`Eliminar franja ${r.desde}–${r.hasta}`}
+                  className="ml-auto min-h-[44px] min-w-[44px] flex items-center justify-center rounded-sm text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <X className="w-4 h-4" aria-hidden="true" />
+                </button>
+              </div>
+            ))}
             <button
-              onClick={() => {
-                const todosActivos = slots.every(Boolean);
-                const nuevosSlots = new Array<boolean>(TOTAL_SLOTS).fill(!todosActivos);
-                setSlots(nuevosSlots);
-                guardar(nuevosSlots);
-              }}
-              className="text-xs text-slate-400 hover:text-white transition-colors min-h-[44px]"
+              onClick={agregarFranja}
+              className="flex items-center gap-1.5 min-h-[44px] text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors"
             >
-              {slots.every(Boolean) ? "Limpiar todo" : "Marcar todo"}
+              <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+              Agregar franja
             </button>
           </div>
 
-          <div className="relative rounded-md border border-industrial-700 overflow-hidden bg-industrial-900">
-            {Array.from({ length: TOTAL_SLOTS }, (_, idx) => {
-              const esHora = (SLOT_MIN_INICIO + idx) % 2 === 0;
-              const horaLabel = slotAHora(idx);
-              const disponible = slots[idx];
-
-              return (
-                <div
-                  key={idx}
-                  className={`
-                    flex items-start group relative
-                    ${disponible ? "bg-emerald-950/20" : "bg-industrial-900"}
-                    ${esHora ? "border-t border-industrial-700/50" : "border-t border-industrial-800/30"}
-                  `}
-                  style={{ minHeight: "32px" }}
-                >
-                  {/* Etiqueta de hora */}
-                  <button
-                    onClick={() => manejarToggle(idx)}
-                    className="w-14 flex-shrink-0 px-2 py-1 text-right select-none focus:outline-none"
-                    aria-label={`${disponible ? "Desmarcar" : "Marcar"} disponibilidad ${horaLabel}`}
-                  >
-                    <span className={`text-xs leading-none font-mono ${esHora ? "text-slate-400" : "text-transparent"}`}>
-                      {esHora ? horaLabel : ""}
-                    </span>
-                  </button>
-
-                  {/* Bloque de disponibilidad (clickeable) */}
-                  <button
-                    onClick={() => manejarToggle(idx)}
-                    className={`
-                      flex-1 h-8 mx-1 my-0.5 rounded cursor-pointer
-                      transition-colors duration-100 focus:outline-none focus:ring-1 focus:ring-emerald-500
-                      ${disponible
-                        ? "bg-emerald-500/20 hover:bg-emerald-500/30 group-hover:bg-emerald-500/30"
-                        : "bg-industrial-800/40 hover:bg-industrial-700/40"
-                      }
-                    `}
-                    aria-pressed={disponible}
-                    title={`${horaLabel}–${slotAHora(idx + 1)} — ${disponible ? "disponible (clic para marcar no disponible)" : "no disponible (clic para marcar disponible)"}`}
-                  />
-                </div>
-              );
-            })}
-
-            {/* Línea de fin */}
-            <div className="flex items-center border-t border-industrial-700/50">
-              <span className="w-14 px-2 py-1 text-right text-xs font-mono text-slate-400">22:00</span>
-            </div>
+          {/* Barra visual de lo configurado */}
+          <div className="pt-1">
+            <BarraDisponibilidad rangos={rangosDia} />
+            <p className="text-xs text-slate-500 mt-2 text-center font-mono tabular-nums">
+              {rangosAHoras(rangosDia)}h disponibles
+            </p>
           </div>
-
-          <p className="text-xs text-slate-400 mt-2 text-center">
-            Tocá un bloque para marcar / desmarcar tu disponibilidad
-          </p>
         </div>
       )}
     </section>

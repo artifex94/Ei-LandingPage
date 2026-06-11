@@ -1,23 +1,31 @@
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
-import { disponibilidadDefault } from "@/lib/disponibilidad-utils";
+import type { Rango } from "@/lib/disponibilidad-utils";
 import { PortalSection } from "@/components/portal/PortalSection";
 import { fusionarParadas, seleccionarHero, type OTDia, type TareaDia } from "./paradas";
 import { ParadaHero } from "./ParadaHero";
 import { ParadaCard } from "./ParadaCard";
-import { DisponibilidadEditor } from "./DisponibilidadEditor";
+import { DisponibilidadEditor, type DiaStrip } from "./DisponibilidadEditor";
 
 export const metadata = { title: "Mi día" };
 
-export default async function MiDiaPage() {
+const DIAS_EDITABLES = 14;
+
+export default async function MiDiaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ fecha?: string }>;
+}) {
   const { userId } = await requireSesion();
+  const sp = await searchParams;
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
   const manana = new Date(hoy);
   manana.setDate(manana.getDate() + 1);
+  const finVentana = addDays(hoy, DIAS_EDITABLES);
 
   const [empleado, tareasRaw, disponibilidadHoy] = await Promise.all([
     prisma.empleado.findFirst({
@@ -42,8 +50,8 @@ export default async function MiDiaPage() {
       orderBy: [{ hora_inicio: "asc" }],
     }),
     prisma.disponibilidadTecnico.findMany({
-      where: { tecnico_id: userId, fecha: hoy },
-      orderBy: { desde: "asc" },
+      where: { tecnico_id: userId, fecha: { gte: hoy, lt: finVentana } },
+      orderBy: [{ fecha: "asc" }, { desde: "asc" }],
     }),
   ]);
 
@@ -113,10 +121,26 @@ export default async function MiDiaPage() {
   const total = paradas.length;
   const pct = total > 0 ? Math.round((completadas / total) * 100) : 0;
 
-  const rangos =
-    disponibilidadHoy.length > 0
-      ? disponibilidadHoy.map((d) => ({ desde: d.desde, hasta: d.hasta }))
-      : disponibilidadDefault();
+  // Disponibilidad agrupada por día; los días sin registro NO entran en el
+  // map (el editor les aplica el default 06-22 al leerlos).
+  const dispPorFecha: Record<string, Rango[]> = {};
+  for (const d of disponibilidadHoy) {
+    const iso = format(d.fecha, "yyyy-MM-dd");
+    (dispPorFecha[iso] ??= []).push({ desde: d.desde, hasta: d.hasta });
+  }
+
+  const dias: DiaStrip[] = Array.from({ length: DIAS_EDITABLES }, (_, i) => {
+    const fecha = addDays(hoy, i);
+    return {
+      iso: format(fecha, "yyyy-MM-dd"),
+      dia: format(fecha, "EEE", { locale: es }).replace(".", ""),
+      num: format(fecha, "d"),
+      esHoy: i === 0,
+    };
+  });
+
+  const fechaInicial =
+    sp.fecha && /^\d{4}-\d{2}-\d{2}$/.test(sp.fecha) ? sp.fecha : undefined;
 
   const fechaLabel = format(hoy, "EEEE d 'de' MMMM", { locale: es });
 
@@ -175,8 +199,9 @@ export default async function MiDiaPage() {
 
       {/* ── Disponibilidad (colapsada) ────────────────────────────────────── */}
       <DisponibilidadEditor
-        fechaISO={format(hoy, "yyyy-MM-dd")}
-        rangosIniciales={rangos}
+        dias={dias}
+        dispPorFecha={dispPorFecha}
+        fechaInicial={fechaInicial}
       />
     </div>
   );
