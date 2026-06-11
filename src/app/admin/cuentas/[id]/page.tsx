@@ -40,6 +40,13 @@ const MESES = [
   "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
 ];
 
+function fechaHora(d: Date): string {
+  return d.toLocaleString("es-AR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
 const ESTADO_PAGO_COLORES: Record<string, string> = {
   PAGADO: "bg-green-900/40 text-green-400",
   VENCIDO: "bg-orange-900/40 text-orange-400",
@@ -138,6 +145,101 @@ export default async function CuentaAdminPage({
           </Link>
         </div>
       </div>
+
+      {/* Estado del panel según la central (proyección sg_*, la llena el cron) */}
+      <section aria-labelledby="panel-heading">
+        <h2 id="panel-heading" className="text-lg font-semibold text-white mb-4">
+          Panel — central de monitoreo
+        </h2>
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-5">
+          {!cuenta.sg_synced_at ? (
+            <p className="text-sm text-slate-500">
+              Sin datos de la central todavía — esperando la primera sincronización.
+            </p>
+          ) : (
+            <>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div>
+                  <dt className="text-xs text-slate-400 mb-1">Situación en la central</dt>
+                  <dd>
+                    <span
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        cuenta.sg_situacion === "Habilitado"
+                          ? "bg-emerald-900/40 text-emerald-400"
+                          : "bg-red-900/40 text-red-400"
+                      }`}
+                    >
+                      {cuenta.sg_situacion ?? "Sin dato"}
+                    </span>
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-xs text-slate-400 mb-1">Alimentación</dt>
+                  <dd>
+                    {cuenta.sg_en_fallo_ac ? (
+                      <p className="font-semibold text-red-300">
+                        ⚠ Sin 220v
+                        {cuenta.sg_fallo_ac_desde && (
+                          <span className="font-normal text-red-400/80">
+                            {" "}— detectado el {fechaHora(cuenta.sg_fallo_ac_desde)}
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-emerald-400">✓ 220v OK</p>
+                    )}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-xs text-slate-400 mb-1">Test periódico</dt>
+                  <dd>
+                    {cuenta.sg_en_fallo_tst ? (
+                      <p className="font-semibold text-amber-300">
+                        ⚠ Sin reportar
+                        {cuenta.sg_fallo_tst_desde && (
+                          <span className="font-normal text-amber-400/80">
+                            {" "}desde el {fechaHora(cuenta.sg_fallo_tst_desde)}
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-emerald-400">✓ Reportando</p>
+                    )}
+                    {cuenta.sg_ultimo_tst && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Último test: {fechaHora(cuenta.sg_ultimo_tst)}
+                      </p>
+                    )}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-xs text-slate-400 mb-1">Último evento</dt>
+                  <dd>
+                    {cuenta.sg_ultimo_evento ? (
+                      <>
+                        <p className="text-slate-200">{cuenta.sg_ultimo_evento}</p>
+                        {cuenta.sg_ultimo_evento_at && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            {fechaHora(cuenta.sg_ultimo_evento_at)}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-slate-500">Sin eventos registrados.</p>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-xs text-slate-600 mt-4 pt-3 border-t border-slate-700/60">
+                Sincronizado de la central: {fechaHora(cuenta.sg_synced_at)}
+              </p>
+            </>
+          )}
+        </div>
+      </section>
 
       {/* Editar cuenta */}
       <section aria-labelledby="editar-heading">
