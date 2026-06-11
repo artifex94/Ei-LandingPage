@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Wrench } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
+import { PortalSection } from "@/components/portal/PortalSection";
+import { Badge, type BadgeVariant } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const metadata: Metadata = { title: "Mis solicitudes" };
 
-const ESTADO_CONFIG: Record<string, { label: string; cls: string }> = {
-  PENDIENTE:   { label: "Pendiente",   cls: "bg-amber-900/40 text-amber-400" },
-  EN_PROCESO:  { label: "En proceso",  cls: "bg-blue-900/40 text-blue-400" },
-  RESUELTA:    { label: "Resuelta",    cls: "bg-green-900/40 text-green-400" },
+const ESTADO_CONFIG: Record<string, { label: string; variant: BadgeVariant }> = {
+  PENDIENTE:  { label: "Pendiente",  variant: "warning" },
+  EN_PROCESO: { label: "En proceso", variant: "info" },
+  RESUELTA:   { label: "Resuelta",   variant: "success" },
 };
 
 const PRIORIDAD_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -31,62 +36,49 @@ export default async function SolicitudesPage() {
   const resueltas = solicitudes.filter((s) => s.estado === "RESUELTA");
 
   return (
-    <section className="space-y-8" aria-labelledby="solicitudes-heading">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 id="solicitudes-heading" className="text-2xl font-display font-bold text-white">
-            Mis solicitudes
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Historial de asistencia técnica solicitada.
-          </p>
-        </div>
-        <Link
-          href="/portal/solicitud"
-          className="shrink-0 bg-orange-500 hover:bg-orange-600 text-slate-900 font-semibold px-5 py-3 rounded-lg min-h-[48px] text-sm flex items-center gap-2 transition-colors"
-        >
-          + Nueva solicitud
-        </Link>
-      </div>
-
-      {solicitudes.length === 0 ? (
-        <div className="bg-slate-800 rounded-xl border border-slate-700 p-10 text-center">
-          <p className="text-slate-400 mb-4">No tenés solicitudes registradas.</p>
+    <section className="space-y-7" aria-labelledby="solicitudes-heading">
+      <PortalPageHeader
+        title="Mis solicitudes"
+        titleId="solicitudes-heading"
+        description="Historial de asistencia técnica solicitada."
+        action={
           <Link
             href="/portal/solicitud"
-            className="inline-block bg-orange-500 hover:bg-orange-600 text-slate-900 px-6 py-3 rounded-lg font-medium transition-colors"
+            className="shrink-0 bg-tactical-500 hover:bg-tactical-400 border border-tactical-600 border-b-[3px] border-b-tactical-600 active:border-b active:translate-y-[2px] text-slate-900 font-bold uppercase tracking-widest px-5 py-2.5 rounded-sm min-h-[48px] text-xs flex items-center gap-2 transition-all duration-150 ease-mech-press"
           >
-            Solicitar asistencia
+            + Nueva solicitud
           </Link>
-        </div>
+        }
+      />
+
+      {solicitudes.length === 0 ? (
+        <EmptyState
+          icon={Wrench}
+          title="No tenés solicitudes registradas."
+          action={{ label: "Solicitar asistencia", href: "/portal/solicitud" }}
+        />
       ) : (
         <>
           {/* Solicitudes abiertas */}
           {abiertas.length > 0 && (
-            <div>
-              <h2 className="text-base font-semibold text-slate-300 mb-3">
-                Abiertas ({abiertas.length})
-              </h2>
-              <div className="space-y-3">
+            <PortalSection title="Abiertas" ledClass="bg-amber-400" meta={abiertas.length}>
+              <div className="space-y-2">
                 {abiertas.map((s) => (
                   <SolicitudCard key={s.id} s={s} />
                 ))}
               </div>
-            </div>
+            </PortalSection>
           )}
 
           {/* Solicitudes resueltas */}
           {resueltas.length > 0 && (
-            <div>
-              <h2 className="text-base font-semibold text-slate-300 mb-3">
-                Resueltas ({resueltas.length})
-              </h2>
-              <div className="space-y-3">
+            <PortalSection title="Resueltas" ledClass="bg-slate-600" meta={resueltas.length}>
+              <div className="space-y-2">
                 {resueltas.map((s) => (
                   <SolicitudCard key={s.id} s={s} />
                 ))}
               </div>
-            </div>
+            </PortalSection>
           )}
         </>
       )}
@@ -107,11 +99,11 @@ function SolicitudCard({
     cuenta: { id: string; descripcion: string };
   };
 }) {
-  const estado = ESTADO_CONFIG[s.estado] ?? { label: s.estado, cls: "bg-slate-700 text-slate-300" };
+  const estado = ESTADO_CONFIG[s.estado] ?? { label: s.estado, variant: "neutral" as BadgeVariant };
   const prioridad = PRIORIDAD_CONFIG[s.prioridad] ?? { label: s.prioridad, cls: "text-slate-400" };
 
   return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 px-5 py-4">
+    <div className="rounded-md border border-industrial-700 bg-industrial-800/60 hover:bg-industrial-800 transition-colors px-4 py-3">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <Link
@@ -120,11 +112,9 @@ function SolicitudCard({
           >
             {s.cuenta.descripcion}
           </Link>
-          <p className="text-white font-medium mt-0.5 leading-snug">{s.descripcion}</p>
+          <p className="text-sm text-white font-medium mt-0.5 leading-snug">{s.descripcion}</p>
         </div>
-        <span className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${estado.cls}`}>
-          {estado.label}
-        </span>
+        <Badge variant={estado.variant} className="shrink-0">{estado.label}</Badge>
       </div>
 
       <div className="flex items-center gap-4 text-xs text-slate-500 mt-2">
@@ -132,13 +122,13 @@ function SolicitudCard({
           Prioridad:{" "}
           <span className={`font-medium ${prioridad.cls}`}>{prioridad.label}</span>
         </span>
-        <span>
+        <span className="font-mono tabular-nums">
           {new Date(s.creada_en).toLocaleDateString("es-AR", {
             day: "numeric", month: "short", year: "numeric",
           })}
         </span>
         {s.resuelta_en && (
-          <span className="text-green-500">
+          <span className="text-emerald-500">
             Resuelta el{" "}
             {new Date(s.resuelta_en).toLocaleDateString("es-AR", {
               day: "numeric", month: "short",
