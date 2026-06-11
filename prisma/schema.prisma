@@ -249,6 +249,7 @@ model Cuenta {
   sg_fallo_tst_desde  DateTime?
   sg_ultimo_tst       DateTime? // último test recibido por la receptora
   sg_en_fallo_ac      Boolean   @default(false) // corte de alimentación AC
+  sg_fallo_ac_desde   DateTime? // derivado por el sync (la central solo da el bool actual)
   sg_ultimo_evento    String?   // código + descripción del último evento
   sg_ultimo_evento_at DateTime?
   sg_synced_at        DateTime? // última sincronización de esta proyección

@@ -393,7 +393,14 @@ function ContenidoContexto({
       <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-3 space-y-1.5">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Panel</p>
         {cuenta.panel.en_fallo_ac && (
-          <p className="text-xs font-semibold text-red-300">⚠ Sin 220v (corte de AC)</p>
+          <p className="text-xs font-semibold text-red-300">
+            ⚠ Sin 220v (corte de AC)
+            {cuenta.panel.fallo_ac_desde && (
+              <span className="text-red-400/80 font-normal">
+                {" "}desde {horaConDia(cuenta.panel.fallo_ac_desde)}
+              </span>
+            )}
+          </p>
         )}
         {cuenta.panel.en_fallo_tst && (
           <p className="text-xs font-semibold text-amber-300">

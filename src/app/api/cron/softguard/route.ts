@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
   console.log(
     `[cron/softguard] fuente=webapi ` +
     `cuentas.actualizadas=${cuentas.actualizadas} cuentas.sinMatch=${cuentas.sinMatch} ` +
+    `cuentas.solicitudesAuto=${cuentas.solicitudesCreadas} ` +
     `eventos.synced=${eventos.synced} eventos.nuevos=${eventos.nuevos} ` +
     `ots.revisadas=${ots.revisadas} ots.completadas=${ots.completadas} ` +
     `duracion=${duracion_ms}ms`

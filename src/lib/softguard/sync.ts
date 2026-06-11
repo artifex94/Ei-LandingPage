@@ -14,21 +14,71 @@
 
 import { prisma } from "@/lib/prisma/client";
 import { softguardWebApiConfigured, fetchCodigosAlarma, fetchEventosPendientes, fetchCuentasDealer, fetchOrdenesServicio } from "./api";
+import {
+  AUTO_PREFIX,
+  derivarFalloAcDesde,
+  descripcionSolicitudAuto,
+  evaluarFallosSostenidos,
+  umbralFalloHoras,
+  type FalloDetectado,
+} from "./fallo-sostenido";
 
 // ── syncCuentasWebApi ──────────────────────────────────────────────────────────
 //
 // Lee la grilla del CRM de la suite web (CuentaByDealer). Además de
 // dirección/localidad, proyecta el estado de comunicación del panel (test
 // periódico, fallo de AC, último evento) en los campos sg_* de Cuenta.
+//
+// Detección → acción (Fase 3): un fallo de TST o AC sostenido más allá del
+// umbral (SOFTGUARD_FALLO_SOSTENIDO_HORAS, default 24 h) genera una
+// SolicitudMantenimiento automática con prefijo [AUTO], que entra al flujo
+// existente: bandeja → asignación → OT → técnico. Dedupe: no se crea si la
+// cuenta ya tiene una solicitud abierta o una [AUTO] reciente.
+
+/** Ventana de silencio tras una [AUTO] (aunque la hayan resuelto) — evita spam si el fallo persiste. */
+const COOLDOWN_AUTO_MS = 48 * 3_600_000;
+
+async function crearSolicitudSiCorresponde(
+  cuentaId: string,
+  softguardRef: string,
+  fallos: FalloDetectado[],
+  ahora: Date,
+  umbralHoras: number,
+): Promise<boolean> {
+  const bloqueante = await prisma.solicitudMantenimiento.findFirst({
+    where: {
+      cuenta_id: cuentaId,
+      OR: [
+        { estado: { not: "RESUELTA" } },
+        {
+          descripcion: { startsWith: AUTO_PREFIX },
+          creada_en: { gte: new Date(ahora.getTime() - COOLDOWN_AUTO_MS) },
+        },
+      ],
+    },
+    select: { id: true },
+  });
+  if (bloqueante) return false;
+
+  await prisma.solicitudMantenimiento.create({
+    data: {
+      cuenta_id: cuentaId,
+      descripcion: descripcionSolicitudAuto(softguardRef, fallos, umbralHoras),
+      prioridad: "ALTA",
+    },
+  });
+  return true;
+}
 
 export async function syncCuentasWebApi(): Promise<{
   actualizadas: number;
   sinMatch: number;
   errors: number;
+  solicitudesCreadas: number;
   configured: boolean;
 }> {
   if (!softguardWebApiConfigured()) {
-    return { actualizadas: 0, sinMatch: 0, errors: 0, configured: false };
+    return { actualizadas: 0, sinMatch: 0, errors: 0, solicitudesCreadas: 0, configured: false };
   }
 
   let cuentas;
@@ -36,18 +86,36 @@ export async function syncCuentasWebApi(): Promise<{
     cuentas = await fetchCuentasDealer();
   } catch (err) {
     console.error("[syncCuentasWebApi] Error API web:", err);
-    return { actualizadas: 0, sinMatch: 0, errors: 1, configured: true };
+    return { actualizadas: 0, sinMatch: 0, errors: 1, solicitudesCreadas: 0, configured: true };
   }
+
+  // Estado previo del portal: para derivar el inicio del fallo de AC (la
+  // central solo da el booleano actual) y para tener el id de cada cuenta.
+  const previas = await prisma.cuenta.findMany({
+    select: { id: true, softguard_ref: true, sg_en_fallo_ac: true, sg_fallo_ac_desde: true },
+  });
+  const prevPorRef = new Map(previas.map((c) => [c.softguard_ref, c]));
 
   let actualizadas = 0;
   let sinMatch     = 0;
   let errors       = 0;
+  let solicitudesCreadas = 0;
   const ahora = new Date();
+  const umbral = umbralFalloHoras();
 
   for (const sg of cuentas) {
+    const prev = prevPorRef.get(sg.softguard_ref);
+    if (!prev) {
+      sinMatch++; // cuentas de la central sin espejo en el portal (ej. línea _SG)
+      continue;
+    }
     try {
-      const { count } = await prisma.cuenta.updateMany({
-        where: { softguard_ref: sg.softguard_ref },
+      const fallo_ac_desde = derivarFalloAcDesde(
+        sg.en_fallo_ac, prev.sg_en_fallo_ac, prev.sg_fallo_ac_desde, ahora,
+      );
+
+      await prisma.cuenta.update({
+        where: { id: prev.id },
         data: {
           // Dirección: solo pisar si SoftGuard trae dato (no blanquear lo cargado a mano).
           calle:         sg.calle         ?? undefined,
@@ -60,20 +128,33 @@ export async function syncCuentasWebApi(): Promise<{
           sg_fallo_tst_desde:  sg.fallo_tst_desde,
           sg_ultimo_tst:       sg.ultimo_tst,
           sg_en_fallo_ac:      sg.en_fallo_ac,
+          sg_fallo_ac_desde:   fallo_ac_desde,
           sg_ultimo_evento:    sg.ultimo_evento,
           sg_ultimo_evento_at: sg.ultimo_evento_at,
           sg_synced_at:        ahora,
         },
       });
-      if (count > 0) actualizadas++;
-      else sinMatch++; // cuentas de la central sin espejo en el portal (ej. línea _SG)
+      actualizadas++;
+
+      const fallos = evaluarFallosSostenidos({
+        en_fallo_tst: sg.en_fallo_tst,
+        fallo_tst_desde: sg.fallo_tst_desde,
+        en_fallo_ac: sg.en_fallo_ac,
+        fallo_ac_desde,
+        ahora,
+        umbralHoras: umbral,
+      });
+      if (fallos.length > 0) {
+        const creada = await crearSolicitudSiCorresponde(prev.id, sg.softguard_ref, fallos, ahora, umbral);
+        if (creada) solicitudesCreadas++;
+      }
     } catch (err) {
       console.error("[syncCuentasWebApi] Error cuenta", sg.softguard_ref, err);
       errors++;
     }
   }
 
-  return { actualizadas, sinMatch, errors, configured: true };
+  return { actualizadas, sinMatch, errors, solicitudesCreadas, configured: true };
 }
 
 // ── syncEventosWebApi ──────────────────────────────────────────────────────────

@@ -37,6 +37,7 @@ export interface CuentaContextoResponse {
       fallo_tst_desde: string | null;
       ultimo_tst: string | null;
       en_fallo_ac: boolean;
+      fallo_ac_desde: string | null;
       ultimo_evento: string | null;
       ultimo_evento_at: string | null;
       synced_at: string | null;
@@ -128,6 +129,7 @@ export async function GET(req: NextRequest) {
         fallo_tst_desde: cuenta.sg_fallo_tst_desde?.toISOString() ?? null,
         ultimo_tst: cuenta.sg_ultimo_tst?.toISOString() ?? null,
         en_fallo_ac: cuenta.sg_en_fallo_ac,
+        fallo_ac_desde: cuenta.sg_fallo_ac_desde?.toISOString() ?? null,
         ultimo_evento: cuenta.sg_ultimo_evento,
         ultimo_evento_at: cuenta.sg_ultimo_evento_at?.toISOString() ?? null,
         synced_at: cuenta.sg_synced_at?.toISOString() ?? null,
