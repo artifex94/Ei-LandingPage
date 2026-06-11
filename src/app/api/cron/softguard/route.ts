@@ -19,8 +19,9 @@
 
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { syncCuentas, syncEventos, syncEstadoOT } from "@/lib/softguard/sync";
+import { syncCuentas, syncCuentasWebApi, syncEventos, syncEventosWebApi, syncEstadoOT, syncEstadoOTWebApi } from "@/lib/softguard/sync";
 import { isMockMode } from "@/lib/softguard/client";
+import { softguardWebApiConfigured } from "@/lib/softguard/web-api";
 
 export async function POST(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -42,15 +43,19 @@ export async function POST(req: NextRequest) {
 
   const t0 = Date.now();
 
+  // Fuente de eventos: si el SQL directo está en mock (firewall) pero la API web
+  // está configurada, leer eventos de la API REST de la suite web (:8080).
+  const usarWebApi = isMockMode() && softguardWebApiConfigured();
+
   // Ejecutar en secuencia para no saturar el pool de SQL Server (max: 5 conex.)
-  const cuentas = await syncCuentas();
-  const eventos = await syncEventos();
-  const ots     = await syncEstadoOT();
+  const cuentas = usarWebApi ? await syncCuentasWebApi() : await syncCuentas();
+  const eventos = usarWebApi ? await syncEventosWebApi() : await syncEventos();
+  const ots     = usarWebApi ? await syncEstadoOTWebApi() : await syncEstadoOT();
 
   const duracion_ms = Date.now() - t0;
 
   console.log(
-    `[cron/softguard] mock=${isMockMode()} ` +
+    `[cron/softguard] fuente=${usarWebApi ? "webapi" : isMockMode() ? "mock" : "sql"} ` +
     `cuentas.actualizadas=${cuentas.actualizadas} cuentas.sinMatch=${cuentas.sinMatch} ` +
     `eventos.synced=${eventos.synced} eventos.nuevos=${eventos.nuevos} ` +
     `ots.revisadas=${ots.revisadas} ots.completadas=${ots.completadas} ` +
@@ -60,7 +65,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok:         true,
     duracion_ms,
-    mock:       isMockMode(),
+    fuente:     usarWebApi ? "webapi" : isMockMode() ? "mock" : "sql",
     cuentas,
     eventos,
     ots,

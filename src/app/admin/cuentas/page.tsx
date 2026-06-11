@@ -121,6 +121,11 @@ export default async function CuentasAdminPage({
       ),
     },
     {
+      id: "panel",
+      header: "Panel",
+      cell: (c) => <PanelComunicacion cuenta={c} />,
+    },
+    {
       id: "tarifa",
       header: "Tarifa",
       cell: (c) => <span className="text-slate-300">${Number(c.costo_mensual).toLocaleString("es-AR")}</span>,
@@ -156,6 +161,9 @@ export default async function CuentasAdminPage({
           <span className={`text-xs font-semibold px-2 py-1 rounded-full block ${ESTADO_COLORES[c.estado] ?? "bg-slate-700 text-slate-400"}`}>
             {ESTADO_LABELS[c.estado] ?? c.estado}
           </span>
+          <div className="flex justify-end">
+            <PanelComunicacion cuenta={c} />
+          </div>
           <p className="text-white text-sm font-semibold">
             ${Number(c.costo_mensual).toLocaleString("es-AR")}
           </p>
@@ -236,5 +244,65 @@ export default async function CuentasAdminPage({
         steps={TUTORIAL_CUENTAS}
       />
     </section>
+  );
+}
+
+/**
+ * Estado de comunicación del panel según la proyección SoftGuard (campos sg_*,
+ * sincronizados por el cron). Prioridad: sin reportar > sin 220v > OK.
+ */
+function PanelComunicacion({
+  cuenta,
+}: {
+  cuenta: {
+    sg_synced_at: Date | null;
+    sg_en_fallo_tst: boolean;
+    sg_en_fallo_ac: boolean;
+    sg_ultimo_evento: string | null;
+    sg_ultimo_evento_at: Date | null;
+  };
+}) {
+  if (!cuenta.sg_synced_at) {
+    return <span className="text-xs text-slate-600" title="Sin datos de la central todavía">—</span>;
+  }
+
+  const detalle = cuenta.sg_ultimo_evento
+    ? `Último evento: ${cuenta.sg_ultimo_evento}${
+        cuenta.sg_ultimo_evento_at ? ` (${cuenta.sg_ultimo_evento_at.toLocaleString("es-AR")})` : ""
+      }`
+    : undefined;
+
+  if (cuenta.sg_en_fallo_tst) {
+    return (
+      <span
+        title={detalle}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-red-950/60 text-red-300 border border-red-700/40"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-led-crit" aria-hidden="true" />
+        Sin reportar
+      </span>
+    );
+  }
+
+  if (cuenta.sg_en_fallo_ac) {
+    return (
+      <span
+        title={detalle}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-amber-950/50 text-amber-300 border border-amber-700/40"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+        Sin 220v
+      </span>
+    );
+  }
+
+  return (
+    <span
+      title={detalle}
+      className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-800/40"
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+      OK
+    </span>
   );
 }

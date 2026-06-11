@@ -29,6 +29,7 @@ export interface SgEventoReciente {
   accion: string;                      // etl_cAccion — descripción textual
   observacion: string | null;          // etl_cObservacion — detalle del operador
   accion_code: number;                 // etl_iAccionCode — código numérico de acción
+  zona: string;                        // etl_cZona (TODO: confirmar nombre real) — zona/partición disparadora
   operador_id: number | null;
 }
 

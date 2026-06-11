@@ -77,6 +77,14 @@ SELECT
     ISNULL(RTRIM(etl.etl_cAccion), '')                       AS accion,
     etl.etl_cObservacion                                     AS observacion,
     etl.etl_iAccionCode                                      AS accion_code,
+    -- ⚠ TODO (verificar contra el schema real de EventosTimeLine):
+    -- Zona/partición desde la que se disparó el evento. El nombre de columna
+    -- varía por instalación de SoftGuard. Candidatos típicos, en orden de
+    -- probabilidad: etl_cZona, etl_cParticion, etl_iZona, etl_cNumZona.
+    -- Si la columna elegida NO existe, este CREATE VIEW falla entero → ajustar
+    -- el nombre (correr: SELECT TOP 1 * FROM dbo.EventosTimeLine para ver columnas).
+    -- COALESCE permite que, si la primera no existe, baste con borrar esa línea.
+    ISNULL(RTRIM(etl.etl_cZona), '')                         AS zona,
     etl.etl_iOperador                                        AS operador_id
 FROM dbo.EventosTimeLine etl
 LEFT JOIN dbo.m_cuentas c ON c.cue_iid = etl.etl_iCuenta
