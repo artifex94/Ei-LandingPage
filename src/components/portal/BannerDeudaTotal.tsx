@@ -25,7 +25,7 @@ export function BannerDeudaTotal({ deudas }: Props) {
     <>
       <div
         aria-label={`${deudas.length === 1 ? "Hay un pago por regularizar" : `Hay ${deudas.length} pagos por regularizar`}`}
-        className="bg-orange-950/30 border border-orange-700/50 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        className="bg-orange-950/30 border border-orange-700/50 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
           <p className="text-orange-300 font-bold text-lg leading-tight">
@@ -38,7 +38,7 @@ export function BannerDeudaTotal({ deudas }: Props) {
         </div>
         <button
           onClick={() => setModalAbierto(true)}
-          className="w-full sm:w-auto shrink-0 bg-orange-500 hover:bg-orange-600 text-slate-900 font-bold rounded-xl px-6 py-4 min-h-[60px] text-lg transition-colors"
+          className="w-full sm:w-auto shrink-0 bg-tactical-500 hover:bg-tactical-400 border border-tactical-600 border-b-[4px] border-b-tactical-600 active:border-b active:translate-y-[3px] text-slate-900 font-bold uppercase tracking-widest rounded-sm px-6 py-4 min-h-[60px] text-sm transition-all duration-150 ease-mech-press"
         >
           Regularizar pagos
         </button>

@@ -10,7 +10,7 @@ export default function SolicitudesLoading() {
       </div>
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 px-5 py-4 animate-pulse space-y-2">
+          <div key={i} className="bg-industrial-800 rounded-lg border border-industrial-700 px-5 py-4 animate-pulse space-y-2">
             <div className="flex justify-between">
               <div className="h-4 w-32 bg-slate-700 rounded" />
               <div className="h-6 w-20 bg-slate-700 rounded-full" />

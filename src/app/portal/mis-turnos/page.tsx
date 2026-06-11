@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
+import { CalendarDays } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
+import { Badge, type BadgeVariant } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const metadata = { title: "Mis turnos" };
 
@@ -10,12 +14,12 @@ const FRANJA_LABEL: Record<string, string> = {
   NOCHE:  "Noche (22–06)",
 };
 
-const ESTADO_COLOR: Record<string, string> = {
-  PROGRAMADO:  "bg-slate-700 text-slate-300",
-  EN_CURSO:    "bg-blue-500/20 text-blue-300",
-  COMPLETADO:  "bg-emerald-500/20 text-emerald-300",
-  AUSENTE:     "bg-red-500/20 text-red-400",
-  REEMPLAZADO: "bg-amber-500/20 text-amber-300",
+const ESTADO_VARIANT: Record<string, BadgeVariant> = {
+  PROGRAMADO:  "neutral",
+  EN_CURSO:    "info",
+  COMPLETADO:  "success",
+  AUSENTE:     "danger",
+  REEMPLAZADO: "warning",
 };
 
 const ESTADO_LABEL: Record<string, string> = {
@@ -47,19 +51,15 @@ export default async function MisTurnosPage() {
   if (!empleado) redirect("/portal/dashboard");
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-display font-bold text-white">Mis turnos</h1>
-        <p className="text-sm text-slate-400 mt-0.5">Próximos 30 días</p>
-      </div>
+    <div className="space-y-7">
+      <PortalPageHeader title="Mis turnos" description="Próximos 30 días" />
 
       {turnos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center space-y-2">
-          <p className="text-slate-400">No tenés turnos asignados en los próximos 30 días.</p>
-          <p className="text-xs text-slate-500">
-            Cuando el equipo asigne un turno aparecerá acá.
-          </p>
-        </div>
+        <EmptyState
+          icon={CalendarDays}
+          title="No tenés turnos asignados en los próximos 30 días."
+          description="Cuando el equipo asigne un turno aparecerá acá."
+        />
       ) : (
         <ul role="list" className="space-y-2">
           {turnos.map((t) => {
@@ -72,18 +72,18 @@ export default async function MisTurnosPage() {
                 key={t.id}
                 role="listitem"
                 aria-label={`${fechaLabel}, ${FRANJA_LABEL[t.franja] ?? t.franja}, estado: ${estadoLabel}`}
-                className="rounded-xl border border-slate-700 bg-slate-800 p-4 flex items-center justify-between gap-3"
+                className="rounded-md border border-industrial-700 bg-industrial-800/60 px-4 py-3 flex items-center justify-between gap-3"
               >
                 <div>
                   <p className="text-sm font-semibold text-white capitalize">{fechaLabel}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{FRANJA_LABEL[t.franja] ?? t.franja}</p>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5">{FRANJA_LABEL[t.franja] ?? t.franja}</p>
                   {t.notas && (
                     <p className="text-xs text-slate-400 mt-1">{t.notas}</p>
                   )}
                 </div>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${ESTADO_COLOR[t.estado] ?? "bg-slate-700 text-slate-400"}`}>
+                <Badge variant={ESTADO_VARIANT[t.estado] ?? "neutral"} className="flex-shrink-0">
                   {estadoLabel}
-                </span>
+                </Badge>
               </li>
             );
           })}

@@ -6,7 +6,7 @@ export default function DashboardLoading() {
 
       <ul className="grid gap-4 sm:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <li key={i} className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-3 animate-pulse">
+          <li key={i} className="bg-industrial-800 border border-industrial-700 rounded-lg p-5 space-y-3 animate-pulse">
             <div className="flex items-center justify-between">
               <div className="h-5 w-32 bg-slate-700 rounded" />
               <div className="h-5 w-16 bg-slate-700 rounded-full" />

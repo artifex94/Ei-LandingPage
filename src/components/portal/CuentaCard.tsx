@@ -42,7 +42,7 @@ function getLedConfig(
       core: "bg-slate-700",
       pulse: "",
       bar: "bg-slate-700",
-      badgeBg: "bg-slate-800",
+      badgeBg: "bg-industrial-800",
       badgeText: "text-slate-500",
       badgeBorder: "border-slate-700",
       badgeLabel: "Baja",

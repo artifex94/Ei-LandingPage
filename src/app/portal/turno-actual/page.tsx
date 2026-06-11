@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
+import { Clock } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { TurnoCheckinClient } from "./TurnoCheckinClient";
 
 export const metadata = { title: "Turno actual" };
@@ -41,21 +44,18 @@ export default async function TurnoActualPage() {
   };
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-display font-bold text-white">Turno actual</h1>
-        <p className="text-sm text-slate-400 mt-0.5">
-          {new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
-        </p>
-      </div>
+    <div className="space-y-7">
+      <PortalPageHeader
+        title="Turno actual"
+        description={new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
+      />
 
       {!turnoHoy ? (
-        <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center">
-          <p className="text-slate-400">No tenés un turno asignado para hoy.</p>
-          <p className="text-xs text-slate-400 mt-1">
-            Si creés que hay un error, consultá con Ramiro.
-          </p>
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="No tenés un turno asignado para hoy."
+          description="Si creés que hay un error, consultá con Ramiro."
+        />
       ) : (
         <TurnoCheckinClient
           turnoId={turnoHoy.id}

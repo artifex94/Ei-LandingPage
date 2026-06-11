@@ -16,7 +16,7 @@ export default function PortalError({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
-      <div className="rounded-xl border border-red-500/30 bg-red-950/20 p-8 max-w-md w-full space-y-4">
+      <div className="rounded-lg border border-red-500/30 bg-red-950/20 p-8 max-w-md w-full space-y-4">
         <p className="text-red-400 text-3xl" aria-hidden="true">⚠</p>
         <h1 className="text-xl font-display font-bold text-white">Algo salió mal</h1>
         <p className="text-slate-400 text-sm">

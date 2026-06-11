@@ -11,7 +11,7 @@ export default function PagosLoading() {
           {/* Calendar grid skeleton */}
           <div className="grid grid-cols-6 gap-2">
             {Array.from({ length: 12 }).map((_, j) => (
-              <div key={j} className="bg-slate-800 border border-slate-700 rounded-xl h-16" />
+              <div key={j} className="bg-industrial-800 border border-industrial-700 rounded-lg h-16" />
             ))}
           </div>
         </div>
