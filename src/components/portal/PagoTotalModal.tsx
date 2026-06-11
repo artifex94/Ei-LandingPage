@@ -1,7 +1,7 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
+import { Modal } from "@/components/ui/Modal";
 import type { PagoPlano } from "@/components/portal/CalendarioPagos";
 import {
   crearPreferenciaTodoMP,
@@ -25,10 +25,13 @@ interface Props {
 
 function CopyButton({ texto }: { texto: string }) {
   const [copiado, setCopiado] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
   function copiar() {
     navigator.clipboard.writeText(texto).then(() => {
       setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopiado(false), 2000);
     });
   }
   return (
@@ -99,83 +102,67 @@ export function PagoTotalModal({ deudas, onClose }: Props) {
   // ── Vista: confirmación de acción ──────────────────────────────────────────
   if (confirmarAccion === "mp") {
     return (
-      <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/70 z-40" />
-          <Dialog.Content
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6"
-            aria-describedby="confirm-mp-desc"
+      <Modal
+        open
+        onClose={onClose}
+        size="md"
+        title="¿Confirmar pago?"
+        description="Vas a ser redirigido a Mercado Pago para pagar:"
+      >
+        <p className="text-3xl font-bold text-white mb-6">{totalStr}</p>
+        <p className="text-slate-400 text-sm mb-6">
+          Incluye {deudas.length} servicio{deudas.length !== 1 ? "s" : ""}.
+        </p>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handleMercadoPago}
+            disabled={isPending}
+            className="w-full bg-[#009ee3] hover:bg-[#0082c0] disabled:opacity-60 text-white font-bold rounded-xl px-5 py-4 min-h-[60px] text-lg transition-colors"
           >
-            <Dialog.Title className="text-xl font-bold text-white mb-4">
-              ¿Confirmar pago?
-            </Dialog.Title>
-            <p id="confirm-mp-desc" className="text-slate-300 text-base mb-2">
-              Vas a ser redirigido a Mercado Pago para pagar:
-            </p>
-            <p className="text-3xl font-bold text-white mb-6">{totalStr}</p>
-            <p className="text-slate-400 text-sm mb-6">
-              Incluye {deudas.length} servicio{deudas.length !== 1 ? "s" : ""}.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleMercadoPago}
-                disabled={isPending}
-                className="w-full bg-[#009ee3] hover:bg-[#0082c0] disabled:opacity-60 text-white font-bold rounded-xl px-5 py-4 min-h-[60px] text-lg transition-colors"
-              >
-                {isPending ? "Conectando con Mercado Pago…" : "Sí, ir a pagar"}
-              </button>
-              <button
-                onClick={() => setConfirmarAccion(null)}
-                disabled={isPending}
-                className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-xl px-5 py-4 min-h-[56px] text-base transition-colors"
-              >
-                Volver
-              </button>
-            </div>
-            {error && (
-              <div role="alert" className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg px-4 py-3 text-sm mt-4">
-                {error}
-              </div>
-            )}
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+            {isPending ? "Conectando con Mercado Pago…" : "Sí, ir a pagar"}
+          </button>
+          <button
+            onClick={() => setConfirmarAccion(null)}
+            disabled={isPending}
+            className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-xl px-5 py-4 min-h-[56px] text-base transition-colors"
+          >
+            Volver
+          </button>
+        </div>
+        {error && (
+          <div role="alert" className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg px-4 py-3 text-sm mt-4">
+            {error}
+          </div>
+        )}
+      </Modal>
     );
   }
 
   if (confirmarAccion === "transferencia") {
     return (
-      <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/70 z-40" />
-          <Dialog.Content
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6"
-            aria-describedby="confirm-transf-desc"
+      <Modal
+        open
+        onClose={onClose}
+        size="md"
+        title="¿Confirmar transferencia?"
+        description="Vas a avisarnos que transferiste el pago total de:"
+      >
+        <p className="text-3xl font-bold text-white mb-6">{totalStr}</p>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => { setConfirmarAccion(null); setMostrarTransferencia(true); }}
+            className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl px-5 py-4 min-h-[60px] text-lg transition-colors"
           >
-            <Dialog.Title className="text-xl font-bold text-white mb-4">
-              ¿Confirmar transferencia?
-            </Dialog.Title>
-            <p id="confirm-transf-desc" className="text-slate-300 text-base mb-2">
-              Vas a avisarnos que transferiste el pago total de:
-            </p>
-            <p className="text-3xl font-bold text-white mb-6">{totalStr}</p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => { setConfirmarAccion(null); setMostrarTransferencia(true); }}
-                className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl px-5 py-4 min-h-[60px] text-lg transition-colors"
-              >
-                Ver instrucciones de transferencia
-              </button>
-              <button
-                onClick={() => setConfirmarAccion(null)}
-                className="w-full text-slate-500 hover:text-slate-400 py-3 min-h-[48px] text-base"
-              >
-                Volver
-              </button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+            Ver instrucciones de transferencia
+          </button>
+          <button
+            onClick={() => setConfirmarAccion(null)}
+            className="w-full text-slate-500 hover:text-slate-400 py-3 min-h-[48px] text-base"
+          >
+            Volver
+          </button>
+        </div>
+      </Modal>
     );
   }
 
@@ -203,7 +190,7 @@ export function PagoTotalModal({ deudas, onClose }: Props) {
       )}
       <button
         onClick={onClose}
-        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl px-5 py-4 min-h-[60px] text-lg mt-4"
+        className="w-full bg-orange-500 hover:bg-orange-600 text-slate-900 font-bold rounded-xl px-5 py-4 min-h-[60px] text-lg mt-4"
       >
         Cerrar
       </button>
@@ -321,34 +308,20 @@ export function PagoTotalModal({ deudas, onClose }: Props) {
   );
 
   return (
-    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/70 z-40" />
-        <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
-          aria-describedby="pago-total-desc"
-        >
-          <Dialog.Title className="text-xl font-bold text-white mb-1">
-            Regularizar tus pagos
-          </Dialog.Title>
-          <p id="pago-total-desc" className="text-slate-400 text-sm mb-5">
-            {deudas.length} {deudas.length === 1 ? "pago por atender" : "pagos por atender"}
-          </p>
+    <Modal
+      open
+      onClose={onClose}
+      size="md"
+      title="Regularizar tus pagos"
+      description={`${deudas.length} ${deudas.length === 1 ? "pago por atender" : "pagos por atender"}`}
+    >
+      {error && (
+        <div role="alert" className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg px-4 py-3 text-sm mb-4">
+          {error}
+        </div>
+      )}
 
-          {error && (
-            <div role="alert" className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg px-4 py-3 text-sm mb-4">
-              {error}
-            </div>
-          )}
-
-          {mostrarTransferencia ? vistaTransferencia : vistaOpciones}
-
-          <Dialog.Close className="absolute top-4 right-4 text-slate-400 hover:text-white min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors">
-            <span aria-hidden="true" className="text-xl">✕</span>
-            <span className="sr-only">Cerrar</span>
-          </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      {mostrarTransferencia ? vistaTransferencia : vistaOpciones}
+    </Modal>
   );
 }

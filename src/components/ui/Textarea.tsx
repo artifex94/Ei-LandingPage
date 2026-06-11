@@ -14,7 +14,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         <textarea ref={ref} className={`${baseClasses} ${errorClasses} ${className}`} {...props} />
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+        {error && <p role="alert" className="text-red-400 text-xs mt-1">{error}</p>}
       </div>
     );
   }

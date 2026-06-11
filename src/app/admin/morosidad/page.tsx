@@ -1,5 +1,28 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+
+export const metadata: Metadata = { title: "Morosidad" };
+
+const TUTORIAL_MOROSIDAD = [
+  {
+    titulo: "Cómo se define un moroso",
+    descripcion: "Cuentas con 2 o más meses de pagos vencidos sin regularizar. Se calcula automáticamente al cargar la página.",
+  },
+  {
+    titulo: "Contactar por WhatsApp",
+    descripcion: "Cada cuenta tiene un botón de WhatsApp que abre un mensaje pre-redactado al titular. Es la forma más rápida de gestionar.",
+  },
+  {
+    titulo: "Regularizar un pago vencido",
+    descripcion: "Cuando el cliente paga, entrá a Pagos → buscá el mes vencido → registralo manualmente. Desaparece del listado de morosidad.",
+  },
+  {
+    titulo: "Suspender una cuenta",
+    descripcion: "Si no hay respuesta, podés cambiar el estado de la cuenta a SUSPENDIDA desde el detalle de la cuenta en Cuentas.",
+  },
+];
 
 const MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -9,7 +32,7 @@ function waLink(telefono: string, nombre: string, deuda: string) {
     `Hola ${nombre}, te contactamos de Escobar Instalaciones. Tenés pagos pendientes por $${deuda}. ¿Podemos ayudarte a regularizarlos?`
   );
   const num = telefono.replace(/\D/g, "");
-  return `https://wa.me/${num}?text=${msg}`;
+  return `https://wa.me/549${num}?text=${msg}`;
 }
 
 export default async function MorosidadPage() {
@@ -73,10 +96,19 @@ export default async function MorosidadPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-white">Morosidad</h1>
-        <span className="text-sm text-slate-400">
-          {morosas.length} cuenta{morosas.length !== 1 ? "s" : ""} con pagos vencidos
-        </span>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Morosidad</h1>
+          <p className="text-sm text-slate-400 mt-1">
+            {morosas.length} cuenta{morosas.length !== 1 ? "s" : ""} con pagos vencidos
+          </p>
+        </div>
+        <a
+          href="/api/admin/export?tipo=morosidad"
+          className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors shrink-0"
+          title="Exportar morosidad a Excel"
+        >
+          ↓ Excel
+        </a>
       </div>
 
       {grupos.length === 0 ? (
@@ -109,9 +141,12 @@ export default async function MorosidadPage() {
                     <div className="flex flex-wrap gap-3 mt-1 text-sm text-slate-400">
                       {perfil.email && <span>{perfil.email}</span>}
                       {perfil.telefono && (
-                        <span>
+                        <a
+                          href={`tel:${perfil.telefono.replace(/\D/g, "")}`}
+                          className="hover:text-white transition-colors"
+                        >
                           {perfil.telefono}
-                        </span>
+                        </a>
                       )}
                     </div>
                   </div>
@@ -128,7 +163,7 @@ export default async function MorosidadPage() {
                         href={waLink(perfil.telefono, perfil.nombre.split(" ")[0], totalVencido.toLocaleString("es-AR"))}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-green-700 hover:bg-green-600 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 min-h-[40px]"
+                        className="bg-green-700 hover:bg-green-600 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 min-h-[44px]"
                         title="Enviar mensaje por WhatsApp"
                       >
                         <span aria-hidden="true">📱</span>
@@ -153,7 +188,7 @@ export default async function MorosidadPage() {
                               {cuenta.descripcion}
                             </Link>
                             <p className="text-xs text-slate-500 mt-0.5">
-                              Ref: {cuenta.softguard_ref}
+                              Ref: {cuenta.softguard_ref ?? "—"}
                             </p>
                           </div>
                           <p className="text-orange-300 font-bold text-sm shrink-0">
@@ -181,6 +216,12 @@ export default async function MorosidadPage() {
           })}
         </div>
       )}
+
+      <TutorialContextual
+        section="morosidad"
+        titulo="Guía rápida — Morosidad"
+        steps={TUTORIAL_MOROSIDAD}
+      />
     </div>
   );
 }

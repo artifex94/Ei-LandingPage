@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
+import { UUID_RE } from "@/lib/constants/validation";
 
 async function getEmpleadoId(): Promise<string | null> {
   const supabase = await createClient();
@@ -17,6 +18,7 @@ async function getEmpleadoId(): Promise<string | null> {
 }
 
 export async function reservarVehiculo(vehiculoId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!UUID_RE.test(vehiculoId)) return { ok: false, error: "Vehículo inválido." };
   const empleadoId = await getEmpleadoId();
   if (!empleadoId) return { ok: false, error: "Sin registro de empleado." };
 
@@ -49,6 +51,7 @@ export async function reservarVehiculo(vehiculoId: string): Promise<{ ok: boolea
 }
 
 export async function liberarVehiculo(reservaId: string): Promise<{ ok: boolean }> {
+  if (!UUID_RE.test(reservaId)) return { ok: false };
   const empleadoId = await getEmpleadoId();
   if (!empleadoId) return { ok: false };
 

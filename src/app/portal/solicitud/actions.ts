@@ -1,9 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
 const solicitudSchema = z.object({
@@ -19,11 +18,7 @@ export async function crearSolicitud(
   _prev: { error: string; ok?: boolean } | null,
   formData: FormData
 ): Promise<{ error: string; ok?: boolean } | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const input = solicitudSchema.safeParse({
     cuenta_id: formData.get("cuenta_id"),
@@ -37,7 +32,7 @@ export async function crearSolicitud(
 
   // Verificar que la cuenta pertenece al usuario
   const cuenta = await prisma.cuenta.findFirst({
-    where: { id: input.data.cuenta_id, perfil_id: user.id },
+    where: { id: input.data.cuenta_id, perfil_id: userId },
   });
 
   if (!cuenta) return { error: "Servicio no encontrado." };

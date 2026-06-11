@@ -1,10 +1,11 @@
 "use client";
 
 import { useTransition } from "react";
-import type { Empleado, Perfil, ReservaVehiculo } from "@/generated/prisma/client";
+import type { Empleado, ReservaVehiculo } from "@/generated/prisma/client";
 import { cambiarEstadoReserva } from "@/lib/actions/vehiculo";
+import { DataTable, type Column } from "@/components/ui/DataTable";
 
-type ReservaConEmpleado = ReservaVehiculo & { empleado: Empleado & { perfil: Perfil } };
+type ReservaConEmpleado = ReservaVehiculo & { empleado: Empleado & { perfil: { nombre: string } } };
 
 const ESTADO_BADGE: Record<string, string> = {
   RESERVADA:  "bg-blue-500/20 text-blue-300 border-blue-500/30",
@@ -22,80 +23,81 @@ const ESTADO_LABEL: Record<string, string> = {
 export function ReservasVehiculo({ reservas }: { reservas: ReservaConEmpleado[] }) {
   const [pending, startTransition] = useTransition();
 
-  if (reservas.length === 0) {
-    return (
-      <p className="text-sm text-slate-500 px-1">No hay reservas próximas.</p>
-    );
-  }
-
   function handleEstado(id: string, estado: "EN_USO" | "COMPLETADA" | "CANCELADA") {
     startTransition(async () => {
       await cambiarEstadoReserva(id, estado);
     });
   }
 
+  const fmt = (d: Date) =>
+    new Date(d).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+  const columns: Column<ReservaConEmpleado>[] = [
+    {
+      id: "empleado",
+      header: "Empleado",
+      cell: (r) => <span className="text-white font-medium">{r.empleado.perfil.nombre}</span>,
+    },
+    { id: "desde", header: "Desde", cell: (r) => <span className="text-slate-300">{fmt(r.desde)}</span> },
+    { id: "hasta", header: "Hasta", cell: (r) => <span className="text-slate-300">{fmt(r.hasta)}</span> },
+    {
+      id: "estado",
+      header: "Estado",
+      cell: (r) => (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${ESTADO_BADGE[r.estado] ?? ""}`}>
+          {ESTADO_LABEL[r.estado] ?? r.estado}
+        </span>
+      ),
+    },
+    {
+      id: "acciones",
+      header: "Acciones",
+      srOnlyHeader: true,
+      align: "right",
+      cell: (r) => (
+        <div className="flex justify-end gap-2">
+          {r.estado === "RESERVADA" && (
+            <>
+              <button
+                onClick={() => handleEstado(r.id, "EN_USO")}
+                disabled={pending}
+                aria-label={`Marcar reserva de ${r.empleado.perfil.nombre} como en uso`}
+                className="text-xs text-emerald-400 hover:text-emerald-300 disabled:opacity-50 min-h-[44px] flex items-center"
+              >
+                En uso
+              </button>
+              <button
+                onClick={() => handleEstado(r.id, "CANCELADA")}
+                disabled={pending}
+                aria-label={`Cancelar reserva de ${r.empleado.perfil.nombre}`}
+                className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 min-h-[44px] flex items-center"
+              >
+                Cancelar
+              </button>
+            </>
+          )}
+          {r.estado === "EN_USO" && (
+            <button
+              onClick={() => handleEstado(r.id, "COMPLETADA")}
+              disabled={pending}
+              aria-label={`Completar reserva de ${r.empleado.perfil.nombre}`}
+              className="text-xs text-slate-400 hover:text-white disabled:opacity-50 min-h-[44px] flex items-center"
+            >
+              Completar
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className="rounded-lg border border-slate-700 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-800 border-b border-slate-700">
-          <tr>
-            <th className="text-left px-4 py-2.5 text-slate-400 font-medium">Empleado</th>
-            <th className="text-left px-4 py-2.5 text-slate-400 font-medium">Desde</th>
-            <th className="text-left px-4 py-2.5 text-slate-400 font-medium">Hasta</th>
-            <th className="text-left px-4 py-2.5 text-slate-400 font-medium">Estado</th>
-            <th className="px-4 py-2.5" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-700/50">
-          {reservas.map((r) => (
-            <tr key={r.id} className="bg-slate-900 hover:bg-slate-800/50 transition-colors">
-              <td className="px-4 py-3 text-white font-medium">{r.empleado.perfil.nombre}</td>
-              <td className="px-4 py-3 text-slate-300">
-                {new Date(r.desde).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-              </td>
-              <td className="px-4 py-3 text-slate-300">
-                {new Date(r.hasta).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-              </td>
-              <td className="px-4 py-3">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${ESTADO_BADGE[r.estado] ?? ""}`}>
-                  {ESTADO_LABEL[r.estado] ?? r.estado}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div className="flex justify-end gap-2">
-                  {r.estado === "RESERVADA" && (
-                    <>
-                      <button
-                        onClick={() => handleEstado(r.id, "EN_USO")}
-                        disabled={pending}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 disabled:opacity-50"
-                      >
-                        En uso
-                      </button>
-                      <button
-                        onClick={() => handleEstado(r.id, "CANCELADA")}
-                        disabled={pending}
-                        className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
-                      >
-                        Cancelar
-                      </button>
-                    </>
-                  )}
-                  {r.estado === "EN_USO" && (
-                    <button
-                      onClick={() => handleEstado(r.id, "COMPLETADA")}
-                      disabled={pending}
-                      className="text-xs text-slate-400 hover:text-white disabled:opacity-50"
-                    >
-                      Completar
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      columns={columns}
+      rows={reservas}
+      keyExtractor={(r) => r.id}
+      caption="Reservas del vehículo"
+      emptyState={<p className="text-sm text-slate-500 px-1">No hay reservas próximas.</p>}
+    />
   );
 }

@@ -2,8 +2,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { CalendarioTurnos } from "@/components/admin/turnos/CalendarioTurnos";
+import { AutoAsignarButton } from "@/components/admin/turnos/AutoAsignarButton";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
-export const metadata: Metadata = { title: "Turnos — Admin" };
+const TUTORIAL_TURNOS = [
+  {
+    titulo: "Qué es un turno",
+    descripcion: "Un turno asigna a un operador de monitoreo a una franja horaria (mañana, tarde o noche) en un día específico.",
+  },
+  {
+    titulo: "Cobertura completa",
+    descripcion: "El sistema alerta si algún día de la semana queda sin cobertura en alguna franja. Tres turnos por día = cobertura 24h.",
+  },
+  {
+    titulo: "Crear y editar turnos",
+    descripcion: "Hacé clic en una celda vacía del calendario para asignar un turno. Hacé clic en uno existente para editar o eliminar.",
+  },
+  {
+    titulo: "Ausencias",
+    descripcion: "Si un operador falta, registralo en Ausencias. El turno queda marcado visualmente como cubierto por otro o vacío.",
+  },
+];
+
+export const metadata: Metadata = { title: "Turnos" };
 
 function startOfWeek(date: Date): Date {
   const d = new Date(date);
@@ -55,6 +76,22 @@ export default async function TurnosPage({
   const lunesLabel   = lunes.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
   const domingoLabel = domingo.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
 
+  // Huecos de cobertura de la semana visible: 7 días × 3 franjas = 21 slots.
+  const FRANJAS = ["MANANA", "TARDE", "NOCHE"] as const;
+  const cubiertos = new Set(
+    turnos
+      .filter((t) => t.estado === "PROGRAMADO" || t.estado === "EN_CURSO")
+      .map((t) => `${new Date(t.fecha).toISOString().slice(0, 10)}|${t.franja}`)
+  );
+  let huecos = 0;
+  for (let i = 0; i < 7; i++) {
+    const dia = addDays(lunes, i).toISOString().slice(0, 10);
+    for (const f of FRANJAS) {
+      if (!cubiertos.has(`${dia}|${f}`)) huecos++;
+    }
+  }
+  const semanaIso = lunes.toISOString().slice(0, 10);
+
   return (
     <div className="space-y-6">
       {/* Encabezado + navegación de semanas */}
@@ -66,25 +103,30 @@ export default async function TurnosPage({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <a
-            href={`/admin/turnos?semana=${semanaAnterior}`}
-            className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[40px] flex items-center"
-          >
-            ← Anterior
-          </a>
-          <a
-            href="/admin/turnos"
-            className="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[40px] flex items-center"
-          >
-            Hoy
-          </a>
-          <a
-            href={`/admin/turnos?semana=${semanaSiguiente}`}
-            className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[40px] flex items-center"
-          >
-            Siguiente →
-          </a>
+        <div className="flex items-center gap-2 flex-wrap">
+          {empleados.length > 0 && (
+            <AutoAsignarButton semanaDesde={semanaIso} huecos={huecos} />
+          )}
+          <div className="flex items-center gap-2">
+            <a
+              href={`/admin/turnos?semana=${semanaAnterior}`}
+              className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex items-center"
+            >
+              ← Anterior
+            </a>
+            <a
+              href="/admin/turnos"
+              className="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex items-center"
+            >
+              Hoy
+            </a>
+            <a
+              href={`/admin/turnos?semana=${semanaSiguiente}`}
+              className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex items-center"
+            >
+              Siguiente →
+            </a>
+          </div>
         </div>
       </div>
 
@@ -93,20 +135,27 @@ export default async function TurnosPage({
           <p className="text-slate-300 font-medium">No hay monitores activos.</p>
           <p className="text-sm text-slate-500 mt-2">
             Habilitá empleados como monitores en{" "}
-            <Link href="/admin/empleados" className="text-orange-400 underline">
-              Empleados
+            <Link href="/admin/trabajadores" className="text-orange-400 underline">
+              Equipo
             </Link>
             .
           </p>
         </div>
       ) : (
         <CalendarioTurnos
+          key={`${semanaIso}-${turnos.length}`}
           empleados={empleados}
           turnos={turnos}
           semanaDesde={lunes.toISOString().slice(0, 10)}
           hoyIso={hoy.toISOString().slice(0, 10)}
         />
       )}
+
+      <TutorialContextual
+        section="turnos"
+        titulo="Guía rápida — Turnos"
+        steps={TUTORIAL_TURNOS}
+      />
     </div>
   );
 }

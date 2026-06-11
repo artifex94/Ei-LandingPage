@@ -44,7 +44,7 @@ export function EditarTareaForm({
 
       {tarea.notas_tecnico && (
         <div className="rounded-xl border border-slate-700 bg-slate-800 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
             Notas del técnico
           </p>
           <p className="text-sm text-slate-300 whitespace-pre-wrap">{tarea.notas_tecnico}</p>
@@ -62,7 +62,7 @@ export function EditarTareaForm({
             name="titulo"
             required
             defaultValue={tarea.titulo}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:outline-2 focus:outline-orange-500"
           />
         </div>
 
@@ -72,7 +72,7 @@ export function EditarTareaForm({
             name="descripcion"
             rows={2}
             defaultValue={tarea.descripcion ?? ""}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:outline-2 focus:outline-orange-500 resize-none"
           />
         </div>
 
@@ -84,7 +84,7 @@ export function EditarTareaForm({
             name="tecnico_id"
             required
             defaultValue={tarea.tecnico_id}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
           >
             {tecnicos.map((t) => (
               <option key={t.id} value={t.id}>{t.nombre}</option>
@@ -102,7 +102,7 @@ export function EditarTareaForm({
               type="date"
               required
               defaultValue={tarea.fechaISO}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
             />
           </div>
           <div>
@@ -111,7 +111,7 @@ export function EditarTareaForm({
               name="hora_inicio"
               type="time"
               defaultValue={tarea.hora_inicio ?? ""}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
             />
           </div>
           <div>
@@ -120,7 +120,7 @@ export function EditarTareaForm({
               name="hora_fin"
               type="time"
               defaultValue={tarea.hora_fin ?? ""}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
             />
           </div>
         </div>
@@ -130,7 +130,7 @@ export function EditarTareaForm({
           <select
             name="cuenta_id"
             defaultValue={tarea.cuenta_id ?? ""}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
           >
             <option value="">Sin cuenta asociada</option>
             {cuentas.map((c) => (
@@ -147,7 +147,7 @@ export function EditarTareaForm({
             <select
               name="prioridad"
               defaultValue={tarea.prioridad}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
             >
               <option value="BAJA">Baja</option>
               <option value="MEDIA">Media</option>
@@ -159,7 +159,7 @@ export function EditarTareaForm({
             <select
               name="estado"
               defaultValue={tarea.estado}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
             >
               <option value="PENDIENTE">Pendiente</option>
               <option value="EN_CURSO">En curso</option>
@@ -170,7 +170,7 @@ export function EditarTareaForm({
         </div>
 
         {state.errores && state.errores.length > 0 && (
-          <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3">
+          <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/30 p-3">
             {state.errores.map((e) => (
               <p key={e} className="text-sm text-red-400">{e}</p>
             ))}
@@ -184,7 +184,7 @@ export function EditarTareaForm({
         <button
           type="submit"
           disabled={pending}
-          className="w-full font-semibold text-sm bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
+          className="w-full font-semibold text-sm bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 px-4 py-2.5 min-h-[44px] rounded-lg transition-colors"
         >
           {pending ? "Guardando…" : "Guardar cambios"}
         </button>

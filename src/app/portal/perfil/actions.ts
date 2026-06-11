@@ -1,9 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
 const CAMPOS_PERMITIDOS = ["nombre", "telefono", "email"] as const;
@@ -27,11 +26,7 @@ export async function crearSolicitudCambio(
   _prev: { error: string; ok?: boolean } | null,
   formData: FormData
 ): Promise<{ error: string; ok?: boolean } | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const input = schema.safeParse({
     campo: formData.get("campo"),
@@ -45,12 +40,12 @@ export async function crearSolicitudCambio(
   const { campo, valor_nuevo } = input.data;
 
   // Verificar que el perfil existe
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (!perfil) redirect("/login");
+  const perfil = await prisma.perfil.findUnique({ where: { id: userId } });
+  if (!perfil) return { error: "Perfil no encontrado." };
 
   // Bloquear si ya hay una solicitud PENDIENTE para el mismo campo
   const pendiente = await prisma.solicitudCambioInfo.findFirst({
-    where: { perfil_id: user.id, campo, estado: "PENDIENTE" },
+    where: { perfil_id: userId, campo, estado: "PENDIENTE" },
   });
   if (pendiente) {
     return {
@@ -68,7 +63,7 @@ export async function crearSolicitudCambio(
 
   await prisma.solicitudCambioInfo.create({
     data: {
-      perfil_id: user.id,
+      perfil_id: userId,
       campo,
       valor_actual,
       valor_nuevo: valor_nuevo.trim(),

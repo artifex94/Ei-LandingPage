@@ -17,7 +17,7 @@ export function EliminarClienteForm({ id, nombre }: { id: string; nombre: string
       </div>
 
       {state.errores && (
-        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-3">
+        <div role="alert" className="bg-red-900/30 border border-red-700/50 rounded-lg p-3">
           {state.errores.map((e, i) => (
             <p key={i} className="text-sm text-red-300">{e}</p>
           ))}
@@ -28,7 +28,7 @@ export function EliminarClienteForm({ id, nombre }: { id: string; nombre: string
         <button
           type="button"
           onClick={() => setConfirmando(true)}
-          className="text-sm text-red-400 hover:text-red-300 border border-red-800/50 hover:border-red-700 px-4 py-2 rounded-lg transition-colors"
+          className="text-sm text-red-400 hover:text-red-300 border border-red-800/50 hover:border-red-700 px-4 py-2 min-h-[44px] rounded-lg transition-colors"
         >
           Eliminar cliente…
         </button>
@@ -42,14 +42,14 @@ export function EliminarClienteForm({ id, nombre }: { id: string; nombre: string
             <button
               type="submit"
               disabled={pending}
-              className="text-sm font-semibold bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white px-4 py-2 rounded-lg transition-colors"
+              className="text-sm font-semibold bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white px-4 py-2 min-h-[44px] rounded-lg transition-colors"
             >
               {pending ? "Eliminando…" : "Sí, eliminar"}
             </button>
             <button
               type="button"
               onClick={() => setConfirmando(false)}
-              className="text-sm bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors"
+              className="text-sm bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 min-h-[44px] rounded-lg transition-colors"
             >
               Cancelar
             </button>

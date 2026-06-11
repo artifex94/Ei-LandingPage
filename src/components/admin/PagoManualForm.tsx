@@ -51,7 +51,7 @@ export function PagoManualForm({ cuentaId, mes, anio, importe }: Props) {
       <button
         type="submit"
         disabled={pending}
-        className="bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        className="bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white px-4 py-2 min-h-[44px] rounded-lg text-sm font-medium transition-colors"
       >
         {pending ? "Guardando…" : "Registrar pago"}
       </button>

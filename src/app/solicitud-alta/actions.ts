@@ -9,15 +9,24 @@ export interface SolicitudAltaResult {
   errores?: string[];
 }
 
+const CONDICION_IVA_VALIDAS = new Set([
+  "RESPONSABLE_INSCRIPTO", "MONOTRIBUTISTA", "EXENTO", "CONSUMIDOR_FINAL", "NO_RESPONSABLE",
+]);
+
 const schema = z.object({
-  nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+  nombre: z
+    .string()
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(100, "El nombre no puede superar los 100 caracteres")
+    .transform((v) => v.trim()),
   telefono: z
     .string()
     .regex(/^\d{10}$/, "El teléfono debe tener exactamente 10 dígitos"),
   dni: z
     .string()
     .optional()
-    .transform((v) => v || undefined),
+    .transform((v) => v?.replace(/\D/g, "") || undefined)
+    .refine((v) => !v || /^\d{7,8}$/.test(v), "El DNI debe tener 7 u 8 dígitos"),
   email: z
     .string()
     .email("Email inválido")
@@ -33,15 +42,18 @@ const schema = z.object({
     .transform((v) => v === "true"),
   razon_social: z
     .string()
+    .max(200, "La razón social no puede superar los 200 caracteres")
     .optional()
-    .transform((v) => v || undefined),
+    .transform((v) => v?.trim() || undefined),
   cuit: z
     .string()
     .optional()
-    .transform((v) => v || undefined),
+    .transform((v) => v?.replace(/\D/g, "") || undefined)
+    .refine((v) => !v || /^\d{11}$/.test(v), "El CUIT debe tener 11 dígitos"),
   condicion_iva: z
     .string()
     .optional()
+    .refine((v) => !v || CONDICION_IVA_VALIDAS.has(v), "Condición de IVA inválida")
     .transform((v) => v || undefined),
 });
 

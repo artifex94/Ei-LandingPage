@@ -2,8 +2,31 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { NuevaOTButton } from "@/components/admin/ot/NuevaOTButton";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+import { StagePipeline } from "@/components/admin/StagePipeline";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { Inbox, UserCheck, Truck, MapPin, CheckCircle2 } from "lucide-react";
 
-export const metadata: Metadata = { title: "Órdenes de Trabajo — Admin" };
+const TUTORIAL_OT = [
+  {
+    titulo: "Qué es una Orden de Trabajo",
+    descripcion: "Una OT es una visita técnica programada: instalación, correctivo, preventivo o retiro. Tiene técnico asignado y fecha de visita.",
+  },
+  {
+    titulo: "Estados de la OT",
+    descripcion: "Solicitada → Asignada (técnico definido) → En ruta → En sitio → Completada. El técnico actualiza el estado desde su panel.",
+  },
+  {
+    titulo: "OTs vencidas",
+    descripcion: "Las marcadas en rojo tienen fecha de visita pasada sin completarse. Contactá al técnico o reprogramá.",
+  },
+  {
+    titulo: "Crear una OT",
+    descripcion: 'El botón "+ Nueva OT" te permite crear una para cualquier cuenta activa. Asigná técnico y fecha de visita al crearla.',
+  },
+];
+
+export const metadata: Metadata = { title: "Órdenes de Trabajo" };
 
 const ESTADO_BADGE: Record<string, string> = {
   SOLICITADA:  "bg-amber-500/20 text-amber-300 border-amber-500/30",
@@ -37,9 +60,9 @@ const PRIORIDAD_COLOR: Record<string, string> = {
 };
 
 export default async function OTListPage() {
-  const [ots, empleados] = await Promise.all([
+  const [ots, completadas, countsByEstado] = await Promise.all([
     prisma.ordenTrabajo.findMany({
-      where: { estado: { not: "CANCELADA" } },
+      where: { estado: { notIn: ["CANCELADA", "COMPLETADA"] } },
       include: {
         tecnico: { include: { perfil: { select: { nombre: true } } } },
         cuenta:  { select: { descripcion: true, perfil: { select: { nombre: true } } } },
@@ -47,26 +70,81 @@ export default async function OTListPage() {
       },
       orderBy: [{ estado: "asc" }, { fecha_visita: "asc" }, { created_at: "desc" }],
     }),
-    prisma.empleado.findMany({
-      where: { activo: true, puede_instalar: true },
-      include: { perfil: { select: { nombre: true } } },
+    prisma.ordenTrabajo.findMany({
+      where: { estado: "COMPLETADA" },
+      include: {
+        tecnico: { include: { perfil: { select: { nombre: true } } } },
+        cuenta:  { select: { descripcion: true, perfil: { select: { nombre: true } } } },
+        perfil:  { select: { nombre: true } },
+      },
+      orderBy: { hora_fin: "desc" },
+      take: 20,
+    }),
+    prisma.ordenTrabajo.groupBy({
+      by: ["estado"],
+      _count: { estado: true },
+      where: { estado: { notIn: ["CANCELADA"] } },
     }),
   ]);
 
   const ahora = new Date();
   const hace3dias = new Date(); hace3dias.setDate(ahora.getDate() - 3);
 
-  const activas    = ots.filter((o) => !["COMPLETADA", "CANCELADA"].includes(o.estado));
-  const completadas = await prisma.ordenTrabajo.findMany({
-    where: { estado: "COMPLETADA" },
-    include: {
-      tecnico: { include: { perfil: { select: { nombre: true } } } },
-      cuenta:  { select: { descripcion: true, perfil: { select: { nombre: true } } } },
-      perfil:  { select: { nombre: true } },
+  const activas = ots;
+
+  const countFor = (e: string) =>
+    countsByEstado.find((r) => r.estado === e)?._count.estado ?? 0;
+
+  const OT_STAGES = [
+    {
+      key: "SOLICITADA",
+      label: "Solicitada",
+      count: countFor("SOLICITADA"),
+      href: "/admin/ot",
+      activeCls: "bg-amber-950/50 text-amber-300",
+      countCls: "text-amber-300",
+      icon: Inbox,
     },
-    orderBy: { hora_fin: "desc" },
-    take: 20,
-  });
+    {
+      key: "ASIGNADA",
+      label: "Asignada",
+      count: countFor("ASIGNADA"),
+      href: "/admin/ot",
+      activeCls: "bg-blue-950/50 text-blue-300",
+      countCls: "text-blue-300",
+      icon: UserCheck,
+    },
+    {
+      key: "EN_RUTA",
+      label: "En ruta",
+      count: countFor("EN_RUTA"),
+      href: "/admin/ot",
+      activeCls: "bg-indigo-950/50 text-indigo-300",
+      countCls: "text-indigo-300",
+      icon: Truck,
+    },
+    {
+      key: "EN_SITIO",
+      label: "En sitio",
+      count: countFor("EN_SITIO"),
+      href: "/admin/ot",
+      activeCls: "bg-violet-950/50 text-violet-300",
+      countCls: "text-violet-300",
+      icon: MapPin,
+    },
+    {
+      key: "COMPLETADA",
+      label: "Completada",
+      count: countFor("COMPLETADA"),
+      href: "/admin/ot",
+      activeCls: "bg-emerald-950/50 text-emerald-300",
+      countCls: "text-emerald-400",
+      icon: CheckCircle2,
+    },
+  ] as const;
+
+  // Active key: el estado más "en curso" del primer OT activo, o el primero con items
+  const primerActivoEstado = activas[0]?.estado ?? "SOLICITADA";
 
   return (
     <div className="space-y-6">
@@ -77,8 +155,20 @@ export default async function OTListPage() {
             {activas.length} activa{activas.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <NuevaOTButton empleados={empleados} />
+        <div className="flex items-center gap-2">
+          <a
+            href="/api/admin/export?tipo=ots"
+            className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
+            title="Exportar OTs a Excel"
+          >
+            ↓ Excel
+          </a>
+          <NuevaOTButton />
+        </div>
       </div>
+
+      {/* Pipeline de estados */}
+      <StagePipeline stages={OT_STAGES} activeKey={primerActivoEstado} />
 
       {/* Banner alertas */}
       {(() => {
@@ -124,76 +214,163 @@ function OTTable({ ots, titulo, muted = false, ahora }: { ots: OTRow[]; titulo: 
     return (
       <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-10 text-center">
         <p className="text-slate-400">No hay OTs {titulo.toLowerCase()}.</p>
+        {titulo === "Activas" && (
+          <p className="text-xs text-slate-500 mt-1">Usá el botón &quot;Nueva OT&quot; para crear la primera.</p>
+        )}
       </div>
     );
   }
+
+  const isVencida = (ot: OTRow) =>
+    Boolean(
+      ahora &&
+        ot.fecha_visita &&
+        new Date(ot.fecha_visita) < ahora &&
+        !["EN_RUTA", "EN_SITIO", "COMPLETADA", "CANCELADA"].includes(ot.estado),
+    );
+
+  const columns: Column<OTRow>[] = [
+    {
+      id: "numero",
+      header: "Nº",
+      cell: (ot) => (
+        <span className="font-mono text-xs text-slate-400">#{String(ot.numero).padStart(4, "0")}</span>
+      ),
+    },
+    {
+      id: "tipo",
+      header: "Tipo / Cliente",
+      cell: (ot) => {
+        const clienteNombre = ot.cuenta?.perfil.nombre ?? ot.perfil?.nombre ?? "—";
+        return (
+          <>
+            <p className="font-medium text-white">{TIPO_LABEL[ot.tipo] ?? ot.tipo}</p>
+            <p className="text-xs text-slate-400">{clienteNombre}</p>
+            {ot.cuenta && <p className="text-xs text-slate-500">{ot.cuenta.descripcion}</p>}
+          </>
+        );
+      },
+    },
+    {
+      id: "tecnico",
+      header: "Técnico",
+      cell: (ot) => (
+        <span className="text-slate-300 text-xs">
+          {ot.tecnico?.perfil.nombre ?? <span className="text-slate-500">Sin asignar</span>}
+        </span>
+      ),
+    },
+    {
+      id: "fecha",
+      header: "Fecha",
+      cell: (ot) => {
+        const vencida = isVencida(ot);
+        return (
+          <span className={`text-xs ${vencida ? "text-red-400 font-medium" : "text-slate-400"}`}>
+            {ot.fecha_visita ? (
+              new Date(ot.fecha_visita).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" })
+            ) : (
+              <span className="text-slate-500">—</span>
+            )}
+            {vencida && <span className="block text-red-500 text-xs">vencida</span>}
+          </span>
+        );
+      },
+    },
+    {
+      id: "estado",
+      header: "Estado",
+      cell: (ot) => (
+        <>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${ESTADO_BADGE[ot.estado] ?? ""}`}>
+            {ESTADO_LABEL[ot.estado] ?? ot.estado}
+          </span>
+          <span className={`block text-xs mt-0.5 ${PRIORIDAD_COLOR[ot.prioridad]}`}>
+            {ot.prioridad.toLowerCase()}
+          </span>
+        </>
+      ),
+    },
+    {
+      id: "acciones",
+      header: "Acciones",
+      srOnlyHeader: true,
+      align: "right",
+      cell: (ot) => (
+        <Link
+          href={`/admin/ot/${ot.id}`}
+          className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
+        >
+          Ver →
+        </Link>
+      ),
+    },
+  ];
+
+  const renderCard = (ot: OTRow) => {
+    const clienteNombre = ot.cuenta?.perfil.nombre ?? ot.perfil?.nombre ?? "—";
+    const vencida = isVencida(ot);
+    return (
+      <Link
+        href={`/admin/ot/${ot.id}`}
+        className={`block rounded-lg border px-4 py-3 transition-colors ${
+          vencida
+            ? "bg-red-950/30 border-red-800/50 hover:bg-red-900/20"
+            : "bg-slate-800 border-slate-700 hover:bg-slate-700/60"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div className="min-w-0">
+            <p className="font-medium text-white text-sm">
+              {TIPO_LABEL[ot.tipo] ?? ot.tipo}
+              <span className="font-mono text-xs text-slate-500 ml-2">
+                #{String(ot.numero).padStart(4, "0")}
+              </span>
+            </p>
+            <p className="text-xs text-slate-400 truncate">{clienteNombre}</p>
+            {ot.cuenta && <p className="text-xs text-slate-500 truncate">{ot.cuenta.descripcion}</p>}
+          </div>
+          <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${ESTADO_BADGE[ot.estado] ?? ""}`}>
+            {ESTADO_LABEL[ot.estado] ?? ot.estado}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-slate-400">
+            {ot.tecnico?.perfil.nombre ?? <span className="text-slate-500">Sin asignar</span>}
+          </span>
+          <span className={vencida ? "text-red-400 font-medium" : "text-slate-500"}>
+            {ot.fecha_visita
+              ? new Date(ot.fecha_visita).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" })
+              : "—"}
+            {vencida && " · vencida"}
+          </span>
+        </div>
+      </Link>
+    );
+  };
 
   return (
     <section className="space-y-3">
       <h2 className={`text-sm font-semibold uppercase tracking-wider ${muted ? "text-slate-500" : "text-slate-300"}`}>
         {titulo}
       </h2>
-      <div className="rounded-lg border border-slate-700 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-800 border-b border-slate-700">
-            <tr>
-              <th className="text-left px-4 py-3 text-slate-400 font-medium">Nº</th>
-              <th className="text-left px-4 py-3 text-slate-400 font-medium">Tipo / Cliente</th>
-              <th className="text-left px-4 py-3 text-slate-400 font-medium">Técnico</th>
-              <th className="text-left px-4 py-3 text-slate-400 font-medium">Fecha</th>
-              <th className="text-left px-4 py-3 text-slate-400 font-medium">Estado</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700/50">
-            {ots.map((ot) => {
-              const clienteNombre = ot.cuenta?.perfil.nombre ?? ot.perfil?.nombre ?? "—";
-              const vencida = ahora && ot.fecha_visita &&
-                new Date(ot.fecha_visita) < ahora &&
-                !["EN_RUTA", "EN_SITIO", "COMPLETADA", "CANCELADA"].includes(ot.estado);
-              return (
-                <tr key={ot.id} className={`transition-colors ${vencida ? "bg-red-950/30 hover:bg-red-900/20" : "bg-slate-900 hover:bg-slate-800/50"}`}>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-400">
-                    #{String(ot.numero).padStart(4, "0")}
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-white">{TIPO_LABEL[ot.tipo] ?? ot.tipo}</p>
-                    <p className="text-xs text-slate-400">{clienteNombre}</p>
-                    {ot.cuenta && (
-                      <p className="text-xs text-slate-500">{ot.cuenta.descripcion}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-300 text-xs">
-                    {ot.tecnico?.perfil.nombre ?? <span className="text-slate-500">Sin asignar</span>}
-                  </td>
-                  <td className={`px-4 py-3 text-xs ${vencida ? "text-red-400 font-medium" : "text-slate-400"}`}>
-                    {ot.fecha_visita
-                      ? new Date(ot.fecha_visita).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" })
-                      : <span className="text-slate-500">—</span>}
-                    {vencida && <span className="block text-red-500 text-xs">vencida</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${ESTADO_BADGE[ot.estado] ?? ""}`}>
-                      {ESTADO_LABEL[ot.estado] ?? ot.estado}
-                    </span>
-                    <span className={`block text-xs mt-0.5 ${PRIORIDAD_COLOR[ot.prioridad]}`}>
-                      {ot.prioridad.toLowerCase()}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/ot/${ot.id}`}
-                      className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-                    >
-                      Ver →
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+
+      <DataTable
+        columns={columns}
+        rows={ots}
+        keyExtractor={(ot) => ot.id}
+        caption={`Órdenes de trabajo — ${titulo}`}
+        renderCard={renderCard}
+        rowClassName={(ot) =>
+          isVencida(ot) ? "bg-red-950/30 hover:bg-red-900/20" : "bg-slate-900 hover:bg-slate-800/50"
+        }
+      />
+
+      <TutorialContextual
+        section="ot"
+        titulo="Guía rápida — Órdenes de Trabajo"
+        steps={TUTORIAL_OT}
+      />
     </section>
   );
 }

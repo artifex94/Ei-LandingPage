@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import type { EstadoOT } from "@/generated/prisma/client";
 import { cambiarEstadoOT } from "@/lib/actions/ot";
+import { useToast } from "@/components/ui/Toast";
 
 const TRANSICIONES: Record<string, { estado: EstadoOT; label: string; color: string }[]> = {
   SOLICITADA: [
@@ -29,12 +30,24 @@ export function CambiarEstadoOTButtons({
   estado_actual: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
   const opciones = TRANSICIONES[estado_actual] ?? [];
 
   if (opciones.length === 0) return null;
 
-  function handleCambio(estado: EstadoOT) {
-    startTransition(async () => { await cambiarEstadoOT(ot_id, estado); });
+  function handleCambio(estado: EstadoOT, label: string) {
+    startTransition(async () => {
+      try {
+        await cambiarEstadoOT(ot_id, estado);
+        toast({ title: "OT actualizada", description: label });
+      } catch (err) {
+        toast({
+          variant: "error",
+          title: "No se pudo actualizar la OT",
+          description: err instanceof Error ? err.message : undefined,
+        });
+      }
+    });
   }
 
   return (
@@ -42,7 +55,7 @@ export function CambiarEstadoOTButtons({
       {opciones.map((op) => (
         <button
           key={op.estado}
-          onClick={() => handleCambio(op.estado)}
+          onClick={() => handleCambio(op.estado, op.label)}
           disabled={pending}
           className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 ${op.color}`}
         >

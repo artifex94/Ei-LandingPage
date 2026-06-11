@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
+import { requireAdmin } from "@/lib/auth/session";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { RefreshButton } from "@/components/admin/RefreshButton";
+import { EstadoSistemaBar } from "@/components/admin/EstadoSistemaBar";
+import { AreaContextBar } from "@/components/admin/AreaContextBar";
 
 export const metadata: Metadata = {
-  title: "Admin — Escobar Instalaciones",
+  title: {
+    default: "Admin — Escobar Instalaciones",
+    template: "%s — Admin EI",
+  },
   robots: "noindex, nofollow",
 };
 
@@ -15,25 +19,16 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") redirect("/portal/dashboard");
+  const perfil = await requireAdmin();
 
   const hace3dias = new Date();
   hace3dias.setDate(hace3dias.getDate() - 3);
 
-  const [pendingSolicitudes, pendingMantenimiento, cuentasEnMora, otsPendientes, altasUsuarioPendientes] =
+  const [pendingSolicitudes, pendingMantenimiento, cuentasEnMora, otsPendientes, altasUsuarioPendientes, eventosSinProcesar] =
     await Promise.all([
       prisma.solicitudCambioInfo.count({ where: { estado: "PENDIENTE" } }),
       prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
-      prisma.pago.groupBy({ by: ["cuenta_id"], where: { estado: "VENCIDO" }, _count: true })
-        .then((rows) => rows.length),
+      prisma.cuenta.count({ where: { pagos: { some: { estado: "VENCIDO" } } } }),
       prisma.ordenTrabajo.count({
         where: {
           estado: { notIn: ["COMPLETADA", "CANCELADA"] },
@@ -44,6 +39,7 @@ export default async function AdminLayout({
         },
       }),
       prisma.altaUsuario.count({ where: { estado: "PENDIENTE" } }),
+      prisma.eventoAlarma.count({ where: { estado: "NUEVO" } }),
     ]);
 
   return (
@@ -63,6 +59,7 @@ export default async function AdminLayout({
           cuentasEnMora={cuentasEnMora}
           otsPendientes={otsPendientes}
           altasUsuarioPendientes={altasUsuarioPendientes}
+          eventosSinProcesar={eventosSinProcesar}
         />
 
         <main
@@ -70,7 +67,16 @@ export default async function AdminLayout({
           tabIndex={-1}
           className="relative flex-1 p-4 sm:p-6 lg:p-8 overflow-auto pt-16 lg:pt-8"
         >
+          <EstadoSistemaBar
+            eventosSinProcesar={eventosSinProcesar}
+            pendingMantenimiento={pendingMantenimiento}
+            altasUsuarioPendientes={altasUsuarioPendientes}
+            pendingSolicitudes={pendingSolicitudes}
+            cuentasEnMora={cuentasEnMora}
+            otsPendientes={otsPendientes}
+          />
           <RefreshButton />
+          <AreaContextBar />
           {children}
         </main>
       </div>

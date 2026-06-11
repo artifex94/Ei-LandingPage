@@ -3,13 +3,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import type { Rol } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/actions/auth";
 import { siteConfig } from "@/config/site";
+import { UUID_RE } from "@/lib/constants/validation";
 
 export interface EmpleadoActionResult {
   ok?: boolean;
@@ -128,7 +128,7 @@ export async function crearEmpleado(
 // ── Actualizar empleado ────────────────────────────────────────────────────────
 
 const actualizarEmpleadoSchema = z.object({
-  id:               z.string().min(1),
+  id:               z.string().uuid("ID de empleado inválido"),
   nombre:           z.string().min(2, "El nombre es obligatorio"),
   dni:              z.string().optional().transform((v) => v || undefined),
   telefono:         z.string().optional().transform((v) => v || undefined),
@@ -216,7 +216,6 @@ export async function actualizarEmpleado(
   });
 
   revalidatePath(`/admin/empleados/${id}`);
-  revalidatePath("/admin/empleados");
   revalidatePath("/admin/trabajadores");
   revalidatePath(`/admin/trabajadores/${id}`);
   return { ok: true };
@@ -232,7 +231,7 @@ export async function eliminarEmpleado(
   if (!admin) return { errores: ["Sin permisos de administrador."] };
 
   const id = (formData.get("id") as string ?? "").trim();
-  if (!id) return { errores: ["ID inválido."] };
+  if (!UUID_RE.test(id)) return { errores: ["ID inválido."] };
 
   const empleado = await prisma.empleado.findUnique({
     where: { perfil_id: id },

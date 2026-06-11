@@ -1,12 +1,11 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit, registrarAuditTx } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
+import { UUID_RE } from "@/lib/constants/validation";
 
 // Señaliza que el pago cambió de estado entre el snapshot y el borrado
 // (control de concurrencia optimista en anularPago).
@@ -23,7 +22,7 @@ export interface PagoEditResult {
 }
 
 const editarPagoSchema = z.object({
-  pago_id: z.string().min(1),
+  pago_id: z.string().uuid("ID de pago inválido."),
   estado: z.enum(["PENDIENTE", "PAGADO", "VENCIDO", "PROCESANDO"]),
   importe: z.coerce.number().min(0),
   metodo: z.enum(["EFECTIVO", "CHEQUE", "MERCADOPAGO", "TALO_CVU", "TRANSFERENCIA_BANCARIA"]).optional().nullable(),
@@ -80,6 +79,7 @@ export async function editarPago(
 }
 
 export async function anularPago(pagoId: string): Promise<{ error?: string }> {
+  if (!UUID_RE.test(pagoId)) return { error: "ID de pago inválido." };
   const admin = await requireAdmin();
   if (!admin) return { error: "Sin permisos de administrador." };
 
@@ -134,26 +134,29 @@ export async function confirmarTransferencia(
   prevState: ConfirmarResult,
   formData: FormData
 ): Promise<ConfirmarResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const admin = await requireAdmin();
 
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  if (perfil?.rol !== "ADMIN") return { error: "Sin permisos de administrador." };
-
-  const pagoId = formData.get("pago_id") as string;
-  if (!pagoId) return { error: "ID de pago inválido." };
+  const pagoId = (formData.get("pago_id") as string ?? "").trim();
+  if (!UUID_RE.test(pagoId)) return { error: "ID de pago inválido." };
 
   try {
-    await prisma.pago.update({
-      where: { id: pagoId },
-      data: {
-        estado: "PAGADO",
-        acreditado_en: new Date(),
-        registrado_por: perfil.nombre ?? "Admin",
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.pago.update({
+        where: { id: pagoId },
+        data: {
+          estado: "PAGADO",
+          acreditado_en: new Date(),
+          registrado_por: admin.nombre ?? "Admin",
+        },
+      });
+      await registrarAuditTx(tx, {
+        admin_id: admin.id,
+        admin_nombre: admin.nombre ?? "Admin",
+        accion: "TRANSFERENCIA_CONFIRMADA",
+        entidad: "pago",
+        entidad_id: pagoId,
+        state_transition: { prior_state: "PROCESANDO", new_state: "PAGADO" },
+      });
     });
   } catch (e: unknown) {
     // P2025: registro no encontrado

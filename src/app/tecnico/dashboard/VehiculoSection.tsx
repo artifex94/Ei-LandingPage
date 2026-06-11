@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { Car, CheckCircle, Circle } from "lucide-react";
+import { Car, Circle } from "lucide-react";
 import { reservarVehiculo, liberarVehiculo } from "@/lib/actions/vehiculo-reserva";
 
 interface Vehiculo {
@@ -81,16 +81,16 @@ export function VehiculoSection({ reservaActual, vehiculosDisponibles, tieneEmpl
               key={v.id}
               disabled={pending}
               onClick={() => startTransition(async () => { await reservarVehiculo(v.id); })}
-              className="w-full flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-indigo-500/50 transition-all px-3 py-2.5 group disabled:opacity-50"
+              className="w-full flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-orange-500/50 transition-all px-3 py-2.5 group disabled:opacity-50"
             >
               <div className="flex items-center gap-3">
-                <Circle className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors" />
+                <Circle className="w-4 h-4 text-slate-600 group-hover:text-orange-400 transition-colors" />
                 <div className="text-left">
                   <p className="text-sm font-semibold text-white">{v.marca} {v.modelo}</p>
                   <p className="text-xs text-slate-400">{v.patente} · {v.anio} · {v.km_actual.toLocaleString("es-AR")} km</p>
                 </div>
               </div>
-              <span className="text-xs text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+              <span className="text-xs text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
                 Tomar →
               </span>
             </button>

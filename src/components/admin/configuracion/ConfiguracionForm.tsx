@@ -26,23 +26,23 @@ export function ConfiguracionForm({ tarifaActual }: { tarifaActual: number }) {
         <h2 className="text-sm font-bold text-white uppercase tracking-wider">Datos del emisor</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-xs text-slate-500 mb-0.5">Razón social</p>
+            <p className="text-xs text-slate-400 mb-0.5">Razón social</p>
             <p className="text-white">{siteConfig.fiscal.razonSocial}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 mb-0.5">CUIT</p>
+            <p className="text-xs text-slate-400 mb-0.5">CUIT</p>
             <p className="text-white">{siteConfig.fiscal.cuitDisplay}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 mb-0.5">Condición IVA</p>
+            <p className="text-xs text-slate-400 mb-0.5">Condición IVA</p>
             <p className="text-white">{siteConfig.fiscal.condicionIva}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 mb-0.5">Domicilio fiscal</p>
+            <p className="text-xs text-slate-400 mb-0.5">Domicilio fiscal</p>
             <p className="text-white">{siteConfig.address.full}</p>
           </div>
         </div>
-        <p className="text-xs text-slate-600">Para modificar los datos fiscales, actualizá <code>src/config/site.ts</code>.</p>
+        <p className="text-xs text-slate-400">Para modificar los datos fiscales, actualizá <code>src/config/site.ts</code>.</p>
       </section>
 
       {/* Tarifa estándar */}
@@ -66,7 +66,7 @@ export function ConfiguracionForm({ tarifaActual }: { tarifaActual: number }) {
                 step="1"
                 defaultValue={tarifaActual}
                 required
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
               />
             </div>
           </div>
@@ -81,7 +81,7 @@ export function ConfiguracionForm({ tarifaActual }: { tarifaActual: number }) {
           <button
             type="submit"
             disabled={pending}
-            className="text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white px-5 py-2.5 rounded-lg transition-colors"
+            className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 px-5 py-2.5 rounded-lg transition-colors"
           >
             {pending ? "Guardando…" : "Actualizar tarifa"}
           </button>
@@ -93,15 +93,15 @@ export function ConfiguracionForm({ tarifaActual }: { tarifaActual: number }) {
         <h2 className="text-sm font-bold text-white uppercase tracking-wider">Variables de entorno</h2>
         <div className="space-y-2 text-xs font-mono">
           {[
-            { key: "SOFTGUARD_DB_HOST",       label: "SoftGuard DB Host" },
-            { key: "SOFTGUARD_DB_USER",       label: "SoftGuard DB User" },
+            { key: "SOFTGUARD_API_BASE",      label: "SoftGuard API base (:8080)" },
+            { key: "SOFTGUARD_API_USER",      label: "SoftGuard API user" },
             { key: "SOFTGUARD_EMBED_SECRET",  label: "Embed Secret (rotable)" },
             { key: "TWILIO_ACCOUNT_SID",      label: "Twilio SID" },
             { key: "TWILIO_PHONE_NUMBER",     label: "Twilio número" },
           ].map(({ key, label }) => (
             <div key={key} className="flex items-center justify-between">
               <span className="text-slate-400">{label}</span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                 process.env[key] ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-400"
               }`}>
                 {process.env[key] ? "configurado" : "no configurado"}

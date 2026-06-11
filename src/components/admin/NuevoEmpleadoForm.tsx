@@ -19,14 +19,6 @@ const CAPACIDADES = [
   { name: "puede_facturar",   label: "Finanzas y cobros" },
 ];
 
-// Capacidades sugeridas por rol (pre-tickea pero el admin puede cambiar)
-const DEFAULTS: Record<string, string[]> = {
-  TECNICO:        ["puede_instalar"],
-  MONITOR:        ["puede_monitorear"],
-  ADMINISTRATIVO: ["puede_facturar"],
-  ADMIN_GENERAL:  ["puede_instalar", "puede_monitorear", "puede_facturar"],
-};
-
 export function NuevoEmpleadoForm({ esEscobarAdmin = false }: { esEscobarAdmin?: boolean }) {
   const [state, action, pending] = useActionState(crearEmpleado, {});
   const rolesVisibles = ROLES_EMPLEADO.filter((r) => r.value !== "ADMIN_GENERAL" || esEscobarAdmin);
@@ -137,7 +129,7 @@ export function NuevoEmpleadoForm({ esEscobarAdmin = false }: { esEscobarAdmin?:
             </label>
             <input
               id="emp-color" name="color_calendario" type="color"
-              defaultValue="#6366f1"
+              defaultValue="#64748b"
               className="h-9 w-16 rounded-lg border border-slate-600 bg-slate-700 cursor-pointer p-1"
             />
           </div>
@@ -150,7 +142,7 @@ export function NuevoEmpleadoForm({ esEscobarAdmin = false }: { esEscobarAdmin?:
       <button
         type="submit"
         disabled={pending}
-        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
+        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-slate-900 py-2.5 rounded-lg text-sm font-semibold transition-colors"
       >
         {pending ? "Creando empleado…" : "Crear empleado"}
       </button>

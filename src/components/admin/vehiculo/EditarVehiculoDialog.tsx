@@ -19,7 +19,7 @@ export function EditarVehiculoDialog({ vehiculo }: { vehiculo: Vehiculo }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="text-sm font-semibold bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
+        className="text-sm font-semibold bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-300 hover:text-white px-4 py-2 min-h-[44px] rounded-lg transition-colors"
       >
         Editar vehículo
       </button>
@@ -28,21 +28,31 @@ export function EditarVehiculoDialog({ vehiculo }: { vehiculo: Vehiculo }) {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
         >
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editar-vehiculo-title"
+            className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-white">Editar vehículo</h2>
-              <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-white text-lg leading-none">×</button>
+              <h2 id="editar-vehiculo-title" className="text-base font-bold text-white">Editar vehículo</h2>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Cerrar diálogo"
+                className="text-slate-500 hover:text-white text-lg leading-none min-h-[44px] min-w-[44px] flex items-center justify-center rounded"
+              >×</button>
             </div>
 
             {state.ok && (
-              <p className="text-green-400 text-sm bg-green-900/30 border border-green-800 rounded-lg px-3 py-2">
+              <p role="status" className="text-green-400 text-sm bg-green-900/30 border border-green-800 rounded-lg px-3 py-2">
                 Vehículo actualizado correctamente.
               </p>
             )}
             {state.errores && (
-              <div className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg p-3 text-sm space-y-1">
-                {state.errores.map((e, i) => <p key={i}>{e}</p>)}
+              <div role="alert" className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg p-3 text-sm space-y-1">
+                {state.errores.map((e) => <p key={e}>{e}</p>)}
               </div>
             )}
 
@@ -51,35 +61,36 @@ export function EditarVehiculoDialog({ vehiculo }: { vehiculo: Vehiculo }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Marca <span className="text-red-400">*</span></label>
-                  <input name="marca" type="text" required defaultValue={vehiculo.marca} className={inputCls} />
+                  <label htmlFor="ev-marca" className="block text-xs font-semibold text-slate-400 mb-1.5">Marca <span className="text-red-400">*</span></label>
+                  <input id="ev-marca" name="marca" type="text" required autoFocus defaultValue={vehiculo.marca} className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Modelo <span className="text-red-400">*</span></label>
-                  <input name="modelo" type="text" required defaultValue={vehiculo.modelo} className={inputCls} />
+                  <label htmlFor="ev-modelo" className="block text-xs font-semibold text-slate-400 mb-1.5">Modelo <span className="text-red-400">*</span></label>
+                  <input id="ev-modelo" name="modelo" type="text" required defaultValue={vehiculo.modelo} className={inputCls} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Año <span className="text-red-400">*</span></label>
-                  <input name="anio" type="number" min="1990" max="2100" required defaultValue={vehiculo.anio} className={inputCls} />
+                  <label htmlFor="ev-anio" className="block text-xs font-semibold text-slate-400 mb-1.5">Año <span className="text-red-400">*</span></label>
+                  <input id="ev-anio" name="anio" type="number" min="1990" max="2100" required defaultValue={vehiculo.anio} className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Patente <span className="text-red-400">*</span></label>
-                  <input name="patente" type="text" required defaultValue={vehiculo.patente} className={`${inputCls} uppercase`} />
+                  <label htmlFor="ev-patente" className="block text-xs font-semibold text-slate-400 mb-1.5">Patente <span className="text-red-400">*</span></label>
+                  <input id="ev-patente" name="patente" type="text" required defaultValue={vehiculo.patente} className={`${inputCls} uppercase`} />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Km actual <span className="text-red-400">*</span></label>
-                <input name="km_actual" type="number" min="0" required defaultValue={vehiculo.km_actual} className={inputCls} />
+                <label htmlFor="ev-km-actual" className="block text-xs font-semibold text-slate-400 mb-1.5">Km actual <span className="text-red-400">*</span></label>
+                <input id="ev-km-actual" name="km_actual" type="number" min="0" required defaultValue={vehiculo.km_actual} className={inputCls} />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Próximo service (km)</label>
+                  <label htmlFor="ev-proximo-service-km" className="block text-xs font-semibold text-slate-400 mb-1.5">Próximo service (km)</label>
                   <input
+                    id="ev-proximo-service-km"
                     name="proximo_service_km"
                     type="number"
                     min="0"
@@ -89,8 +100,9 @@ export function EditarVehiculoDialog({ vehiculo }: { vehiculo: Vehiculo }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Próximo service (fecha)</label>
+                  <label htmlFor="ev-proximo-service-fecha" className="block text-xs font-semibold text-slate-400 mb-1.5">Próximo service (fecha)</label>
                   <input
+                    id="ev-proximo-service-fecha"
                     name="proximo_service_fecha"
                     type="date"
                     defaultValue={toDateInput(vehiculo.proximo_service_fecha)}
@@ -100,8 +112,9 @@ export function EditarVehiculoDialog({ vehiculo }: { vehiculo: Vehiculo }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Observaciones</label>
+                <label htmlFor="ev-observaciones" className="block text-xs font-semibold text-slate-400 mb-1.5">Observaciones</label>
                 <textarea
+                  id="ev-observaciones"
                   name="observaciones"
                   rows={2}
                   defaultValue={vehiculo.observaciones ?? ""}
@@ -114,7 +127,7 @@ export function EditarVehiculoDialog({ vehiculo }: { vehiculo: Vehiculo }) {
                 <button
                   type="submit"
                   disabled={pending}
-                  className="flex-1 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
+                  className="flex-1 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 px-4 py-2.5 rounded-lg transition-colors"
                 >
                   {pending ? "Guardando…" : "Guardar cambios"}
                 </button>

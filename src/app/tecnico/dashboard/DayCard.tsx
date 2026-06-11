@@ -98,7 +98,7 @@ export function DayCard({ dayLabel, dayNumber, monthLabel, esHoy, tareas, comple
         {/* Cabecera: día */}
         <div className="px-3 pt-3 pb-1.5">
           <p
-            className="text-[9px] font-black uppercase tracking-[0.15em] leading-none"
+            className="text-xs font-black uppercase tracking-[0.15em] leading-none"
             style={{ color: tw ? "rgba(255,255,255,0.65)" : "rgba(30,41,59,0.65)" }}
           >
             {esHoy ? "HOY" : dayLabel}
@@ -110,7 +110,7 @@ export function DayCard({ dayLabel, dayNumber, monthLabel, esHoy, tareas, comple
             {dayNumber}
           </p>
           <p
-            className="text-[9px] leading-none -mt-0.5"
+            className="text-xs leading-none -mt-0.5"
             style={{ color: tw ? "rgba(255,255,255,0.55)" : "rgba(30,41,59,0.5)" }}
           >
             {monthLabel}
@@ -123,7 +123,7 @@ export function DayCard({ dayLabel, dayNumber, monthLabel, esHoy, tareas, comple
             <span className="text-base leading-none" aria-hidden="true">{theme.emoji}</span>
             <div>
               <p
-                className="text-[9px] font-semibold leading-tight"
+                className="text-xs font-semibold leading-tight"
                 style={{ color: tw ? "rgba(255,255,255,0.85)" : "rgba(30,41,59,0.75)" }}
               >
                 {weather.maxTemp}°/{weather.minTemp}°
@@ -145,7 +145,7 @@ export function DayCard({ dayLabel, dayNumber, monthLabel, esHoy, tareas, comple
         >
           {tareas.length === 0 ? (
             <p
-              className="text-center text-[10px] py-4"
+              className="text-center text-xs py-4"
               style={{ color: "rgba(255,255,255,0.35)" }}
             >
               Sin tareas
@@ -163,19 +163,19 @@ export function DayCard({ dayLabel, dayNumber, monthLabel, esHoy, tareas, comple
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ESTADO_DOT[t.estado] ?? "bg-slate-500"}`} />
                     {t.hora_inicio && (
                       <span
-                        className="font-mono text-[9px]"
+                        className="font-mono text-xs"
                         style={{ color: "rgba(255,255,255,0.55)" }}
                       >
                         {t.hora_inicio}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] font-medium text-white leading-tight line-clamp-2">
+                  <p className="text-xs font-medium text-white leading-tight line-clamp-2">
                     {t.titulo}
                   </p>
                   {t.cuenta?.calle && (
                     <p
-                      className="text-[9px] mt-0.5 truncate"
+                      className="text-xs mt-0.5 truncate"
                       style={{ color: "rgba(255,255,255,0.45)" }}
                     >
                       {t.cuenta.calle}
@@ -188,7 +188,7 @@ export function DayCard({ dayLabel, dayNumber, monthLabel, esHoy, tareas, comple
 
           {tareas.length > 0 && (
             <div
-              className="px-2 py-1 text-[9px] flex justify-between border-t border-white/10 flex-shrink-0"
+              className="px-2 py-1 text-xs flex justify-between border-t border-white/10 flex-shrink-0"
               style={{ color: "rgba(255,255,255,0.45)" }}
             >
               <span>{tareas.length} tarea{tareas.length !== 1 ? "s" : ""}</span>

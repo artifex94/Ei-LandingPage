@@ -1,10 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { MercadoPagoConfig, Preference } from "mercadopago";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/actions/auth";
 import { prisma } from "@/lib/prisma/client";
+import { UUID_RE } from "@/lib/constants/validation";
 
 // ─── Mercado Pago ─────────────────────────────────────────────────────────────
 
@@ -13,18 +13,17 @@ export async function crearPreferenciaMercadoPago(
   mes: number,
   anio: number
 ): Promise<{ checkoutUrl: string } | { error: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!UUID_RE.test(cuentaId)) return { error: "Cuenta inválida." };
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) return { error: "Mes inválido." };
+  if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) return { error: "Año inválido." };
+  const { userId: user_id } = await requireSesion();
 
   const pago = await prisma.pago.findUnique({
     where: { cuenta_id_mes_anio: { cuenta_id: cuentaId, mes, anio } },
     include: { cuenta: true },
   });
 
-  if (!pago || pago.cuenta.perfil_id !== user.id) {
+  if (!pago || pago.cuenta.perfil_id !== user_id) {
     return { error: "Pago no encontrado." };
   }
 
@@ -77,18 +76,17 @@ export async function crearIntencionTalo(
   mes: number,
   anio: number
 ): Promise<{ paymentUrl: string } | { error: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!UUID_RE.test(cuentaId)) return { error: "Cuenta inválida." };
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) return { error: "Mes inválido." };
+  if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) return { error: "Año inválido." };
+  const { userId: user_id } = await requireSesion();
 
   const pago = await prisma.pago.findUnique({
     where: { cuenta_id_mes_anio: { cuenta_id: cuentaId, mes, anio } },
     include: { cuenta: true },
   });
 
-  if (!pago || pago.cuenta.perfil_id !== user.id) {
+  if (!pago || pago.cuenta.perfil_id !== user_id) {
     return { error: "Pago no encontrado." };
   }
 
@@ -159,18 +157,17 @@ export async function avisarTransferencia(
   mes: number,
   anio: number
 ): Promise<{ ok: boolean } | { error: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!UUID_RE.test(cuentaId)) return { error: "Cuenta inválida." };
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) return { error: "Mes inválido." };
+  if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) return { error: "Año inválido." };
+  const { userId: user_id } = await requireSesion();
 
   const pago = await prisma.pago.findUnique({
     where: { cuenta_id_mes_anio: { cuenta_id: cuentaId, mes, anio } },
     include: { cuenta: true },
   });
 
-  if (!pago || pago.cuenta.perfil_id !== user.id) {
+  if (!pago || pago.cuenta.perfil_id !== user_id) {
     return { error: "Pago no encontrado." };
   }
 
@@ -204,12 +201,9 @@ export async function crearPreferenciaTodoMP(
   if (pagoIds.length > MAX_PAGOS_BULK) {
     return { error: `No podés seleccionar más de ${MAX_PAGOS_BULK} pagos a la vez.` };
   }
+  if (pagoIds.some((id) => !UUID_RE.test(id))) return { error: "IDs de pago inválidos." };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId: user_id } = await requireSesion();
 
   const pagos = await prisma.pago.findMany({
     where: { id: { in: pagoIds } },
@@ -217,7 +211,7 @@ export async function crearPreferenciaTodoMP(
   });
 
   // Verificar propiedad de todos los pagos
-  if (pagos.some((p) => p.cuenta.perfil_id !== user.id)) {
+  if (pagos.some((p) => p.cuenta.perfil_id !== user_id)) {
     return { error: "No tenés permiso sobre alguno de estos pagos." };
   }
 
@@ -271,19 +265,16 @@ export async function avisarTransferenciaTodo(
   if (pagoIds.length > MAX_PAGOS_BULK) {
     return { error: `No podés seleccionar más de ${MAX_PAGOS_BULK} pagos a la vez.` };
   }
+  if (pagoIds.some((id) => !UUID_RE.test(id))) return { error: "IDs de pago inválidos." };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId: user_id } = await requireSesion();
 
   const pagos = await prisma.pago.findMany({
     where: { id: { in: pagoIds } },
     include: { cuenta: true },
   });
 
-  if (pagos.some((p) => p.cuenta.perfil_id !== user.id)) {
+  if (pagos.some((p) => p.cuenta.perfil_id !== user_id)) {
     return { error: "No tenés permiso sobre alguno de estos pagos." };
   }
 

@@ -1,49 +1,49 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { CalendarioPagos, type PagoPlano } from "@/components/portal/CalendarioPagos";
 import { BannerDeudaTotal } from "@/components/portal/BannerDeudaTotal";
-import { getEventosHeatmap } from "@/lib/actions/eventos";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
+import Select from "@/components/ui/Select";
+
+export const metadata: Metadata = { title: "Mis pagos" };
 
 export default async function PagosPage({
   searchParams,
 }: {
   searchParams: Promise<{ anio?: string }>;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId: user_id } = await requireSesion();
 
   const sp = await searchParams;
   const anioActual = new Date().getFullYear();
   const anio = Number(sp.anio) || anioActual;
 
-  // Años con pagos registrados para este usuario
-  const aniosRaw = await prisma.pago.findMany({
-    where: { cuenta: { perfil_id: user.id } },
-    select: { anio: true },
-    distinct: ["anio"],
-    orderBy: { anio: "desc" },
-  });
+  const [aniosRaw, cuentas] = await Promise.all([
+    // Años con pagos registrados para este usuario
+    prisma.pago.findMany({
+      where: { cuenta: { perfil_id: user_id } },
+      select: { anio: true },
+      distinct: ["anio"],
+      orderBy: { anio: "desc" },
+    }),
+    // Cuentas activas con pagos del año seleccionado
+    prisma.cuenta.findMany({
+      where: { perfil_id: user_id, estado: { not: "BAJA_DEFINITIVA" } },
+      include: {
+        pagos: {
+          where: { anio },
+          orderBy: { mes: "asc" },
+        },
+      },
+      orderBy: { descripcion: "asc" },
+    }),
+  ]);
 
   const aniosDisponibles = [...new Set([
     anioActual,
     ...aniosRaw.map((r) => r.anio),
   ])].sort((a, b) => b - a);
-
-  // Cuentas activas con pagos del año seleccionado
-  const cuentas = await prisma.cuenta.findMany({
-    where: { perfil_id: user.id, estado: { not: "BAJA_DEFINITIVA" } },
-    include: {
-      pagos: {
-        where: { anio },
-        orderBy: { mes: "asc" },
-      },
-    },
-    orderBy: { descripcion: "asc" },
-  });
 
   // Calcular deudas pendientes/vencidas del año seleccionado
   const deudas: { pago: PagoPlano; descripcionCuenta: string }[] = [];
@@ -58,45 +58,40 @@ export default async function PagosPage({
     }
   }
 
-  // Heatmap de eventos de alarma — en paralelo para todas las cuentas
-  const eventosHeatmapPorCuenta = await Promise.all(
-    cuentas.map((c) =>
-      getEventosHeatmap(c.id, anio).catch(() => [])
-    )
-  );
-
   return (
     <section aria-labelledby="pagos-heading">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 id="pagos-heading" className="text-2xl font-bold text-white">
-          Historial de pagos
-        </h1>
-
-        {/* Selector de año */}
-        {aniosDisponibles.length > 1 && (
-          <form method="GET">
-            <label htmlFor="anio-select" className="sr-only">Seleccionar año</label>
-            <div className="flex items-center gap-2">
-              <select
-                id="anio-select"
-                name="anio"
-                defaultValue={anio}
-                className="bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 text-base min-h-[52px] focus:outline-2 focus:outline-orange-500"
-                aria-label="Año a consultar"
-              >
-                {aniosDisponibles.map((a) => (
-                  <option key={a} value={a}>{a}</option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white px-5 py-3 rounded-xl text-base min-h-[52px] transition-colors font-semibold"
-              >
-                Ver
-              </button>
-            </div>
-          </form>
-        )}
+      <div className="mb-6">
+        <PortalPageHeader
+          title="Historial de pagos"
+          titleId="pagos-heading"
+          action={
+            aniosDisponibles.length > 1 ? (
+              <form method="GET">
+                <label htmlFor="anio-select" className="sr-only">Seleccionar año</label>
+                <div className="flex items-center gap-2">
+                  <div className="w-28">
+                    <Select
+                      id="anio-select"
+                      name="anio"
+                      defaultValue={anio}
+                      aria-label="Año a consultar"
+                    >
+                      {aniosDisponibles.map((a) => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </Select>
+                  </div>
+                  <button
+                    type="submit"
+                    className="bg-industrial-700 hover:bg-industrial-600 border border-industrial-600 border-b-[3px] border-b-industrial-950 active:border-b active:translate-y-[2px] text-slate-300 hover:text-slate-200 px-5 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest min-h-[48px] transition-all duration-150 ease-mech-press"
+                  >
+                    Ver
+                  </button>
+                </div>
+              </form>
+            ) : undefined
+          }
+        />
       </div>
 
       {/* Banner de deuda total — solo para el año actual */}
@@ -110,21 +105,20 @@ export default async function PagosPage({
         <p className="text-slate-400 text-lg">No tenés servicios activos.</p>
       ) : (
         <div className="space-y-10">
-          {cuentas.map((cuenta, i) => (
+          {cuentas.map((cuenta) => (
             <div key={cuenta.id}>
               <div className="flex items-baseline gap-3 mb-4">
                 <h2 className="text-lg font-semibold text-white">
                   {cuenta.descripcion}
                 </h2>
                 <span className="text-xs text-slate-500 font-mono hidden sm:inline">
-                  Actividad del sistema de alarma · {anio}
+                  Estado de pagos · {anio}
                 </span>
               </div>
               <CalendarioPagos
                 pagos={cuenta.pagos.map((p) => ({ ...p, importe: Number(p.importe) }))}
                 anio={anio}
                 cuentaId={cuenta.id}
-                eventosHeatmap={eventosHeatmapPorCuenta[i]}
               />
             </div>
           ))}

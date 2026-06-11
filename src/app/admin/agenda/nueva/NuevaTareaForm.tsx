@@ -37,7 +37,7 @@ export function NuevaTareaForm({
             name="titulo"
             required
             placeholder="Mantenimiento preventivo alarma"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:outline-2 focus:outline-orange-500"
           />
         </div>
 
@@ -47,7 +47,7 @@ export function NuevaTareaForm({
             name="descripcion"
             rows={2}
             placeholder="Detalles del trabajo a realizar…"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:outline-2 focus:outline-orange-500 resize-none"
           />
         </div>
 
@@ -58,7 +58,7 @@ export function NuevaTareaForm({
           <select
             name="tecnico_id"
             required
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
           >
             <option value="">Seleccionar técnico…</option>
             {tecnicos.map((t) => (
@@ -77,7 +77,7 @@ export function NuevaTareaForm({
               type="date"
               required
               defaultValue={hoy}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
             />
           </div>
           <div>
@@ -85,7 +85,7 @@ export function NuevaTareaForm({
             <input
               name="hora_inicio"
               type="time"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
             />
           </div>
           <div>
@@ -93,7 +93,7 @@ export function NuevaTareaForm({
             <input
               name="hora_fin"
               type="time"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
             />
           </div>
         </div>
@@ -104,7 +104,7 @@ export function NuevaTareaForm({
           </label>
           <select
             name="cuenta_id"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
           >
             <option value="">Sin cuenta asociada</option>
             {cuentas.map((c) => (
@@ -120,7 +120,7 @@ export function NuevaTareaForm({
           <select
             name="prioridad"
             defaultValue="MEDIA"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:outline-2 focus:outline-orange-500"
           >
             <option value="BAJA">Baja</option>
             <option value="MEDIA">Media</option>
@@ -129,7 +129,7 @@ export function NuevaTareaForm({
         </div>
 
         {state.errores && state.errores.length > 0 && (
-          <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3">
+          <div role="alert" className="rounded-lg bg-red-500/10 border border-red-500/30 p-3">
             {state.errores.map((e) => (
               <p key={e} className="text-sm text-red-400">{e}</p>
             ))}
@@ -139,7 +139,7 @@ export function NuevaTareaForm({
         <button
           type="submit"
           disabled={pending}
-          className="w-full font-semibold text-sm bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
+          className="w-full font-semibold text-sm bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 px-4 py-2.5 min-h-[44px] rounded-lg transition-colors"
         >
           {pending ? "Guardando…" : "Crear tarea"}
         </button>

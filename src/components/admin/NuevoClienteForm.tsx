@@ -83,7 +83,7 @@ export function NuevoClienteForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
+        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-slate-900 py-2.5 rounded-lg text-sm font-semibold transition-colors"
       >
         {pending ? "Creando cliente…" : "Crear cliente"}
       </button>

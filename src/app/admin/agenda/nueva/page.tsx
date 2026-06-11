@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma/client";
 import { NuevaTareaForm } from "./NuevaTareaForm";
 
-export const metadata = { title: "Nueva tarea — Admin EI" };
+export const metadata = { title: "Nueva tarea" };
 
 export default async function NuevaTareaPage() {
   const [tecnicos, cuentas] = await Promise.all([

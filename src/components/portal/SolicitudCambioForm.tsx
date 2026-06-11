@@ -43,7 +43,7 @@ export function SolicitudCambioForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-xs text-orange-400 hover:text-orange-300 hover:underline font-medium transition-colors min-h-[32px]"
+        className="text-xs text-orange-400 hover:text-orange-300 hover:underline font-medium transition-colors min-h-[44px]"
       >
         Solicitar cambio
       </button>
@@ -86,14 +86,14 @@ export function SolicitudCambioForm({
         <button
           type="submit"
           disabled={pending}
-          className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-2 min-h-[40px] text-sm transition-colors"
+          className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 font-semibold rounded-lg px-4 py-2 min-h-[44px] text-sm transition-colors"
         >
           {pending ? "Enviando..." : "Enviar solicitud"}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm min-h-[40px] transition-colors"
+          className="text-slate-400 hover:text-white px-4 py-2 rounded-lg text-sm min-h-[44px] transition-colors"
         >
           Cancelar
         </button>

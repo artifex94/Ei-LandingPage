@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { OTCampoClient } from "./OTCampoClient";
+import { UUID_RE } from "@/lib/constants/validation";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  if (!UUID_RE.test(id)) return { title: "Orden de trabajo" };
+  const ot = await prisma.ordenTrabajo.findUnique({ where: { id }, select: { numero: true } });
+  return { title: ot ? `OT #${String(ot.numero).padStart(4, "0")}` : "Orden de trabajo" };
+}
 
 export default async function TecnicoOTPage({
   params,
@@ -9,35 +18,33 @@ export default async function TecnicoOTPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
+  const { userId, perfil } = await requireSesion();
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const ot = await prisma.ordenTrabajo.findUnique({
-    where: { id },
-    include: {
-      cuenta: {
-        select: {
-          descripcion: true,
-          calle: true,
-          localidad: true,
-          provincia: true,
-          perfil: { select: { nombre: true, telefono: true } },
+  const [ot, empleado] = await Promise.all([
+    prisma.ordenTrabajo.findUnique({
+      where: { id },
+      include: {
+        cuenta: {
+          select: {
+            descripcion: true,
+            calle: true,
+            localidad: true,
+            provincia: true,
+            perfil: { select: { nombre: true, telefono: true } },
+          },
         },
+        perfil: { select: { nombre: true, telefono: true } },
+        tecnico: { select: { perfil_id: true } },
       },
-      perfil: { select: { nombre: true, telefono: true } },
-      tecnico: { select: { perfil_id: true } },
-    },
-  });
+    }),
+    // Independiente de ot — se resuelven en paralelo
+    prisma.empleado.findUnique({ where: { perfil_id: userId } }),
+  ]);
 
   if (!ot) notFound();
-
-  // Solo el técnico asignado o un admin puede acceder
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id }, select: { rol: true } });
-  const empleado = await prisma.empleado.findUnique({ where: { perfil_id: user.id } });
-  const esTecnicoAsignado = empleado && ot.tecnico?.perfil_id === user.id;
-  if (!esTecnicoAsignado && perfil?.rol !== "ADMIN") redirect("/tecnico");
+  const esTecnicoAsignado = empleado && ot.tecnico?.perfil_id === userId;
+  if (!esTecnicoAsignado && perfil.rol !== "ADMIN") redirect("/tecnico");
 
   const fotos: string[] = ot.fotos_urls ? JSON.parse(ot.fotos_urls) : [];
 

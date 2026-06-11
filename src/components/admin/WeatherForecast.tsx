@@ -19,7 +19,7 @@ export async function WeatherForecast() {
         <p className="text-sm font-semibold text-white">
           Pronóstico 7 días — {siteConfig.contact.location}
         </p>
-        <div className="flex items-center gap-3 text-[10px] text-slate-500">
+        <div className="flex items-center gap-3 text-xs text-slate-400">
           <span className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
             Seguro

@@ -33,7 +33,7 @@ export function ClimaWidget({ dias, hoyIso }: ClimaWidgetProps) {
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-3">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+      <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
         Clima · Victoria, ER
       </p>
       <div className="grid grid-cols-7 gap-1">
@@ -47,12 +47,12 @@ export function ClimaWidget({ dias, hoyIso }: ClimaWidgetProps) {
             <div
               key={dia.fecha}
               className={`flex flex-col items-center gap-0.5 rounded-lg px-1 py-2 ${
-                esHoy ? "bg-indigo-500/20 ring-1 ring-indigo-500/50" : ""
+                esHoy ? "bg-orange-500/15 ring-1 ring-orange-500/40" : ""
               }`}
             >
               <span
-                className={`text-[10px] font-semibold uppercase ${
-                  esHoy ? "text-indigo-300" : "text-slate-500"
+                className={`text-xs font-semibold uppercase ${
+                  esHoy ? "text-orange-300" : "text-slate-400"
                 }`}
               >
                 {diaNombre}
@@ -60,10 +60,10 @@ export function ClimaWidget({ dias, hoyIso }: ClimaWidgetProps) {
               <span className="text-xl leading-none" title={label}>
                 {emoji}
               </span>
-              <span className="text-[10px] font-bold text-white">
+              <span className="text-xs font-bold text-white">
                 {Math.round(dia.temp_max)}°
               </span>
-              <span className="text-[10px] text-slate-500">
+              <span className="text-xs text-slate-400">
                 {Math.round(dia.temp_min)}°
               </span>
             </div>

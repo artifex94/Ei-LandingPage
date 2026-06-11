@@ -4,16 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/session";
 import type { EstadoReserva } from "@/generated/prisma/client";
-
-async function getAdminActual() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  return perfil?.rol === "ADMIN" ? perfil : null;
-}
+import { UUID_RE } from "@/lib/constants/validation";
 
 export async function crearReservaVehiculo(data: {
   vehiculo_id: string;
@@ -24,8 +17,7 @@ export async function crearReservaVehiculo(data: {
   notas?: string;
   ot_id?: string;
 }) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   // Verificar que no haya solapamiento
   const conflicto = await prisma.reservaVehiculo.findFirst({
@@ -57,7 +49,7 @@ export async function crearReservaVehiculo(data: {
 }
 
 const editarVehiculoSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().uuid("ID de vehículo inválido."),
   marca: z.string().min(1, "La marca es obligatoria"),
   modelo: z.string().min(1, "El modelo es obligatorio"),
   anio: z.coerce.number().min(1990).max(2100),
@@ -77,8 +69,7 @@ export async function editarVehiculo(
   prevState: EditarVehiculoResult,
   formData: FormData
 ): Promise<EditarVehiculoResult> {
-  const admin = await getAdminActual();
-  if (!admin) return { errores: ["Sin permisos de administrador."] };
+  const admin = await requireAdmin();
 
   const parsed = editarVehiculoSchema.safeParse({
     id: formData.get("id"),
@@ -112,8 +103,12 @@ export async function editarVehiculo(
 }
 
 export async function actualizarKmVehiculo(vehiculo_id: string, km_actual: number) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  if (!UUID_RE.test(vehiculo_id)) throw new Error("ID de vehículo inválido.");
+  if (!Number.isInteger(km_actual) || km_actual < 0) {
+    throw new Error("El kilometraje debe ser un número entero positivo.");
+  }
+
+  const admin = await requireAdmin();
 
   const vehiculo = await prisma.vehiculo.update({
     where: { id: vehiculo_id },
@@ -138,8 +133,8 @@ export async function cambiarEstadoReserva(
   estado: EstadoReserva,
   km_final?: number
 ) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  if (!UUID_RE.test(reserva_id)) throw new Error("ID de reserva inválido.");
+  const admin = await requireAdmin();
 
   const reserva = await prisma.reservaVehiculo.update({
     where: { id: reserva_id },

@@ -1,5 +1,28 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { prisma } from "@/lib/prisma/client";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Pagination } from "@/components/ui/Pagination";
+
+const TUTORIAL_CLIENTES = [
+  {
+    titulo: "Buscar un cliente",
+    descripcion: "Usá el campo de búsqueda para encontrar por nombre, DNI o teléfono. Los resultados aparecen al instante.",
+  },
+  {
+    titulo: "Ver detalle y cuentas",
+    descripcion: 'Hacé clic en "Ver" para abrir el perfil del cliente. Desde ahí podés ver sus cuentas, pagos y solicitudes.',
+  },
+  {
+    titulo: "Dar de alta un cliente nuevo",
+    descripcion: 'El botón "+ Nuevo" abre el formulario de alta. Completá datos personales y vinculá o creá una cuenta.',
+  },
+];
+
+export const metadata: Metadata = { title: "Clientes" };
 
 const POR_PAGINA = 30;
 
@@ -31,7 +54,7 @@ export default async function ClientesPage({
     prisma.perfil.count({ where }),
     prisma.perfil.findMany({
       where,
-      include: { cuentas: { select: { id: true, estado: true } } },
+      include: { cuentas: { select: { id: true } } },
       orderBy: { nombre: "asc" },
       skip: (pagina - 1) * POR_PAGINA,
       take: POR_PAGINA,
@@ -40,23 +63,98 @@ export default async function ClientesPage({
 
   const totalPaginas = Math.ceil(total / POR_PAGINA);
 
+  type ClienteRow = (typeof perfiles)[number];
+
+  const columns: Column<ClienteRow>[] = [
+    {
+      id: "nombre",
+      header: "Nombre",
+      cell: (p) => <span className="font-medium text-white">{p.nombre}</span>,
+    },
+    {
+      id: "dni",
+      header: "DNI",
+      cell: (p) => <span className="text-slate-300 font-mono">{p.dni ?? "—"}</span>,
+    },
+    {
+      id: "telefono",
+      header: "Teléfono",
+      cell: (p) => <span className="text-slate-300">{p.telefono ?? "—"}</span>,
+    },
+    {
+      id: "cuentas",
+      header: "Cuentas",
+      cell: (p) => <span className="text-slate-300">{p.cuentas.length}</span>,
+    },
+    {
+      id: "acciones",
+      header: "Acciones",
+      srOnlyHeader: true,
+      cell: (p) => (
+        <Link
+          href={`/admin/clientes/${p.id}`}
+          className="text-orange-400 hover:text-orange-300 hover:underline min-h-[44px] flex items-center transition-colors"
+        >
+          Ver
+        </Link>
+      ),
+    },
+  ];
+
+  const renderCard = (p: ClienteRow) => (
+    <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold text-white truncate">{p.nombre}</p>
+          <p className="text-xs text-slate-400 mt-0.5 font-mono">{p.dni ?? "—"}</p>
+        </div>
+        <div className="shrink-0 flex items-center gap-2">
+          {p.telefono && (
+            <a
+              href={`https://wa.me/549${p.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${p.nombre.split(" ")[0]}, te contactamos de Escobar Instalaciones.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`WhatsApp a ${p.nombre}`}
+              className="bg-green-700 hover:bg-green-600 text-white text-xs font-semibold px-3 py-2.5 rounded-lg transition-colors min-h-[44px] flex items-center"
+            >
+              WA
+            </a>
+          )}
+          <span className="text-xs bg-slate-700 text-slate-300 px-2 py-2 rounded-lg font-medium">
+            {p.cuentas.length}c
+          </span>
+          <Link
+            href={`/admin/clientes/${p.id}`}
+            aria-label={`Ver perfil de ${p.nombre}`}
+            className="text-orange-400 hover:text-orange-300 text-xs font-semibold px-3 py-2.5 rounded-lg border border-orange-500/30 transition-colors min-h-[44px] flex items-center"
+          >
+            Ver →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+
+  const hrefPagina = (n: number) =>
+    `/admin/clientes?pagina=${n}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+
   return (
     <section aria-labelledby="clientes-heading">
       <div className="flex items-center justify-between mb-6 gap-4">
         <h1 id="clientes-heading" className="text-2xl font-bold text-white">
-          Clientes ({perfiles.length})
+          Clientes ({total})
         </h1>
         <div className="flex gap-2 shrink-0">
           <a
             href="/api/admin/export?tipo=clientes"
+            aria-label="Exportar clientes a Excel"
             className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
-            title="Exportar a Excel"
           >
             ↓ Excel
           </a>
           <Link
             href="/admin/clientes/nuevo"
-            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
+            className="bg-orange-500 hover:bg-orange-600 text-slate-900 font-semibold px-4 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
           >
             + Nuevo
           </Link>
@@ -75,98 +173,30 @@ export default async function ClientesPage({
         />
       </form>
 
-      {perfiles.length === 0 ? (
-        <p className="text-slate-400">No se encontraron clientes.</p>
-      ) : (
-        <>
-          {/* ── Tabla — desktop ──────────────────────────────────────────────── */}
-          <div className="hidden md:block bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-900/50 border-b border-slate-700">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">Nombre</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">DNI</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">Teléfono</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">Cuentas</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
-                {perfiles.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-700/40 transition-colors">
-                    <td className="px-4 py-3 font-medium text-white">{p.nombre}</td>
-                    <td className="px-4 py-3 text-slate-300 font-mono">{p.dni ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-300">{p.telefono ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-300">{p.cuentas.length}</td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/clientes/${p.id}`}
-                        className="text-orange-400 hover:text-orange-300 hover:underline min-h-[44px] flex items-center transition-colors"
-                      >
-                        Ver
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <DataTable
+        columns={columns}
+        rows={perfiles}
+        keyExtractor={(p) => p.id}
+        caption="Listado de clientes"
+        renderCard={renderCard}
+        emptyState={
+          <EmptyState
+            icon={Users}
+            title="No se encontraron clientes."
+            action={q ? undefined : { label: "Registrar primer cliente", href: "/admin/clientes/nuevo" }}
+          />
+        }
+      />
 
-          {/* ── Cards — mobile ───────────────────────────────────────────────── */}
-          <div className="md:hidden space-y-3">
-            {perfiles.map((p) => (
-              <Link
-                key={p.id}
-                href={`/admin/clientes/${p.id}`}
-                className="block bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 hover:border-orange-500/50 active:bg-slate-700 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-white truncate">{p.nombre}</p>
-                    <p className="text-sm text-slate-400 mt-0.5">
-                      DNI: {p.dni ?? "—"}
-                    </p>
-                    {p.telefono && (
-                      <p className="text-sm text-slate-400">{p.telefono}</p>
-                    )}
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <span className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded-full font-medium">
-                      {p.cuentas.length} cuenta{p.cuentas.length !== 1 ? "s" : ""}
-                    </span>
-                    <p className="text-orange-400 text-xs mt-2">Ver →</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
+      <TutorialContextual
+        section="clientes"
+        titulo="Guía rápida — Clientes"
+        steps={TUTORIAL_CLIENTES}
+      />
 
-      {/* Paginación */}
       {totalPaginas > 1 && (
-        <div className="flex items-center justify-between gap-4 pt-4 mt-4 border-t border-slate-700">
-          <span className="text-sm text-slate-400">
-            Página {pagina} de {totalPaginas} · {total} clientes
-          </span>
-          <div className="flex gap-2">
-            {pagina > 1 && (
-              <a
-                href={`/admin/clientes?pagina=${pagina - 1}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                ← Anterior
-              </a>
-            )}
-            {pagina < totalPaginas && (
-              <a
-                href={`/admin/clientes?pagina=${pagina + 1}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                Siguiente →
-              </a>
-            )}
-          </div>
+        <div className="pt-4 mt-4 border-t border-slate-700">
+          <Pagination page={pagina} pageCount={totalPaginas} makeHref={hrefPagina} />
         </div>
       )}
     </section>

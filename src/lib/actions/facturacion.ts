@@ -7,10 +7,14 @@ import type { CondicionIVA } from "@/generated/prisma/client";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { prepararBorradoresFactura } from "@/lib/facturacion/preparar-borradores";
 import { requireAdmin } from "@/lib/auth/session";
+import { UUID_RE } from "@/lib/constants/validation";
 
 // ── Generar borradores manualmente (sin esperar el cron) ──────────────────────
 
 export async function generarBorradoresMes(anio: number, mes: number) {
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) throw new Error("Mes inválido.");
+  if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) throw new Error("Año inválido.");
+
   const admin = await requireAdmin();
 
   const desde = new Date(anio, mes - 1, 1);
@@ -21,12 +25,24 @@ export async function generarBorradoresMes(anio: number, mes: number) {
   return resultado;
 }
 
+const CONDICION_IVA_VALIDAS = new Set([
+  "RESPONSABLE_INSCRIPTO", "MONOTRIBUTISTA", "EXENTO", "CONSUMIDOR_FINAL", "NO_RESPONSABLE",
+]);
+
 // ── Actualizar datos fiscales del titular ─────────────────────────────────────
 
 export async function actualizarDatosFiscales(
   perfil_id: string,
   datos: { cuit?: string; condicion_iva?: string; razon_social?: string }
 ) {
+  if (!UUID_RE.test(perfil_id)) throw new Error("ID de perfil inválido.");
+  if (datos.condicion_iva && !CONDICION_IVA_VALIDAS.has(datos.condicion_iva)) {
+    throw new Error("Condición de IVA inválida.");
+  }
+  if (datos.razon_social && datos.razon_social.length > 200) {
+    throw new Error("La razón social no puede superar los 200 caracteres.");
+  }
+
   const admin = await requireAdmin();
 
   const perfil = await prisma.perfil.update({
@@ -58,6 +74,10 @@ export async function marcarEmitidaManual(
   numero_oficial: string,
   pdf_file: FormData
 ) {
+  if (!UUID_RE.test(factura_id)) throw new Error("ID de factura inválido.");
+  if (!numero_oficial.trim()) throw new Error("El número oficial es obligatorio.");
+  if (numero_oficial.length > 50) throw new Error("Número oficial demasiado largo.");
+
   const admin = await requireAdmin();
 
   const file = pdf_file.get("pdf") as File | null;
@@ -74,7 +94,10 @@ export async function marcarEmitidaManual(
     .from("facturas")
     .upload(filename, file, { contentType: "application/pdf", upsert: true });
 
-  if (uploadError) throw new Error(`Error al subir PDF: ${uploadError.message}`);
+  if (uploadError) {
+    console.error("[facturacion/subirPDF] Supabase storage error:", uploadError.message);
+    throw new Error("Error al subir el PDF. Intentá de nuevo.");
+  }
 
   const { data: urlData } = supabaseAdmin.storage
     .from("facturas")
@@ -125,11 +148,16 @@ export async function marcarEmitidaManual(
 // ── Anular factura ────────────────────────────────────────────────────────────
 
 export async function anularFactura(factura_id: string, motivo: string) {
+  if (!UUID_RE.test(factura_id)) throw new Error("ID de factura inválido.");
+  const motivoTrimmed = motivo.trim();
+  if (!motivoTrimmed) throw new Error("El motivo de anulación es obligatorio.");
+  if (motivoTrimmed.length > 500) throw new Error("El motivo no puede superar los 500 caracteres.");
+
   const admin = await requireAdmin();
 
   const factura = await prisma.factura.update({
     where: { id: factura_id },
-    data:  { estado: "ANULADA", arca_observaciones: motivo },
+    data:  { estado: "ANULADA", arca_observaciones: motivoTrimmed },
   });
 
   await registrarAudit({
@@ -138,9 +166,9 @@ export async function anularFactura(factura_id: string, motivo: string) {
     accion: "FACTURA_ANULAR",
     entidad: "factura",
     entidad_id: factura_id,
-    detalle: { motivo },
+    detalle: { motivo: motivoTrimmed },
     state_transition: { prior_state: factura.estado, new_state: "ANULADA" },
-    justification: motivo,
+    justification: motivoTrimmed,
   });
 
   revalidatePath("/admin/facturacion");
@@ -154,6 +182,14 @@ export async function editarItemFactura(
   precio_unit: number,
   descripcion?: string
 ) {
+  if (!UUID_RE.test(item_id)) throw new Error("ID de ítem inválido.");
+  if (typeof precio_unit !== "number" || precio_unit < 0) {
+    throw new Error("El precio debe ser un número positivo.");
+  }
+  if (descripcion && descripcion.length > 200) {
+    throw new Error("La descripción no puede superar los 200 caracteres.");
+  }
+
   await requireAdmin();
 
   const item = await prisma.facturaItem.update({
@@ -181,6 +217,7 @@ export async function editarItemFactura(
 // ── Activar / desactivar facturación para un titular ─────────────────────────
 
 export async function toggleRequiereFactura(perfil_id: string, valor: boolean) {
+  if (!UUID_RE.test(perfil_id)) throw new Error("ID de perfil inválido.");
   const admin = await requireAdmin();
 
   await prisma.perfil.update({

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
@@ -5,27 +7,11 @@ import { ActualizarCuentaForm } from "@/components/admin/ActualizarCuentaForm";
 import { GestionSensores } from "@/components/admin/GestionSensores";
 import { NuevaSolicitudForm } from "@/components/admin/NuevaSolicitudForm";
 import { OverrideSuspensionForm } from "@/components/admin/OverrideSuspensionForm";
+import { UUID_RE } from "@/lib/constants/validation";
+import { DataTable, type Column } from "@/components/ui/DataTable";
 
-const MESES = [
-  "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-];
-
-const ESTADO_PAGO_COLORES: Record<string, string> = {
-  PAGADO: "bg-green-900/40 text-green-400",
-  VENCIDO: "bg-orange-900/40 text-orange-400",
-  PROCESANDO: "bg-blue-900/40 text-blue-400",
-  PENDIENTE: "bg-amber-900/40 text-amber-400",
-};
-
-export default async function CuentaAdminPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-
-  const cuenta = await prisma.cuenta.findUnique({
+const getCuenta = cache(async (id: string) => {
+  return prisma.cuenta.findUnique({
     where: { id },
     include: {
       perfil: { select: { id: true, nombre: true, telefono: true } },
@@ -40,7 +26,76 @@ export default async function CuentaAdminPage({
       },
     },
   });
+});
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  if (!UUID_RE.test(id)) return { title: "Cuenta" };
+  const cuenta = await getCuenta(id);
+  return { title: cuenta?.descripcion ?? "Cuenta" };
+}
+
+const MESES = [
+  "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+];
+
+function fechaHora(d: Date): string {
+  return d.toLocaleString("es-AR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+const ESTADO_PAGO_COLORES: Record<string, string> = {
+  PAGADO: "bg-green-900/40 text-green-400",
+  VENCIDO: "bg-orange-900/40 text-orange-400",
+  PROCESANDO: "bg-blue-900/40 text-blue-400",
+  PENDIENTE: "bg-amber-900/40 text-amber-400",
+};
+
+type PagoCuentaRow = NonNullable<Awaited<ReturnType<typeof getCuenta>>>["pagos"][number];
+
+const pagosColumns: Column<PagoCuentaRow>[] = [
+  {
+    id: "periodo",
+    header: "Período",
+    cell: (p) => <span className="text-slate-300">{MESES[p.mes]} {p.anio}</span>,
+  },
+  {
+    id: "estado",
+    header: "Estado",
+    cell: (p) => (
+      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ESTADO_PAGO_COLORES[p.estado] ?? "bg-slate-700 text-slate-300"}`}>
+        {p.estado}
+      </span>
+    ),
+  },
+  {
+    id: "importe",
+    header: "Importe",
+    cell: (p) => <span className="text-white font-medium">${Number(p.importe).toLocaleString("es-AR")}</span>,
+  },
+  {
+    id: "metodo",
+    header: "Método",
+    cell: (p) => <span className="text-slate-400 text-xs">{p.metodo ?? "—"}</span>,
+  },
+  {
+    id: "registrado",
+    header: "Registrado por",
+    cell: (p) => <span className="text-slate-400 text-xs">{p.registrado_por ?? "—"}</span>,
+  },
+];
+
+export default async function CuentaAdminPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
+  const cuenta = await getCuenta(id);
   if (!cuenta) notFound();
 
   return (
@@ -72,7 +127,7 @@ export default async function CuentaAdminPage({
           </p>
           {cuenta.perfil.telefono && (
             <a
-              href={`https://wa.me/${cuenta.perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${cuenta.perfil.nombre.split(" ")[0]}, te contactamos por el servicio "${cuenta.descripcion}" de Escobar Instalaciones.`)}`}
+              href={`https://wa.me/549${cuenta.perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${cuenta.perfil.nombre.split(" ")[0]}, te contactamos por el servicio "${cuenta.descripcion}" de Escobar Instalaciones.`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 bg-green-700 hover:bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
@@ -90,6 +145,101 @@ export default async function CuentaAdminPage({
           </Link>
         </div>
       </div>
+
+      {/* Estado del panel según la central (proyección sg_*, la llena el cron) */}
+      <section aria-labelledby="panel-heading">
+        <h2 id="panel-heading" className="text-lg font-semibold text-white mb-4">
+          Panel — central de monitoreo
+        </h2>
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-5">
+          {!cuenta.sg_synced_at ? (
+            <p className="text-sm text-slate-500">
+              Sin datos de la central todavía — esperando la primera sincronización.
+            </p>
+          ) : (
+            <>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div>
+                  <dt className="text-xs text-slate-400 mb-1">Situación en la central</dt>
+                  <dd>
+                    <span
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        cuenta.sg_situacion === "Habilitado"
+                          ? "bg-emerald-900/40 text-emerald-400"
+                          : "bg-red-900/40 text-red-400"
+                      }`}
+                    >
+                      {cuenta.sg_situacion ?? "Sin dato"}
+                    </span>
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-xs text-slate-400 mb-1">Alimentación</dt>
+                  <dd>
+                    {cuenta.sg_en_fallo_ac ? (
+                      <p className="font-semibold text-red-300">
+                        ⚠ Sin 220v
+                        {cuenta.sg_fallo_ac_desde && (
+                          <span className="font-normal text-red-400/80">
+                            {" "}— detectado el {fechaHora(cuenta.sg_fallo_ac_desde)}
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-emerald-400">✓ 220v OK</p>
+                    )}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-xs text-slate-400 mb-1">Test periódico</dt>
+                  <dd>
+                    {cuenta.sg_en_fallo_tst ? (
+                      <p className="font-semibold text-amber-300">
+                        ⚠ Sin reportar
+                        {cuenta.sg_fallo_tst_desde && (
+                          <span className="font-normal text-amber-400/80">
+                            {" "}desde el {fechaHora(cuenta.sg_fallo_tst_desde)}
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-emerald-400">✓ Reportando</p>
+                    )}
+                    {cuenta.sg_ultimo_tst && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Último test: {fechaHora(cuenta.sg_ultimo_tst)}
+                      </p>
+                    )}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-xs text-slate-400 mb-1">Último evento</dt>
+                  <dd>
+                    {cuenta.sg_ultimo_evento ? (
+                      <>
+                        <p className="text-slate-200">{cuenta.sg_ultimo_evento}</p>
+                        {cuenta.sg_ultimo_evento_at && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            {fechaHora(cuenta.sg_ultimo_evento_at)}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-slate-500">Sin eventos registrados.</p>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-xs text-slate-600 mt-4 pt-3 border-t border-slate-700/60">
+                Sincronizado de la central: {fechaHora(cuenta.sg_synced_at)}
+              </p>
+            </>
+          )}
+        </div>
+      </section>
 
       {/* Editar cuenta */}
       <section aria-labelledby="editar-heading">
@@ -150,6 +300,10 @@ export default async function CuentaAdminPage({
           Solicitudes de mantenimiento{cuenta.solicitudes.length > 0 ? ` (${cuenta.solicitudes.length} abiertas)` : ""}
         </h2>
 
+        {cuenta.solicitudes.length === 0 && (
+          <p className="text-sm text-slate-500 mb-4">Sin solicitudes abiertas.</p>
+        )}
+
         {cuenta.solicitudes.length > 0 && (
           <ul className="space-y-3 mb-4">
             {cuenta.solicitudes.map((s) => (
@@ -175,53 +329,19 @@ export default async function CuentaAdminPage({
       </section>
 
       {/* Últimos 12 pagos */}
-      {cuenta.pagos.length > 0 && (
-        <section aria-labelledby="pagos-heading">
-          <h2 id="pagos-heading" className="text-lg font-semibold text-white mb-4">
-            Últimos pagos
-          </h2>
-          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-900/50 border-b border-slate-700">
-                <tr>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Período</th>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Estado</th>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Importe</th>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Método</th>
-                  <th className="text-left px-4 py-2 font-semibold text-slate-300">Registrado por</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
-                {cuenta.pagos.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-700/30 transition-colors">
-                    <td className="px-4 py-2 text-slate-300">
-                      {MESES[p.mes]} {p.anio}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          ESTADO_PAGO_COLORES[p.estado] ?? "bg-slate-700 text-slate-300"
-                        }`}
-                      >
-                        {p.estado}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-white font-medium">
-                      ${Number(p.importe).toLocaleString("es-AR")}
-                    </td>
-                    <td className="px-4 py-2 text-slate-400 text-xs">
-                      {p.metodo ?? "—"}
-                    </td>
-                    <td className="px-4 py-2 text-slate-400 text-xs">
-                      {p.registrado_por ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+      <section aria-labelledby="pagos-heading">
+        <h2 id="pagos-heading" className="text-lg font-semibold text-white mb-4">
+          Últimos pagos
+        </h2>
+
+        <DataTable
+          columns={pagosColumns}
+          rows={cuenta.pagos}
+          keyExtractor={(p) => p.id}
+          caption="Últimos pagos de la cuenta"
+          emptyState={<p className="text-sm text-slate-500">No hay pagos registrados para esta cuenta.</p>}
+        />
+      </section>
     </div>
   );
 }

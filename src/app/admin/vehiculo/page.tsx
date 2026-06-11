@@ -4,8 +4,24 @@ import { VehiculoCard } from "@/components/admin/vehiculo/VehiculoCard";
 import { ReservasVehiculo } from "@/components/admin/vehiculo/ReservasVehiculo";
 import { NuevaReservaDialog } from "@/components/admin/vehiculo/NuevaReservaDialog";
 import { EditarVehiculoDialog } from "@/components/admin/vehiculo/EditarVehiculoDialog";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
-export const metadata: Metadata = { title: "Vehículo — Admin" };
+const TUTORIAL_VEHICULO = [
+  {
+    titulo: "Registrar kilómetros",
+    descripcion: 'Actualizá los km del vehículo después de cada salida. Usá "Editar" en la card del vehículo para actualizar.',
+  },
+  {
+    titulo: "Crear una reserva",
+    descripcion: 'Con "+ Nueva reserva" asignás el vehículo a un empleado para un rango horario. Evita conflictos de uso.',
+  },
+  {
+    titulo: "Ver historial",
+    descripcion: "Las reservas pasadas quedan en el historial. Sirve para auditar quién usó el vehículo y cuándo.",
+  },
+];
+
+export const metadata: Metadata = { title: "Vehículo" };
 
 export default async function VehiculoPage() {
   const [vehiculos, empleados] = await Promise.all([
@@ -17,7 +33,7 @@ export default async function VehiculoPage() {
             estado: { in: ["RESERVADA", "EN_USO"] },
             hasta: { gte: new Date() },
           },
-          include: { empleado: { include: { perfil: true } } },
+          include: { empleado: { include: { perfil: { select: { nombre: true } } } } },
           orderBy: { desde: "asc" },
           take: 20,
         },
@@ -25,7 +41,7 @@ export default async function VehiculoPage() {
     }),
     prisma.empleado.findMany({
       where: { activo: true },
-      include: { perfil: true },
+      include: { perfil: { select: { nombre: true } } },
       orderBy: { created_at: "asc" },
     }),
   ]);
@@ -61,6 +77,12 @@ export default async function VehiculoPage() {
           </div>
         ))
       )}
+
+      <TutorialContextual
+        section="vehiculo"
+        titulo="Guía rápida — Vehículo"
+        steps={TUTORIAL_VEHICULO}
+      />
     </div>
   );
 }

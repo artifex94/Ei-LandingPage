@@ -77,7 +77,7 @@ export function TecnicoTabNav({ mobile = false }: Props) {
               }`}
             >
               <Icon className="w-5 h-5" strokeWidth={active ? 2.2 : 1.8} />
-              <span className={`text-[10px] leading-none ${active ? "font-semibold" : "font-medium"}`}>
+              <span className={`text-xs leading-none ${active ? "font-semibold" : "font-medium"}`}>
                 {"mobileLabel" in tab ? tab.mobileLabel : tab.label}
               </span>
             </Link>
@@ -87,10 +87,10 @@ export function TecnicoTabNav({ mobile = false }: Props) {
     );
   }
 
-  // Desktop: tab bar debajo del header
+  // Desktop: tab bar debajo del header (el bloque sticky lo aporta el layout)
   return (
-    <div className="hidden lg:block sticky top-[57px] z-30 bg-slate-800 border-b border-slate-700">
-      <div className="max-w-7xl mx-auto w-full px-8 flex gap-1">
+    <div className="hidden lg:block bg-industrial-800 border-b border-industrial-700">
+      <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 flex gap-1">
         {TABS.map((tab) => {
           const active = isActive(pathname, tab);
           const Icon = tab.icon;

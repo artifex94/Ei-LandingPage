@@ -5,12 +5,13 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
+import { UUID_RE } from "@/lib/constants/validation";
 
 const CATEGORIAS = ["ALARMA_MONITOREO", "DOMOTICA", "CAMARA_CCTV", "ANTENA_STARLINK", "OTRO"] as const;
 const ESTADOS_CUENTA = ["ACTIVA", "SUSPENDIDA_PAGO", "EN_MANTENIMIENTO", "BAJA_DEFINITIVA"] as const;
 
 const actualizarCuentaSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().uuid("ID de cuenta inválido"),
   descripcion: z.string().min(1, "La dirección es obligatoria"),
   categoria: z.enum(CATEGORIAS),
   estado: z.enum(ESTADOS_CUENTA),
@@ -101,7 +102,7 @@ export async function actualizarCuenta(
 // ── Crear cuenta nueva ────────────────────────────────────────────────────────
 
 const crearCuentaSchema = z.object({
-  perfil_id: z.string().min(1),
+  perfil_id: z.string().uuid("ID de perfil inválido"),
   softguard_ref: z.string().min(1, "La referencia es obligatoria"),
   descripcion: z.string().min(1, "La descripción es obligatoria"),
   categoria: z.enum(CATEGORIAS),
@@ -159,7 +160,7 @@ export async function crearCuenta(
 }
 
 const pagoManualSchema = z.object({
-  cuenta_id: z.string().min(1),
+  cuenta_id: z.string().uuid("ID de cuenta inválido"),
   mes: z.coerce.number().min(1).max(12),
   anio: z.coerce.number().min(2020),
   importe: z.coerce.number().min(0),
@@ -235,7 +236,7 @@ export interface SensorActionResult {
 }
 
 const actualizarSensorSchema = z.object({
-  id: z.string().min(1),
+  id: z.string().uuid("ID de sensor inválido"),
   etiqueta: z.string().min(1, "La etiqueta es obligatoria"),
   tipo: z.enum(TIPOS_SENSOR),
   activa: z.enum(["true", "false"]).transform((v) => v === "true"),
@@ -285,7 +286,7 @@ export async function actualizarSensor(
 }
 
 const crearSensorSchema = z.object({
-  cuenta_id: z.string().min(1),
+  cuenta_id: z.string().uuid("ID de cuenta inválido"),
   codigo_zona: z.string().min(1, "El código de zona es obligatorio"),
   etiqueta: z.string().min(1, "La etiqueta es obligatoria"),
   tipo: z.enum(TIPOS_SENSOR),
@@ -354,7 +355,7 @@ export async function activarOverrideSuspension(
   const ttl_horas = parseInt(formData.get("ttl_horas") as string, 10);
   const justificacion = (formData.get("justificacion") as string)?.trim();
 
-  if (!cuenta_id) return { errores: ["ID de cuenta requerido."] };
+  if (!UUID_RE.test(cuenta_id ?? "")) return { errores: ["ID de cuenta inválido."] };
   if (isNaN(ttl_horas) || ![24, 48, 72].includes(ttl_horas)) return { errores: ["TTL inválido (24, 48 o 72 horas)."] };
   if (!justificacion || justificacion.length < 10) {
     return { errores: ["La justificación debe tener al menos 10 caracteres."] };
@@ -394,6 +395,7 @@ export async function activarOverrideSuspension(
 }
 
 export async function eliminarSensor(id: string): Promise<SensorActionResult> {
+  if (!UUID_RE.test(id)) return { errores: ["ID de sensor inválido."] };
   const admin = await requireAdmin();
   if (!admin) return { errores: ["Sin permisos de administrador."] };
 

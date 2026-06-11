@@ -1,7 +1,7 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
+import { Modal } from "@/components/ui/Modal";
 import type { PagoPlano } from "@/components/portal/CalendarioPagos";
 import {
   crearPreferenciaMercadoPago,
@@ -19,11 +19,14 @@ interface Props {
 // ── Botón de copiar al portapapeles ──────────────────────────────────────────
 function CopyButton({ texto }: { texto: string }) {
   const [copiado, setCopiado] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
   function copiar() {
     navigator.clipboard.writeText(texto).then(() => {
       setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopiado(false), 2000);
     });
   }
 
@@ -43,10 +46,12 @@ function CampoCopia({
   etiqueta,
   valor,
   grande = false,
+  hideCopy = false,
 }: {
   etiqueta: string;
   valor: string;
   grande?: boolean;
+  hideCopy?: boolean;
 }) {
   return (
     <div className="bg-slate-700/50 border border-slate-600 rounded-xl p-4">
@@ -59,7 +64,7 @@ function CampoCopia({
         >
           {valor}
         </span>
-        <CopyButton texto={valor} />
+        {!hideCopy && <CopyButton texto={valor} />}
       </div>
     </div>
   );
@@ -73,12 +78,13 @@ export function PagoModal({ pago, cuentaId, nombreMes, onClose }: Props) {
   const [transferenciaEnviada, setTransferenciaEnviada] = useState(false);
   const [confirmarMP, setConfirmarMP] = useState(false);
 
-  // Código de referencia único — el mismo que guarda el servidor
-  const refCode = `EI-${pago.id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+  // Código de referencia único — DEBE coincidir exactamente con avisarTransferencia (12 chars)
+  const refCode = `EI-${pago.id.replace(/-/g, "").slice(0, 12).toUpperCase()}`;
   const importeStr = `$${Number(pago.importe).toLocaleString("es-AR")}`;
 
   const cvu = process.env.NEXT_PUBLIC_BUSINESS_CVU ?? "";
   const alias = process.env.NEXT_PUBLIC_BUSINESS_ALIAS ?? "";
+  const CVU_FALLBACK = "Consultá al equipo de Escobar Instalaciones";
 
   function handleMercadoPago() {
     setError("");
@@ -193,7 +199,7 @@ export function PagoModal({ pago, cuentaId, nombreMes, onClose }: Props) {
         href={taloUrl ?? ""}
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl px-5 py-4 min-h-[56px] text-base flex items-center justify-center gap-2"
+        className="w-full bg-orange-500 hover:bg-orange-600 text-slate-900 font-semibold rounded-xl px-5 py-4 min-h-[56px] text-base flex items-center justify-center gap-2"
       >
         Ir a Talo Pay →
       </a>
@@ -209,7 +215,7 @@ export function PagoModal({ pago, cuentaId, nombreMes, onClose }: Props) {
   // ── Vista: instrucciones de transferencia ───────────────────────────────────
   const vistaTransferencia = transferenciaEnviada ? (
     <div className="space-y-5 text-center">
-      <div className="text-5xl">✓</div>
+      <div className="text-5xl" aria-hidden="true">✓</div>
       <p className="text-white font-semibold text-lg">
         ¡Gracias! Ya avisamos que vas a transferir.
       </p>
@@ -219,7 +225,7 @@ export function PagoModal({ pago, cuentaId, nombreMes, onClose }: Props) {
       </p>
       <button
         onClick={onClose}
-        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl px-5 py-3 min-h-[48px] text-base"
+        className="w-full bg-orange-500 hover:bg-orange-600 text-slate-900 font-semibold rounded-xl px-5 py-3 min-h-[48px] text-base"
       >
         Cerrar
       </button>
@@ -244,8 +250,8 @@ export function PagoModal({ pago, cuentaId, nombreMes, onClose }: Props) {
           Paso 2 — Hacé la transferencia
         </p>
         <div className="space-y-2">
-          <CampoCopia etiqueta="CVU" valor={cvu || "Consultá al equipo de Escobar Instalaciones"} />
-          <CampoCopia etiqueta="Alias" valor={alias || "Consultá al equipo de Escobar Instalaciones"} />
+          <CampoCopia etiqueta="CVU" valor={cvu || CVU_FALLBACK} hideCopy={!cvu} />
+          <CampoCopia etiqueta="Alias" valor={alias || CVU_FALLBACK} hideCopy={!alias} />
           <div className="bg-slate-700/50 border border-slate-600 rounded-xl p-4">
             <p className="text-xs font-medium text-slate-400 mb-1">
               Importe exacto a transferir
@@ -310,38 +316,27 @@ export function PagoModal({ pago, cuentaId, nombreMes, onClose }: Props) {
   }
 
   return (
-    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/70 z-40" />
-        <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
-          aria-describedby="pago-desc"
+    <Modal
+      open
+      onClose={onClose}
+      size="md"
+      title={`Pagar ${nombreMes} ${pago.anio}`}
+      description={
+        <>
+          Importe: <strong className="text-white text-lg">{importeStr}</strong>
+        </>
+      }
+    >
+      {error && (
+        <div
+          role="alert"
+          className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg px-4 py-3 text-sm mb-4"
         >
-          <Dialog.Title className="text-xl font-bold text-white mb-1">
-            Pagar {nombreMes} {pago.anio}
-          </Dialog.Title>
-          <p id="pago-desc" className="text-slate-400 text-sm mb-6">
-            Importe:{" "}
-            <strong className="text-white text-lg">{importeStr}</strong>
-          </p>
+          {error}
+        </div>
+      )}
 
-          {error && (
-            <div
-              role="alert"
-              className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg px-4 py-3 text-sm mb-4"
-            >
-              {error}
-            </div>
-          )}
-
-          {contenido}
-
-          <Dialog.Close className="absolute top-4 right-4 text-slate-400 hover:text-white min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors">
-            <span aria-hidden="true" className="text-xl">✕</span>
-            <span className="sr-only">Cerrar</span>
-          </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      {contenido}
+    </Modal>
   );
 }

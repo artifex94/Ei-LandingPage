@@ -41,7 +41,7 @@ export function SolicitudAltaForm() {
         <form action={action} className="space-y-6">
           {/* Error list */}
           {state.errores && state.errores.length > 0 && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 space-y-1">
+            <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 space-y-1">
               {state.errores.map((e, i) => (
                 <p key={i} className="text-red-400 text-sm">
                   {e}
@@ -90,7 +90,7 @@ export function SolicitudAltaForm() {
                   className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-orange-500 transition-colors"
                 />
               </div>
-              <p className="mt-1 text-xs text-slate-600">10 dígitos sin 0 ni 15</p>
+              <p className="mt-1 text-xs text-slate-400">10 dígitos sin 0 ni 15</p>
             </div>
 
             <div>
@@ -176,6 +176,7 @@ export function SolicitudAltaForm() {
                     name="razon_social"
                     type="text"
                     placeholder="Nombre o empresa"
+                    tabIndex={requiereFactura ? undefined : -1}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
@@ -191,6 +192,7 @@ export function SolicitudAltaForm() {
                     inputMode="numeric"
                     maxLength={11}
                     placeholder="Sin guiones (11 dígitos)"
+                    tabIndex={requiereFactura ? undefined : -1}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
@@ -202,6 +204,7 @@ export function SolicitudAltaForm() {
                   <select
                     id="condicion_iva"
                     name="condicion_iva"
+                    tabIndex={requiereFactura ? undefined : -1}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors appearance-none"
                   >
                     <option value="">Seleccioná una opción</option>
@@ -218,7 +221,7 @@ export function SolicitudAltaForm() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-slate-900 font-semibold py-3 rounded-xl text-sm transition-colors"
           >
             {pending ? "Enviando solicitud..." : "Solicitar acceso"}
           </button>

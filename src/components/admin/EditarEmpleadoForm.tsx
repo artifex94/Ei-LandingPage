@@ -186,7 +186,7 @@ export function EditarEmpleadoForm({ empleado, esEscobarAdmin = false }: Props) 
             </label>
             <input
               id="emp-e-color" name="color_calendario" type="color"
-              defaultValue={empleado.color_calendario ?? "#6366f1"}
+              defaultValue={empleado.color_calendario ?? "#64748b"}
               className="h-9 w-full rounded-lg border border-slate-600 bg-slate-700 cursor-pointer p-1"
             />
           </div>
@@ -196,7 +196,7 @@ export function EditarEmpleadoForm({ empleado, esEscobarAdmin = false }: Props) 
       <button
         type="submit"
         disabled={pending}
-        className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+        className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-slate-900 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
       >
         {pending ? "Guardando…" : "Guardar cambios"}
       </button>

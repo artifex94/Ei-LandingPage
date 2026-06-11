@@ -9,6 +9,23 @@ export async function guardarDisponibilidad(
   fechaISO: string,
   rangos: Rango[]
 ): Promise<{ ok: boolean; error?: string }> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaISO)) return { ok: false, error: "Fecha inválida." };
+  const HORA_RE = /^\d{2}:\d{2}$/;
+  if (
+    !Array.isArray(rangos) ||
+    rangos.length > 20 ||
+    rangos.some(
+      (r) =>
+        typeof r !== "object" ||
+        r === null ||
+        !HORA_RE.test(r.desde) ||
+        !HORA_RE.test(r.hasta) ||
+        r.desde >= r.hasta
+    )
+  ) {
+    return { ok: false, error: "Rangos de disponibilidad inválidos." };
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

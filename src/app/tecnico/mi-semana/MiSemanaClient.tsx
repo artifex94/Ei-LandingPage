@@ -45,12 +45,21 @@ const ESTADO_DOT: Record<string, string> = {
   COMPLETADA: "bg-emerald-400",
 };
 
+const ESTADO_LABEL: Record<string, string> = {
+  PENDIENTE:  "Pendiente",
+  EN_CURSO:   "En curso",
+  COMPLETADA: "Completada",
+};
+
 // ── Tarjeta de tarea ──────────────────────────────────────────────────────────
 
 function TareaChip({ t }: { t: TareaDia }) {
+  const estadoLabel = ESTADO_LABEL[t.estado] ?? t.estado;
+  const horaLabel = t.hora_inicio ? ` — ${t.hora_inicio}` : "";
   return (
     <Link
       href={`/tecnico/tareas/${t.id}`}
+      aria-label={`${t.titulo}${horaLabel} (${estadoLabel})`}
       className={`
         block rounded border-l-2 px-2 py-1.5 text-xs hover:brightness-110 transition-all
         ${PRIORIDAD_BG[t.prioridad] ?? "border-l-slate-600 bg-slate-800/60"}
@@ -58,14 +67,18 @@ function TareaChip({ t }: { t: TareaDia }) {
       `}
     >
       <div className="flex items-center gap-1 mb-0.5">
-        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ESTADO_DOT[t.estado] ?? "bg-slate-500"}`} />
+        <span
+          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ESTADO_DOT[t.estado] ?? "bg-slate-500"}`}
+          role="img"
+          aria-label={estadoLabel}
+        />
         {t.hora_inicio && (
-          <span className="font-mono text-[10px] text-slate-400">{t.hora_inicio}</span>
+          <span className="font-mono text-xs text-slate-400">{t.hora_inicio}</span>
         )}
       </div>
       <p className="font-medium text-white leading-tight line-clamp-2">{t.titulo}</p>
       {t.cuenta_calle && (
-        <p className="text-slate-500 text-[10px] mt-0.5 truncate">{t.cuenta_calle}</p>
+        <p className="text-slate-500 text-xs mt-0.5 truncate">{t.cuenta_calle}</p>
       )}
     </Link>
   );
@@ -83,17 +96,17 @@ function VistaDesktop({ dias }: { dias: DiaSemana[] }) {
             className={`
               rounded-lg px-2 py-2 mb-2 text-center
               ${dia.esHoy
-                ? "bg-indigo-600 text-white"
+                ? "bg-orange-500 text-slate-900"
                 : "bg-slate-800 text-slate-400"
               }
             `}
           >
             <p className="text-xs font-bold uppercase tracking-wide">{dia.label.split(" ")[0]}</p>
-            <p className={`text-lg font-bold leading-none ${dia.esHoy ? "text-white" : "text-slate-200"}`}>
+            <p className={`text-lg font-bold leading-none ${dia.esHoy ? "text-slate-900" : "text-slate-200"}`}>
               {dia.label.split(" ")[1]}
             </p>
             {dia.horasDisp > 0 && (
-              <p className={`text-[10px] mt-0.5 ${dia.esHoy ? "text-indigo-200" : "text-emerald-500"}`}>
+              <p className={`text-xs mt-0.5 ${dia.esHoy ? "text-slate-800" : "text-emerald-500"}`}>
                 {dia.horasDisp}h dispon.
               </p>
             )}
@@ -106,9 +119,7 @@ function VistaDesktop({ dias }: { dias: DiaSemana[] }) {
                 <span className="text-slate-700 text-xs">—</span>
               </div>
             ) : (
-              dia.tareas
-                .sort((a, b) => (a.hora_inicio ?? "").localeCompare(b.hora_inicio ?? ""))
-                .map((t) => <TareaChip key={t.id} t={t} />)
+              dia.tareas.map((t) => <TareaChip key={t.id} t={t} />)
             )}
           </div>
         </div>
@@ -130,7 +141,11 @@ function VistaMobile({ dias }: { dias: DiaSemana[] }) {
   const toggle = (fecha: string) => {
     setAbiertos((prev) => {
       const next = new Set(prev);
-      next.has(fecha) ? next.delete(fecha) : next.add(fecha);
+      if (next.has(fecha)) {
+        next.delete(fecha);
+      } else {
+        next.add(fecha);
+      }
       return next;
     });
   };
@@ -143,36 +158,36 @@ function VistaMobile({ dias }: { dias: DiaSemana[] }) {
           <div
             key={dia.fecha}
             className={`rounded-xl border overflow-hidden ${
-              dia.esHoy ? "border-indigo-600/60" : "border-slate-700/50"
+              dia.esHoy ? "border-orange-500/60" : "border-slate-700/50"
             }`}
           >
             {/* Header acordeón */}
             <button
               onClick={() => toggle(dia.fecha)}
               className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${
-                dia.esHoy ? "bg-indigo-900/40 hover:bg-indigo-900/60" : "bg-slate-800/60 hover:bg-slate-800"
+                dia.esHoy ? "bg-orange-900/30 hover:bg-orange-900/50" : "bg-slate-800/60 hover:bg-slate-800"
               }`}
             >
               <div className="flex items-center gap-3">
                 {dia.esHoy && (
-                  <span className="text-[10px] font-bold bg-indigo-500 text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                  <span className="text-xs font-bold bg-orange-500 text-slate-900 px-1.5 py-0.5 rounded-full uppercase tracking-wide">
                     Hoy
                   </span>
                 )}
-                <span className={`text-sm font-semibold capitalize ${dia.esHoy ? "text-white" : "text-slate-300"}`}>
+                <span className={`text-sm font-semibold capitalize ${dia.esHoy ? "text-orange-200" : "text-slate-300"}`}>
                   {dia.labelLargo}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 {dia.tareas.length > 0 && (
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    dia.esHoy ? "bg-indigo-500/30 text-indigo-200" : "bg-slate-700 text-slate-300"
+                    dia.esHoy ? "bg-orange-500/30 text-orange-200" : "bg-slate-700 text-slate-300"
                   }`}>
                     {dia.tareas.length}
                   </span>
                 )}
                 {dia.horasDisp > 0 && (
-                  <span className="text-[10px] text-emerald-500">{dia.horasDisp}h</span>
+                  <span className="text-xs text-emerald-500">{dia.horasDisp}h</span>
                 )}
                 <span className={`text-slate-400 transition-transform ${abierto ? "rotate-90" : ""}`}>›</span>
               </div>
@@ -182,7 +197,7 @@ function VistaMobile({ dias }: { dias: DiaSemana[] }) {
             {abierto && (
               <div className="px-3 py-2 bg-slate-900/40 space-y-1.5">
                 {dia.tareas.length === 0 ? (
-                  <p className="text-xs text-slate-600 py-2 text-center">Sin tareas asignadas</p>
+                  <p className="text-xs text-slate-400 py-2 text-center">Sin tareas asignadas</p>
                 ) : (
                   dia.tareas
                     .sort((a, b) => (a.hora_inicio ?? "").localeCompare(b.hora_inicio ?? ""))
@@ -227,12 +242,13 @@ export function MiSemanaClient({ dias, semanaLabel, offset }: Props) {
       </div>
 
       {/* Navegación semanas */}
-      <div className="flex items-center justify-between bg-slate-800/50 rounded-xl px-3 py-2">
+      <nav aria-label="Navegación por semanas" className="flex items-center justify-between bg-slate-800/50 rounded-xl px-3 py-2">
         <Link
           href={prevHref}
-          className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-slate-700"
+          className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors px-3 py-3 rounded-lg hover:bg-slate-700 min-h-[44px]"
+          aria-label="Semana anterior"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           <span className="hidden sm:inline">Anterior</span>
         </Link>
 
@@ -240,14 +256,14 @@ export function MiSemanaClient({ dias, semanaLabel, offset }: Props) {
           {offset !== 0 && (
             <Link
               href="?semana=0"
-              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors underline underline-offset-2"
+              className="text-xs text-orange-400 hover:text-orange-300 transition-colors underline underline-offset-2"
             >
               Hoy
             </Link>
           )}
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
             offset === 0
-              ? "bg-indigo-600/30 text-indigo-300"
+              ? "bg-orange-500/20 text-orange-300"
               : "bg-slate-700 text-slate-400"
           }`}>
             {semanaTag}
@@ -256,16 +272,24 @@ export function MiSemanaClient({ dias, semanaLabel, offset }: Props) {
 
         <Link
           href={nextHref}
-          className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-slate-700"
+          className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors px-3 py-3 rounded-lg hover:bg-slate-700 min-h-[44px]"
+          aria-label="Semana siguiente"
         >
           <span className="hidden sm:inline">Siguiente</span>
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-4 h-4" aria-hidden="true" />
         </Link>
-      </div>
+      </nav>
 
       {/* Progress bar */}
       {totalTareas > 0 && (
-        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div
+          className="h-1.5 bg-slate-800 rounded-full overflow-hidden"
+          role="progressbar"
+          aria-valuenow={completadas}
+          aria-valuemax={totalTareas}
+          aria-valuemin={0}
+          aria-label={`${completadas} de ${totalTareas} tareas completadas`}
+        >
           <div
             className="h-full bg-emerald-500 rounded-full transition-all"
             style={{ width: `${(completadas / totalTareas) * 100}%` }}

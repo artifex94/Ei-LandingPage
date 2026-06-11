@@ -2,14 +2,34 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { prisma } from "@/lib/prisma/client";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
-export const metadata = { title: "Agenda — Admin EI" };
+export const metadata = { title: "Agenda" };
 
-const ESTADO_BADGE: Record<string, string> = {
-  PENDIENTE:  "bg-slate-700 text-slate-300",
-  EN_CURSO:   "bg-blue-500/20 text-blue-300",
-  COMPLETADA: "bg-emerald-500/20 text-emerald-300",
-  CANCELADA:  "bg-red-500/20 text-red-400",
+const TUTORIAL_AGENDA = [
+  {
+    titulo: "Qué es una tarea agendada",
+    descripcion: "Es un trabajo programado para un técnico en una fecha y hora específica. Puede estar ligada a una OT o ser independiente.",
+  },
+  {
+    titulo: "Diferencia con OT",
+    descripcion: "Una OT es la visita completa. Una tarea es un paso puntual dentro de esa visita (instalar sensor X, hacer medición Y).",
+  },
+  {
+    titulo: "Ver y filtrar",
+    descripcion: "La agenda muestra tareas de hoy en adelante. Podés filtrar por técnico o por estado para encontrar qué está pendiente.",
+  },
+  {
+    titulo: "Crear una tarea",
+    descripcion: 'Usá "+ Nueva tarea" para agendar trabajo puntual. Elegí técnico, cuenta, fecha, hora y descripción.',
+  },
+];
+
+const ESTADO_BADGE: Record<string, { cls: string; label: string }> = {
+  PENDIENTE:  { cls: "bg-slate-700 text-slate-300",         label: "Pendiente" },
+  EN_CURSO:   { cls: "bg-blue-500/20 text-blue-300",        label: "En curso" },
+  COMPLETADA: { cls: "bg-emerald-500/20 text-emerald-300",  label: "Completada" },
+  CANCELADA:  { cls: "bg-red-500/20 text-red-400",          label: "Cancelada" },
 };
 const PRIORIDAD_DOT: Record<string, string> = {
   ALTA: "bg-red-500", MEDIA: "bg-amber-500", BAJA: "bg-slate-600",
@@ -22,24 +42,25 @@ export default async function AgendaPage({
 }) {
   const { tecnico: tecnicoFilter, estado: estadoFilter } = await searchParams;
 
-  const tecnicos = await prisma.perfil.findMany({
-    where: { rol: "TECNICO" },
-    select: { id: true, nombre: true },
-    orderBy: { nombre: "asc" },
-  });
-
-  const tareas = await prisma.tareaAgendada.findMany({
-    where: {
-      ...(tecnicoFilter && { tecnico_id: tecnicoFilter }),
-      ...(estadoFilter && { estado: estadoFilter as "PENDIENTE" | "EN_CURSO" | "COMPLETADA" | "CANCELADA" }),
-    },
-    include: {
-      tecnico: { select: { nombre: true } },
-      cuenta: { select: { descripcion: true, calle: true, localidad: true } },
-    },
-    orderBy: [{ fecha: "desc" }, { hora_inicio: "asc" }],
-    take: 100,
-  });
+  const [tecnicos, tareas] = await Promise.all([
+    prisma.perfil.findMany({
+      where: { rol: "TECNICO" },
+      select: { id: true, nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
+    prisma.tareaAgendada.findMany({
+      where: {
+        ...(tecnicoFilter && { tecnico_id: tecnicoFilter }),
+        ...(estadoFilter && { estado: estadoFilter as "PENDIENTE" | "EN_CURSO" | "COMPLETADA" | "CANCELADA" }),
+      },
+      include: {
+        tecnico: { select: { nombre: true } },
+        cuenta: { select: { descripcion: true, calle: true, localidad: true } },
+      },
+      orderBy: [{ fecha: "desc" }, { hora_inicio: "asc" }],
+      take: 100,
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -47,18 +68,18 @@ export default async function AgendaPage({
         <h1 className="text-2xl font-bold text-white">Agenda</h1>
         <Link
           href="/admin/agenda/nueva"
-          className="text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
+          className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-slate-900 px-4 py-2 rounded-lg min-h-[44px] flex items-center transition-colors"
         >
           + Nueva tarea
         </Link>
       </div>
 
       {/* Filtros */}
-      <form method="GET" className="flex flex-wrap gap-3">
+      <form method="GET" aria-label="Filtrar agenda" className="flex flex-wrap gap-3">
         <select
           name="tecnico"
           defaultValue={tecnicoFilter ?? ""}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-2 focus:outline-orange-500"
         >
           <option value="">Todos los técnicos</option>
           {tecnicos.map((t) => (
@@ -71,7 +92,7 @@ export default async function AgendaPage({
         <select
           name="estado"
           defaultValue={estadoFilter ?? ""}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-2 focus:outline-orange-500"
         >
           <option value="">Todos los estados</option>
           <option value="PENDIENTE">Pendiente</option>
@@ -82,14 +103,14 @@ export default async function AgendaPage({
 
         <button
           type="submit"
-          className="text-sm bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg transition-colors"
+          className="text-sm bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white px-4 py-2 rounded-lg min-h-[44px] transition-colors"
         >
           Filtrar
         </button>
         {(tecnicoFilter || estadoFilter) && (
           <Link
             href="/admin/agenda"
-            className="text-sm text-slate-400 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+            className="text-sm text-slate-400 hover:text-slate-300 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 min-h-[44px] flex items-center transition-colors"
           >
             Limpiar
           </Link>
@@ -108,22 +129,22 @@ export default async function AgendaPage({
               href={`/admin/agenda/${tarea.id}`}
               className="flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-800 p-4 hover:bg-slate-700/60 transition-colors"
             >
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${PRIORIDAD_DOT[tarea.prioridad]}`} />
+              <div role="img" aria-label={`Prioridad ${tarea.prioridad.toLowerCase()}`} className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${PRIORIDAD_DOT[tarea.prioridad]}`} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-semibold text-white leading-snug">{tarea.titulo}</p>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${ESTADO_BADGE[tarea.estado]}`}>
-                    {tarea.estado.replace("_", " ")}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${ESTADO_BADGE[tarea.estado]?.cls}`}>
+                    {ESTADO_BADGE[tarea.estado]?.label ?? tarea.estado}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
                   {format(new Date(tarea.fecha), "EEE d MMM", { locale: es })}
                   {tarea.hora_inicio && ` · ${tarea.hora_inicio}`}
                   {" · "}
-                  <span className="text-indigo-400">{tarea.tecnico.nombre}</span>
+                  <span className="text-orange-400">{tarea.tecnico.nombre}</span>
                 </p>
                 {tarea.cuenta && (
-                  <p className="text-xs text-slate-500 truncate mt-0.5">
+                  <p className="text-xs text-slate-400 truncate mt-0.5">
                     {tarea.cuenta.descripcion}
                     {tarea.cuenta.localidad && ` · ${tarea.cuenta.localidad}`}
                   </p>
@@ -133,6 +154,12 @@ export default async function AgendaPage({
           ))}
         </div>
       )}
+
+      <TutorialContextual
+        section="agenda"
+        titulo="Guía rápida — Agenda técnica"
+        steps={TUTORIAL_AGENDA}
+      />
     </div>
   );
 }

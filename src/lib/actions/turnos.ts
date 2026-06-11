@@ -1,18 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
-import { createClient } from "@/lib/supabase/server";
+import { UUID_RE } from "@/lib/constants/validation";
 import type { FranjaTurno, EstadoTurno } from "@/generated/prisma/client";
-
-async function getAdminActual() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  return perfil?.rol === "ADMIN" ? perfil : null;
-}
+import { planificarSemana, generarFechasUTC } from "@/lib/scheduling/auto-asignar";
 
 export async function asignarTurno(data: {
   empleado_id: string;
@@ -20,8 +15,7 @@ export async function asignarTurno(data: {
   franja: FranjaTurno;
   notas?: string;
 }) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  const admin = await requireAdmin();
 
   const turno = await prisma.turno.upsert({
     where: {
@@ -48,9 +42,85 @@ export async function asignarTurno(data: {
   return turno;
 }
 
+/**
+ * Auto-asigna los turnos de una semana repartiendo de forma lógica y equitativa
+ * entre los monitores activos. Solo cubre huecos: respeta turnos ya asignados.
+ *
+ * @param semanaDesdeIso fecha de inicio (lunes) en formato "YYYY-MM-DD"
+ */
+export async function autoAsignarSemana(semanaDesdeIso: string) {
+  const admin = await requireAdmin();
+
+  const m = semanaDesdeIso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) throw new Error("Fecha de semana inválida.");
+  const desde = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  const fechas = generarFechasUTC(desde, 7);
+  const hasta = fechas[6];
+
+  const [monitores, turnosExistentes, ausencias] = await Promise.all([
+    prisma.empleado.findMany({
+      where: { activo: true, puede_monitorear: true },
+      include: { perfil: { select: { nombre: true } } },
+      orderBy: { created_at: "asc" },
+    }),
+    prisma.turno.findMany({
+      where: {
+        fecha: { gte: desde, lte: hasta },
+        estado: { in: ["PROGRAMADO", "EN_CURSO", "COMPLETADO"] },
+      },
+      select: { empleado_id: true, fecha: true, franja: true },
+    }),
+    prisma.ausencia.findMany({
+      where: { desde: { lte: hasta }, hasta: { gte: desde } },
+      select: { empleado_id: true, desde: true, hasta: true },
+    }),
+  ]);
+
+  if (monitores.length === 0) {
+    return { creados: 0, mensaje: "No hay monitores activos habilitados." };
+  }
+
+  const propuestas = planificarSemana({
+    monitores: monitores.map((e) => ({ id: e.id, nombre: e.perfil.nombre })),
+    ausencias,
+    turnosExistentes: turnosExistentes.map((t) => ({
+      empleado_id: t.empleado_id,
+      fecha: t.fecha,
+      franja: t.franja,
+    })),
+    fechas,
+  });
+
+  if (propuestas.length === 0) {
+    return { creados: 0, mensaje: "La semana ya está cubierta." };
+  }
+
+  const { count } = await prisma.turno.createMany({
+    data: propuestas.map((p) => ({
+      empleado_id: p.empleado_id,
+      fecha: p.fecha,
+      franja: p.franja,
+      estado: "PROGRAMADO" as const,
+    })),
+    skipDuplicates: true,
+  });
+
+  await registrarAudit({
+    admin_id: admin.id,
+    admin_nombre: admin.nombre ?? "Admin",
+    accion: "TURNO_AUTOASIGNAR",
+    entidad: "turno",
+    entidad_id: semanaDesdeIso,
+    detalle: { semana: semanaDesdeIso, creados: count, monitores: monitores.length },
+  });
+
+  revalidatePath("/admin/turnos");
+  return { creados: count };
+}
+
 export async function cambiarEstadoTurno(turno_id: string, estado: EstadoTurno) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  if (!UUID_RE.test(turno_id)) throw new Error("ID de turno inválido.");
+  const admin = await requireAdmin();
 
   const ahora = new Date();
   const turno = await prisma.turno.update({
@@ -77,8 +147,8 @@ export async function cambiarEstadoTurno(turno_id: string, estado: EstadoTurno) 
 }
 
 export async function eliminarTurno(turno_id: string) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  if (!UUID_RE.test(turno_id)) throw new Error("ID de turno inválido.");
+  const admin = await requireAdmin();
 
   await prisma.turno.delete({ where: { id: turno_id } });
 
@@ -97,7 +167,15 @@ export async function eliminarTurno(turno_id: string) {
 export async function getTurnosSemana(desde: Date, hasta: Date) {
   return prisma.turno.findMany({
     where: { fecha: { gte: desde, lte: hasta } },
-    include: { empleado: { include: { perfil: true } } },
+    include: {
+      empleado: {
+        select: {
+          id: true,
+          color_calendario: true,
+          perfil: { select: { nombre: true } },
+        },
+      },
+    },
     orderBy: [{ fecha: "asc" }, { franja: "asc" }],
   });
 }
@@ -114,6 +192,7 @@ async function getEmpleadoActual() {
 }
 
 export async function checkinTurno(turnoId: string) {
+  if (!UUID_RE.test(turnoId)) return { error: "ID de turno inválido." };
   const empleado = await getEmpleadoActual();
   if (!empleado) return { error: "No autorizado." };
 
@@ -139,6 +218,7 @@ export async function checkinTurno(turnoId: string) {
 }
 
 export async function checkoutTurno(turnoId: string) {
+  if (!UUID_RE.test(turnoId)) return { error: "ID de turno inválido." };
   const empleado = await getEmpleadoActual();
   if (!empleado) return { error: "No autorizado." };
 

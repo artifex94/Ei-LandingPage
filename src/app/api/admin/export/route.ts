@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { createClient } from "@/lib/supabase/server";
+import { getSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
 async function verificarAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  return perfil?.rol === "ADMIN" ? perfil : null;
+  const sesion = await getSesion();
+  if (!sesion || sesion.perfil.rol !== "ADMIN") return null;
+  return sesion.perfil;
 }
 
 export async function GET(req: NextRequest) {
@@ -61,23 +59,35 @@ export async function GET(req: NextRequest) {
 
   else if (tipo === "cuentas") {
     const cuentas = await prisma.cuenta.findMany({
-      include: { perfil: { select: { nombre: true, telefono: true, email: true } } },
+      include: {
+        perfil: { select: { nombre: true, telefono: true, email: true } },
+        pagos: {
+          where: { estado: { in: ["PENDIENTE", "VENCIDO"] } },
+          select: { importe: true, estado: true },
+        },
+      },
       orderBy: { descripcion: "asc" },
       take: 10_000,
     });
 
-    rows = cuentas.map((c) => ({
-      Descripción: c.descripcion,
-      "Ref. Softguard": c.softguard_ref,
-      Cliente: c.perfil.nombre,
-      Teléfono: c.perfil.telefono ?? "",
-      Email: c.perfil.email ?? "",
-      Categoría: c.categoria,
-      Estado: c.estado,
-      "Costo mensual": Number(c.costo_mensual),
-      Localidad: c.localidad ?? "",
-      Provincia: c.provincia ?? "",
-    }));
+    rows = cuentas.map((c) => {
+      const deudaTotal = c.pagos.reduce((s, p) => s + Number(p.importe), 0);
+      const tieneVencidos = c.pagos.some((p) => p.estado === "VENCIDO");
+      return {
+        Descripción: c.descripcion,
+        "Ref. Softguard": c.softguard_ref,
+        Cliente: c.perfil.nombre,
+        Teléfono: c.perfil.telefono ?? "",
+        Email: c.perfil.email ?? "",
+        Categoría: c.categoria,
+        Estado: c.estado,
+        "Deuda pendiente": deudaTotal,
+        "Mora": tieneVencidos ? "Sí" : "No",
+        "Costo mensual": Number(c.costo_mensual),
+        Localidad: c.localidad ?? "",
+        Provincia: c.provincia ?? "",
+      };
+    });
     nombre = "cuentas";
   }
 
@@ -100,6 +110,7 @@ export async function GET(req: NextRequest) {
       Cliente: p.cuenta.perfil.nombre,
       Teléfono: p.cuenta.perfil.telefono ?? "",
       Cuenta: p.cuenta.descripcion,
+      "Ref. Softguard": p.cuenta.softguard_ref,
       Estado: p.estado,
       Importe: Number(p.importe),
       Método: p.metodo ?? "",
@@ -109,8 +120,84 @@ export async function GET(req: NextRequest) {
     nombre = `pagos_${mes}_${anio}`;
   }
 
+  else if (tipo === "morosidad") {
+    const MESES = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const ahora = new Date();
+    const mesAhora = ahora.getMonth() + 1;
+    const anioAhora = ahora.getFullYear();
+
+    const pagosVencidos = await prisma.pago.findMany({
+      where: {
+        OR: [
+          { estado: "VENCIDO" },
+          {
+            estado: "PENDIENTE",
+            OR: [
+              { anio: { lt: anioAhora } },
+              { anio: anioAhora, mes: { lt: mesAhora } },
+            ],
+          },
+        ],
+      },
+      include: {
+        cuenta: { include: { perfil: { select: { nombre: true, telefono: true, email: true } } } },
+      },
+      orderBy: [{ cuenta: { perfil: { nombre: "asc" } } }, { anio: "asc" }, { mes: "asc" }],
+      take: 10_000,
+    });
+
+    rows = pagosVencidos.map((p) => ({
+      Cliente: p.cuenta.perfil.nombre,
+      Teléfono: p.cuenta.perfil.telefono ?? "",
+      Email: p.cuenta.perfil.email ?? "",
+      Cuenta: p.cuenta.descripcion,
+      Período: `${MESES[p.mes]} ${p.anio}`,
+      Estado: p.estado,
+      Importe: Number(p.importe),
+    }));
+    nombre = `morosidad_${new Date().toISOString().slice(0, 10)}`;
+  }
+
+  else if (tipo === "ots") {
+    const TIPO_LABEL: Record<string, string> = {
+      INSTALACION: "Instalación", CORRECTIVO: "Correctivo",
+      PREVENTIVO: "Preventivo", RETIRO: "Retiro",
+    };
+    const ESTADO_LABEL: Record<string, string> = {
+      SOLICITADA: "Solicitada", ASIGNADA: "Asignada", EN_RUTA: "En ruta",
+      EN_SITIO: "En sitio", COMPLETADA: "Completada", CANCELADA: "Cancelada",
+    };
+
+    const ots = await prisma.ordenTrabajo.findMany({
+      include: {
+        perfil:  { select: { nombre: true, telefono: true } },
+        cuenta:  { select: { descripcion: true, perfil: { select: { nombre: true, telefono: true } } } },
+        tecnico: { include: { perfil: { select: { nombre: true } } } },
+      },
+      orderBy: { numero: "desc" },
+      take: 10_000,
+    });
+
+    rows = ots.map((o) => ({
+      "Nro.": String(o.numero).padStart(4, "0"),
+      Tipo: TIPO_LABEL[o.tipo] ?? o.tipo,
+      Estado: ESTADO_LABEL[o.estado] ?? o.estado,
+      Descripción: o.descripcion,
+      Cliente: o.cuenta?.perfil.nombre ?? o.perfil?.nombre ?? "",
+      Teléfono: o.cuenta?.perfil.telefono ?? o.perfil?.telefono ?? "",
+      Cuenta: o.cuenta?.descripcion ?? "",
+      Técnico: o.tecnico?.perfil.nombre ?? "",
+      "Fecha visita": o.fecha_visita
+        ? new Date(o.fecha_visita).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+        : "",
+      Conformidad: o.conformidad_firmada ? "Sí" : "No",
+      Creada: new Date(o.created_at).toLocaleDateString("es-AR"),
+    }));
+    nombre = `ots_${new Date().toISOString().slice(0, 10)}`;
+  }
+
   else {
-    return NextResponse.json({ error: "Tipo inválido. Usá: clientes, cuentas, pagos" }, { status: 400 });
+    return NextResponse.json({ error: "Tipo inválido. Usá: clientes, cuentas, pagos, morosidad, ots" }, { status: 400 });
   }
 
   const wb = XLSX.utils.book_new();

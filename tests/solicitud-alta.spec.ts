@@ -30,26 +30,6 @@ import { test, expect } from "@playwright/test";
  * En ese caso los tests de "éxito" y "error" verifican que la acción fue
  * llamada y que el DOM reacciona correctamente cuando el resultado llega.
  */
-async function mockAction(
-  page: import("@playwright/test").Page,
-  responseBody: Record<string, unknown>
-) {
-  await page.route("**/solicitud-alta", async (route) => {
-    const req = route.request();
-    // Solo interceptar POST con Next-Action header
-    if (req.method() === "POST" && req.headers()["next-action"]) {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/x-component",
-        // Next.js RSC wire format — retorno directo de la action serializado
-        body: JSON.stringify(responseBody),
-      });
-    } else {
-      await route.continue();
-    }
-  });
-}
-
 // ─── Renderizado base ──────────────────────────────────────────────────────────
 
 test.describe("Solicitud de alta — renderizado", () => {

@@ -18,13 +18,41 @@
   --color-tactical-400: #f7913a;     /* hover text / iconos activos            */
   --color-tactical-500: #f17720;     /* color principal de marca (botones CTA) */
   --color-tactical-600: #c75f0d;     /* borde inferior 3D / hover oscuro       */
+
+  /* ── Tipografía display (Chakra Petch via next/font) ── */
+  /* Solo para títulos, marca y números de panel — nunca cuerpo de texto.      */
+  --font-display: var(--font-chakra), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ── Base: fondo oscuro por defecto ────────────────────────────────────── */
 @layer base {
+  :root {
+    /* Controles nativos en oscuro: date pickers, selects, autofill, scrollbars */
+    color-scheme: dark;
+  }
+
   body {
     background-color: var(--color-industrial-900);
     color: rgb(148 163 184); /* slate-400 */
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-industrial-700) transparent;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
+  ::selection {
+    background-color: rgba(241, 119, 32, 0.35);
+    color: #fff;
   }
 }
 
@@ -73,6 +101,15 @@
 }
 @utility animate-led-violencia {
   animation: led-violencia 1.2s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite;
+}
+
+/* ── Toasts (Toast.tsx) — entrada con slide sutil desde la derecha ──────── */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@utility animate-toast-in {
+  animation: toast-in 0.18s ease-out;
 }
 
 /* ── Curvas de Bézier mecánicas ─────────────────────────────────────────── */
@@ -158,4 +195,73 @@
   .clip-path-slant {
     clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%);
   }
+}
+
+
+/* ?? Landing experience: performant CSS-only motion ??????????????????????? */
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); opacity: 0.88; }
+  100% { transform: rotate(360deg); opacity: 0.88; }
+}
+
+@keyframes scanline-pass {
+  0% { transform: translateY(-120%); opacity: 0; }
+  15% { opacity: 0.4; }
+  100% { transform: translateY(760%); opacity: 0; }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -10px, 0); }
+}
+
+@keyframes float-delayed {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-8px, 8px, 0); }
+}
+
+@utility radar-sweep {
+  background: conic-gradient(from 0deg, rgba(241,119,32,0.38), transparent 42%, transparent 100%);
+  animation: radar-sweep 8s linear infinite;
+  mask: radial-gradient(circle, transparent 0 34%, black 35% 100%);
+}
+
+@utility scanline {
+  animation: scanline-pass 6s ease-in-out infinite;
+}
+
+@utility animate-float-slow {
+  animation: float-slow 5.5s ease-in-out infinite;
+}
+
+@utility animate-float-delayed {
+  animation: float-delayed 6.5s ease-in-out infinite;
+}
+
+.security-orb {
+  transform: translateZ(0);
+  contain: layout paint;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-tactical-400);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Admin: progreso mensual ─────────────────────────────────────────────── */
+@keyframes admin-progress-fill {
+  from { width: 0% }
+  to   { width: var(--target-width, 0%) }
+}
+@utility admin-progreso-barra {
+  animation: admin-progress-fill 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

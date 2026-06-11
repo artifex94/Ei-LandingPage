@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { EditarEmpleadoForm } from "@/components/admin/EditarEmpleadoForm";
 import { EliminarEmpleadoForm } from "@/components/admin/EliminarEmpleadoForm";
 import { siteConfig } from "@/config/site";
+import { UUID_RE } from "@/lib/constants/validation";
 
-export const metadata = { title: "Editar empleado — Admin" };
+export const metadata = { title: "Editar empleado" };
 
 const ROL_PERFIL_LABEL: Record<string, string> = {
   ADMIN:   "Administrador (acceso completo)",
@@ -19,10 +20,10 @@ export default async function EditarEmpleadoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const esEscobarAdmin = user?.email === siteConfig.contact.email;
+  const adminPerfil = await requireAdmin();
+  const esEscobarAdmin = adminPerfil.email === siteConfig.contact.email;
 
   const perfil = await prisma.perfil.findUnique({
     where: { id },
@@ -39,8 +40,8 @@ export default async function EditarEmpleadoPage({
       <nav aria-label="Ruta de navegación">
         <ol className="flex items-center gap-2 text-sm text-slate-400">
           <li>
-            <Link href="/admin/empleados" className="hover:text-white transition-colors">
-              Empleados
+            <Link href="/admin/trabajadores" className="hover:text-white transition-colors">
+              Equipo
             </Link>
           </li>
           <li aria-hidden="true">/</li>
@@ -52,7 +53,7 @@ export default async function EditarEmpleadoPage({
       <div className="flex items-center gap-4">
         <div
           className="w-10 h-10 rounded-full flex-shrink-0 border-2 border-slate-600"
-          style={{ backgroundColor: emp.color_calendario ?? "#6366f1" }}
+          style={{ backgroundColor: emp.color_calendario ?? "#64748b" }}
           aria-hidden="true"
         />
         <div>
@@ -69,7 +70,7 @@ export default async function EditarEmpleadoPage({
       {/* WhatsApp rápido */}
       {perfil.telefono && (
         <a
-          href={`https://wa.me/${perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${perfil.nombre.split(" ")[0]}, te contactamos de Escobar Instalaciones.`)}`}
+          href={`https://wa.me/549${perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${perfil.nombre.split(" ")[0]}, te contactamos de Escobar Instalaciones.`)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-colors"

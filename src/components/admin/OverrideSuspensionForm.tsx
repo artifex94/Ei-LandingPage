@@ -12,7 +12,7 @@ interface Props {
 const inputCls =
   "w-full bg-slate-700 border border-slate-600 text-white placeholder:text-slate-400 rounded-lg px-3 py-2 text-sm focus:outline-2 focus:outline-orange-500";
 
-export function OverrideSuspensionForm({ cuentaId, overrideActivo, overrideExpira }: Props) {
+export function OverrideSuspensionForm({ cuentaId, overrideExpira }: Props) {
   const [state, action, pending] = useActionState(activarOverrideSuspension, {});
 
   const expiresAt = overrideExpira ? new Date(overrideExpira) : null;

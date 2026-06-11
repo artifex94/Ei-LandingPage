@@ -1,8 +1,32 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
 import { PagoManualBulkForm } from "@/components/admin/PagoManualBulkForm";
 import { ConfirmarTransferenciaForm } from "@/components/admin/ConfirmarTransferenciaForm";
 import { EditarPagoDialog } from "@/components/admin/EditarPagoDialog";
 import { METODO_LABEL as METODO_LABELS } from "@/lib/constants/payment";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+
+const TUTORIAL_PAGOS = [
+  {
+    titulo: "Navegar por mes",
+    descripcion: "Usá el selector de mes/año arriba a la derecha para ver los pagos de cualquier período.",
+  },
+  {
+    titulo: "Registrar pago manual",
+    descripcion: 'En la sección "Sin pago registrado" aparecen las cuentas que aún no tienen pago este mes. El botón "Registrar" lo carga directamente.',
+  },
+  {
+    titulo: "Confirmar transferencias",
+    descripcion: "Si un cliente pagó por transferencia bancaria, aparece en la sección de transferencias pendientes para que la confirmes.",
+  },
+  {
+    titulo: "Pagos de Mercado Pago",
+    descripcion: "Los pagos por Mercado Pago se confirman automáticamente. Solo aparecen en la lista, no requieren acción manual.",
+  },
+];
+
+export const metadata: Metadata = { title: "Pagos" };
 
 const ESTADO_CONFIG: Record<string, { bg: string; label: string }> = {
   PAGADO:     { bg: "bg-green-900/40 text-green-400",  label: "Pagado" },
@@ -25,20 +49,21 @@ export default async function PagosAdminPage({
   const mes  = Math.min(12, Math.max(1, mesRaw));
   const anio = Math.min(2100, Math.max(2020, anioRaw));
 
-  // Transferencias bancarias pendientes de confirmar — siempre visibles
-  const transferenciasPendientes = await prisma.pago.findMany({
-    where: { estado: "PROCESANDO", metodo: "TRANSFERENCIA_BANCARIA" },
-    include: {
-      cuenta: { include: { perfil: { select: { nombre: true } } } },
-    },
-    orderBy: { updated_at: "desc" },
-  });
-
-  const pagos = await prisma.pago.findMany({
-    where: { mes, anio },
-    include: { cuenta: { include: { perfil: { select: { nombre: true } } } } },
-    orderBy: [{ estado: "asc" }, { cuenta: { descripcion: "asc" } }],
-  });
+  const [transferenciasPendientes, pagos] = await Promise.all([
+    // Transferencias bancarias pendientes de confirmar — siempre visibles
+    prisma.pago.findMany({
+      where: { estado: "PROCESANDO", metodo: "TRANSFERENCIA_BANCARIA" },
+      include: { cuenta: { include: { perfil: { select: { nombre: true } } } } },
+      orderBy: { updated_at: "desc" },
+      take: 100,
+    }),
+    prisma.pago.findMany({
+      where: { mes, anio },
+      include: { cuenta: { include: { perfil: { select: { nombre: true } } } } },
+      orderBy: [{ estado: "asc" }, { cuenta: { descripcion: "asc" } }],
+      take: 500,
+    }),
+  ]);
 
   const cuentasConPago = new Set(pagos.map((p) => p.cuenta_id));
   const cuentasSinPago = await prisma.cuenta.findMany({
@@ -48,6 +73,7 @@ export default async function PagosAdminPage({
     },
     include: { perfil: { select: { nombre: true } } },
     orderBy: { descripcion: "asc" },
+    take: 500,
   });
 
   const totalCobrado = pagos
@@ -60,6 +86,92 @@ export default async function PagosAdminPage({
 
   const MESES = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
+  type PagoRow = (typeof pagos)[number];
+
+  const editarPagoProps = (p: PagoRow) => ({
+    id: p.id,
+    mes: p.mes,
+    anio: p.anio,
+    importe: Number(p.importe),
+    estado: p.estado,
+    metodo: p.metodo ?? null,
+    cuentaNombre: p.cuenta.perfil.nombre,
+    cuentaDesc: p.cuenta.descripcion,
+  });
+
+  const pagosColumns: Column<PagoRow>[] = [
+    {
+      id: "cliente",
+      header: "Cliente",
+      cell: (p) => <span className="font-medium text-white">{p.cuenta.perfil.nombre}</span>,
+    },
+    {
+      id: "servicio",
+      header: "Servicio",
+      cell: (p) => <span className="block text-slate-300 max-w-[160px] truncate">{p.cuenta.descripcion}</span>,
+    },
+    {
+      id: "importe",
+      header: "Importe",
+      cell: (p) => <span className="text-white">${Number(p.importe).toLocaleString("es-AR")}</span>,
+    },
+    {
+      id: "estado",
+      header: "Estado",
+      cell: (p) => {
+        const cfg = ESTADO_CONFIG[p.estado] ?? { bg: "bg-slate-700 text-slate-400", label: p.estado };
+        return <span className={`text-xs font-semibold px-2 py-1 rounded-full ${cfg.bg}`}>{cfg.label}</span>;
+      },
+    },
+    {
+      id: "metodo",
+      header: "Método",
+      cell: (p) => <span className="text-slate-300">{p.metodo ? METODO_LABELS[p.metodo] ?? p.metodo : "—"}</span>,
+    },
+    {
+      id: "acreditado",
+      header: "Acreditado",
+      cell: (p) => (
+        <span className="text-slate-400 text-xs">
+          {p.acreditado_en ? new Date(p.acreditado_en).toLocaleDateString("es-AR") : "—"}
+        </span>
+      ),
+    },
+    {
+      id: "acciones",
+      header: "Acciones",
+      srOnlyHeader: true,
+      cell: (p) => <EditarPagoDialog pago={editarPagoProps(p)} />,
+    },
+  ];
+
+  const renderPagoCard = (p: PagoRow) => {
+    const cfg = ESTADO_CONFIG[p.estado] ?? { bg: "bg-slate-700 text-slate-400", label: p.estado };
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3">
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="min-w-0">
+            <p className="font-semibold text-white truncate">{p.cuenta.perfil.nombre}</p>
+            <p className="text-sm text-slate-400 truncate">{p.cuenta.descripcion}</p>
+          </div>
+          <span className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${cfg.bg}`}>
+            {cfg.label}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-white font-bold">${Number(p.importe).toLocaleString("es-AR")}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-slate-400 text-xs">
+              {p.metodo ? METODO_LABELS[p.metodo] ?? p.metodo : "—"}
+              {p.acreditado_en && ` · ${new Date(p.acreditado_en).toLocaleDateString("es-AR")}`}
+            </span>
+            <EditarPagoDialog pago={editarPagoProps(p)} />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <section aria-labelledby="pagos-heading" className="space-y-8">
       <div className="flex items-start justify-between gap-4">
@@ -69,19 +181,25 @@ export default async function PagosAdminPage({
 
         {/* Selector de mes/año */}
         <form method="GET" className="flex items-center gap-2">
+          <label htmlFor="select-mes" className="sr-only">Mes</label>
           <select
+            id="select-mes"
             name="mes"
             defaultValue={mes}
-            className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm min-h-[40px]"
+            aria-label="Mes"
+            className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm min-h-[44px]"
           >
             {MESES.slice(1).map((m, i) => (
               <option key={i + 1} value={i + 1}>{m}</option>
             ))}
           </select>
+          <label htmlFor="select-anio" className="sr-only">Año</label>
           <select
+            id="select-anio"
             name="anio"
             defaultValue={anio}
-            className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm min-h-[40px]"
+            aria-label="Año"
+            className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm min-h-[44px]"
           >
             {Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - 1 + i).map((a) => (
               <option key={a} value={a}>{a}</option>
@@ -89,14 +207,15 @@ export default async function PagosAdminPage({
           </select>
           <button
             type="submit"
-            className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white px-4 py-2 rounded-lg text-sm min-h-[40px] transition-colors"
+            aria-label="Ver pagos del mes seleccionado"
+            className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white px-4 py-2 rounded-lg text-sm min-h-[44px] transition-colors"
           >
             Ver
           </button>
           <a
             href={`/api/admin/export?tipo=pagos&mes=${mes}&anio=${anio}`}
-            className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[40px] flex items-center text-sm transition-colors"
-            title="Exportar a Excel"
+            aria-label={`Exportar pagos de ${MESES[mes]}/${anio} a Excel`}
+            className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium px-3 py-2 rounded-lg min-h-[44px] flex items-center text-sm transition-colors"
           >
             ↓ Excel
           </a>
@@ -110,7 +229,7 @@ export default async function PagosAdminPage({
             <h2 className="text-lg font-semibold text-white">
               Transferencias a verificar
             </h2>
-            <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-orange-500 text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full">
               {transferenciasPendientes.length}
             </span>
           </div>
@@ -192,80 +311,13 @@ export default async function PagosAdminPage({
             Pagos registrados ({pagos.length})
           </h2>
 
-          {/* Tabla — desktop */}
-          <div className="hidden md:block bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-900/50 border-b border-slate-700">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">Cliente</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">Servicio</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">Importe</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">Estado</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">Método</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-300">Acreditado</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
-                {pagos.map((p) => {
-                  const cfg = ESTADO_CONFIG[p.estado] ?? { bg: "bg-slate-700 text-slate-400", label: p.estado };
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-700/40 transition-colors">
-                      <td className="px-4 py-3 font-medium text-white">{p.cuenta.perfil.nombre}</td>
-                      <td className="px-4 py-3 text-slate-300 max-w-[160px] truncate">{p.cuenta.descripcion}</td>
-                      <td className="px-4 py-3 text-white">${Number(p.importe).toLocaleString("es-AR")}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${cfg.bg}`}>{cfg.label}</span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-300">{p.metodo ? METODO_LABELS[p.metodo] ?? p.metodo : "—"}</td>
-                      <td className="px-4 py-3 text-slate-400 text-xs">
-                        {p.acreditado_en ? new Date(p.acreditado_en).toLocaleDateString("es-AR") : "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <EditarPagoDialog pago={{
-                          id: p.id,
-                          mes: p.mes,
-                          anio: p.anio,
-                          importe: Number(p.importe),
-                          estado: p.estado,
-                          metodo: p.metodo ?? null,
-                          cuentaNombre: p.cuenta.perfil.nombre,
-                          cuentaDesc: p.cuenta.descripcion,
-                        }} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Cards — mobile */}
-          <div className="md:hidden space-y-3">
-            {pagos.map((p) => {
-              const cfg = ESTADO_CONFIG[p.estado] ?? { bg: "bg-slate-700 text-slate-400", label: p.estado };
-              return (
-                <div key={p.id} className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-white truncate">{p.cuenta.perfil.nombre}</p>
-                      <p className="text-sm text-slate-400 truncate">{p.cuenta.descripcion}</p>
-                    </div>
-                    <span className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${cfg.bg}`}>
-                      {cfg.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-white font-bold">${Number(p.importe).toLocaleString("es-AR")}</span>
-                    <span className="text-slate-400 text-xs">
-                      {p.metodo ? METODO_LABELS[p.metodo] ?? p.metodo : "—"}
-                      {p.acreditado_en && ` · ${new Date(p.acreditado_en).toLocaleDateString("es-AR")}`}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <DataTable
+            columns={pagosColumns}
+            rows={pagos}
+            keyExtractor={(p) => p.id}
+            caption="Pagos registrados del mes"
+            renderCard={renderPagoCard}
+          />
         </div>
       )}
 
@@ -279,10 +331,21 @@ export default async function PagosAdminPage({
             {cuentasSinPago.map((c) => (
               <div
                 key={c.id}
-                className="bg-slate-800 rounded-xl border border-slate-700 px-5 py-4 flex items-center justify-between gap-4"
+                className={`bg-slate-800 rounded-xl border px-5 py-4 flex items-center justify-between gap-4 ${
+                  c.estado === "SUSPENDIDA_PAGO"
+                    ? "border-amber-700/50"
+                    : "border-slate-700"
+                }`}
               >
                 <div>
-                  <p className="font-medium text-white">{c.descripcion}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium text-white">{c.descripcion}</p>
+                    {c.estado === "SUSPENDIDA_PAGO" && (
+                      <span className="text-xs font-bold text-amber-400 bg-amber-900/40 border border-amber-700/50 px-1.5 py-0.5 rounded">
+                        SUSPENDIDA
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-slate-400">{c.perfil.nombre}</p>
                 </div>
                 <PagoManualBulkForm
@@ -300,6 +363,12 @@ export default async function PagosAdminPage({
       {pagos.length === 0 && cuentasSinPago.length === 0 && transferenciasPendientes.length === 0 && (
         <p className="text-slate-400">No hay datos para este período.</p>
       )}
+
+      <TutorialContextual
+        section="pagos"
+        titulo="Guía rápida — Pagos"
+        steps={TUTORIAL_PAGOS}
+      />
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma/client";
 const MAX_TS_DRIFT_MS = 5 * 60 * 1000;
 
 function validarFirmaMP(
+  dataId: string,
   xRequestId: string,
   xSignature: string
 ): boolean {
@@ -22,7 +23,8 @@ function validarFirmaMP(
   const ts = Number(tsStr);
   if (!ts || Date.now() - ts > MAX_TS_DRIFT_MS) return false;
 
-  const manifest = `id:${xRequestId};request-id:${xRequestId};ts:${tsStr};`;
+  // MP spec: id = data.id query param; request-id = x-request-id header
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${tsStr};`;
   const hash = crypto
     .createHmac("sha256", secret)
     .update(manifest)
@@ -46,8 +48,11 @@ export async function POST(req: Request) {
   const body = await req.text();
   const xSignature = req.headers.get("x-signature") ?? "";
   const xRequestId = req.headers.get("x-request-id") ?? "";
+  const url = new URL(req.url);
+  // MP spec: data.id query param identifies the notification object
+  const dataId = url.searchParams.get("data.id") ?? url.searchParams.get("id") ?? "";
 
-  if (!validarFirmaMP(xRequestId, xSignature)) {
+  if (!validarFirmaMP(dataId, xRequestId, xSignature)) {
     return new Response("Forbidden", { status: 403 });
   }
 
@@ -79,28 +84,45 @@ export async function POST(req: Request) {
   const detalle = await detRes.json();
 
   if (detalle.status === "approved") {
-    // ref_externa UNIQUE → idempotente: reaplicar el update es seguro.
+    // external_reference contiene el pago.id (single) o pago.id,pago.id,... (bulk).
+    // Idempotente: reaplicar el update con "IN" es seguro si el pago ya está PAGADO.
+    const externalRef: string = String(detalle.external_reference ?? "");
+    const pagoIds = externalRef.split(",").map((s) => s.trim()).filter(Boolean);
+
+    if (pagoIds.length === 0) {
+      console.error(
+        "[conciliacion][mercadopago] pago approved sin external_reference",
+        {
+          mpPaymentId: String(mpPaymentId),
+          monto: detalle.transaction_amount ?? null,
+        }
+      );
+      return new Response("OK");
+    }
+
     const { count } = await prisma.pago.updateMany({
-      where: { ref_externa: String(mpPaymentId) },
+      where: { id: { in: pagoIds }, estado: { not: "PAGADO" } },
       data: {
         estado: "PAGADO",
         metodo: "MERCADOPAGO",
+        ref_externa: String(mpPaymentId),
         acreditado_en: new Date(),
       },
     });
 
     if (count === 0) {
-      // Pago aprobado en Mercado Pago SIN pago local con esa ref_externa:
-      // dinero acreditado que no se pudo conciliar. Devolvemos OK igual (no
-      // queremos que MP reintente en loop), pero esto NO puede pasar silencioso.
-      console.error(
-        "[conciliacion][mercadopago] pago approved sin pago local con esa ref_externa",
-        {
-          mpPaymentId: String(mpPaymentId),
-          monto: detalle.transaction_amount ?? null,
-          payerEmail: detalle.payer?.email ?? null,
-        }
-      );
+      // Ya pagado (idempotencia) o no encontrado. Solo loguear si no existe.
+      const existentes = await prisma.pago.count({ where: { id: { in: pagoIds } } });
+      if (existentes === 0) {
+        console.error(
+          "[conciliacion][mercadopago] pago approved sin pago local con ese id",
+          {
+            mpPaymentId: String(mpPaymentId),
+            pagoIds,
+            monto: detalle.transaction_amount ?? null,
+          }
+        );
+      }
     } else {
       revalidatePath("/portal/pagos");
       revalidatePath("/admin/pagos");

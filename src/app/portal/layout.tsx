@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { calcularEstadoFinanciero, peorEstadoFinanciero } from "@/lib/billing-state";
 import { PagoRequeridoGuard } from "@/components/portal/PagoRequeridoGuard";
@@ -10,7 +10,10 @@ import "./portal.css";
 import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Mi Portal — Escobar Instalaciones",
+  title: {
+    default: "Mi Central — Escobar Instalaciones",
+    template: "%s — Mi Central EI",
+  },
   robots: "noindex, nofollow",
 };
 
@@ -19,26 +22,18 @@ export default async function PortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId, perfil } = await requireSesion();
 
   // Segunda línea de defensa: el middleware ya debería haber redirigido,
   // pero si por algún motivo llega un ADMIN o TECNICO aquí, los enviamos
   // a su área correspondiente sin ejecutar la lógica de cliente.
-  const rolCheck = await prisma.perfil.findUnique({
-    where: { id: user.id },
-    select: { rol: true },
-  });
-  if (rolCheck?.rol === "ADMIN")   redirect("/admin/dashboard");
-  if (rolCheck?.rol === "TECNICO") redirect("/tecnico/mi-dia");
+  if (perfil.rol === "ADMIN")   redirect("/admin/dashboard");
+  if (perfil.rol === "TECNICO") redirect("/tecnico/mi-dia");
 
   const [cuentas, empleado] = await Promise.all([
     prisma.cuenta.findMany({
       where: {
-        perfil_id: user.id,
+        perfil_id: userId,
         estado: { not: "BAJA_DEFINITIVA" },
       },
       select: {
@@ -52,7 +47,7 @@ export default async function PortalLayout({
         },
       },
     }),
-    prisma.empleado.findFirst({ where: { perfil_id: user.id }, select: { id: true } }),
+    prisma.empleado.findFirst({ where: { perfil_id: userId }, select: { id: true } }),
   ]);
 
   const estados = cuentas.map((c) =>
@@ -129,7 +124,7 @@ export default async function PortalLayout({
 
         {/* Footer solo en desktop */}
         <footer className="hidden lg:block bg-industrial-800 border-t border-industrial-700 px-4 py-4 text-center">
-          <span className="text-xs text-slate-600 font-mono tracking-wide">
+          <span className="text-xs text-slate-400 font-mono tracking-wide">
             Escobar Instalaciones — Soporte:{" "}
             <a
               href={siteConfig.contact.whatsappLink}

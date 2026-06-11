@@ -85,7 +85,7 @@ export default async function EmbedCuentaPage({
           <p className="font-bold text-white leading-tight">{cuenta.perfil.nombre}</p>
           <p className="text-slate-400 text-xs">{cuenta.descripcion} · Ref. {cuenta.softguard_ref}</p>
         </div>
-        <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+        <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
           cuenta.estado === "ACTIVA" ? "bg-emerald-500/20 text-emerald-300" :
           cuenta.estado === "SUSPENDIDA_PAGO" ? "bg-red-500/20 text-red-400" :
           "bg-slate-700 text-slate-400"
@@ -96,7 +96,7 @@ export default async function EmbedCuentaPage({
 
       {/* Contacto */}
       <div className="rounded-lg bg-slate-900 border border-slate-800 p-3 space-y-1">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Contacto</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Contacto</p>
         {cuenta.perfil.telefono && (
           <a href={`https://wa.me/549${cuenta.perfil.telefono.replace(/\D/g, "")}`}
             target="_blank" rel="noopener noreferrer"
@@ -115,7 +115,7 @@ export default async function EmbedCuentaPage({
       {/* Deuda */}
       {cuenta.pagos.length > 0 ? (
         <div className="rounded-lg bg-red-900/30 border border-red-700/50 p-3 space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-red-400">
+          <p className="text-xs font-bold uppercase tracking-widest text-red-400">
             Deuda: ${deudaTotal.toLocaleString("es-AR")}
           </p>
           {cuenta.pagos.map((p) => (
@@ -134,17 +134,17 @@ export default async function EmbedCuentaPage({
       {/* OTs abiertas */}
       {cuenta.ordenes_trabajo.length > 0 && (
         <div className="rounded-lg bg-slate-900 border border-slate-800 p-3 space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">OTs abiertas</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">OTs abiertas</p>
           {cuenta.ordenes_trabajo.map((ot) => (
             <div key={ot.id} className="flex items-center justify-between gap-2">
               <p className="text-xs text-white line-clamp-1">{ot.descripcion}</p>
-              <span className="text-[10px] text-slate-400 flex-shrink-0">{ESTADO_OT[ot.estado] ?? ot.estado}</span>
+              <span className="text-xs text-slate-400 flex-shrink-0">{ESTADO_OT[ot.estado] ?? ot.estado}</span>
             </div>
           ))}
         </div>
       )}
 
-      <p className="text-[10px] text-slate-700 text-center pt-2">
+      <p className="text-xs text-slate-700 text-center pt-2">
         Escobar Instalaciones — iframe DSS
       </p>
     </div>

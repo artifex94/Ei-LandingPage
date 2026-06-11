@@ -19,13 +19,13 @@ export const siteConfig = {
   shortName: "EI Seguridad",
   title: "Escobar Instalaciones | Seguridad y Monitoreo 24hs — Victoria, Entre Ríos",
   description:
-    "Empresa de seguridad en Victoria, Entre Ríos. Instalamos y monitoreamos alarmas, cámaras CCTV, domótica y control de acceso. Atención 24 hs, respuesta inmediata.",
+    "Empresa de seguridad en Victoria, Entre Ríos. Instalamos y monitoreamos alarmas, cámaras CCTV, control de acceso y automatización segura. Atención 24 hs, soporte local y soluciones confiables.",
   keywords: [
     "empresa de seguridad Victoria Entre Ríos",
     "alarmas Victoria Entre Ríos",
     "monitoreo 24 horas Victoria",
     "cámaras CCTV Entre Ríos",
-    "domótica Victoria",
+    "automatización segura Victoria",
     "control de acceso Entre Ríos",
     "instalación alarmas Argentina",
     "seguridad hogar Victoria ER",

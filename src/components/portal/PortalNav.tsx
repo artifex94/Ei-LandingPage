@@ -37,14 +37,13 @@ const NAV_CLIENTE: NavDef[] = [
     label: "Soporte",
     mobileLabel: "Soporte",
     icon: Headphones,
-    alsoActive: ["/portal/solicitudes", "/portal/ot", "/portal/solicitud"],
+    alsoActive: ["/portal/solicitudes", "/portal/solicitud"],
   },
   {
     href: "/portal/documentos",
     label: "Documentos",
     mobileLabel: "Docs",
     icon: FolderOpen,
-    alsoActive: ["/portal/recibos", "/portal/facturas"],
   },
   {
     href: "/portal/perfil",
@@ -60,6 +59,12 @@ const ITEM_EVENTOS: NavDef = {
   mobileLabel: "Eventos",
   icon: Bell,
 };
+
+// En mobile, Eventos reemplaza a Documentos (consulta esporádica, accesible
+// desde los accesos rápidos del dashboard y el nav desktop).
+const NAV_CLIENTE_MOBILE: NavDef[] = NAV_CLIENTE.map((nav) =>
+  nav.href === "/portal/documentos" ? ITEM_EVENTOS : nav
+);
 
 const NAV_EMPLEADO_MOBILE: NavDef[] = [
   { href: "/portal/dashboard",   label: "Mis servicios", mobileLabel: "Inicio",  icon: ShieldCheck },
@@ -93,6 +98,7 @@ function DesktopLink({ nav, pathname }: { nav: NavDef; pathname: string }) {
   return (
     <Link
       href={nav.href}
+      aria-current={active ? "page" : undefined}
       className={`
         relative flex items-center gap-1.5 py-1 px-0.5 text-sm font-medium
         min-h-[44px] transition-colors duration-150 group
@@ -101,7 +107,7 @@ function DesktopLink({ nav, pathname }: { nav: NavDef; pathname: string }) {
     >
       <Icon
         className={`w-3.5 h-3.5 flex-shrink-0 transition-colors
-          ${active ? "text-tactical-500" : "text-slate-600 group-hover:text-slate-400"}`}
+          ${active ? "text-tactical-500" : "text-slate-500 group-hover:text-slate-300"}`}
         strokeWidth={active ? 2.2 : 1.8}
       />
       <span>{nav.label}</span>
@@ -122,14 +128,15 @@ function BottomNavItem({ nav, pathname }: { nav: NavDef; pathname: string }) {
   return (
     <Link
       href={nav.href}
+      aria-current={active ? "page" : undefined}
       className={`
-        flex-1 flex flex-col items-center justify-center gap-1
+        flex-1 min-w-0 flex flex-col items-center justify-center gap-1
         min-h-[56px] py-2 rounded-sm transition-colors duration-150
-        ${active ? "bg-tactical-500/10 text-tactical-500" : "text-slate-600 hover:text-slate-400"}
+        ${active ? "bg-tactical-500/10 text-tactical-500" : "text-slate-400 hover:text-slate-200"}
       `}
     >
       <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-      <span className={`text-[10px] leading-none font-mono tracking-wide ${active ? "font-semibold" : "font-medium"}`}>
+      <span className={`max-w-full truncate text-xs leading-none font-mono tracking-wide ${active ? "font-semibold" : "font-medium"}`}>
         {nav.mobileLabel}
       </span>
     </Link>
@@ -146,7 +153,7 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
   const pathname = usePathname();
 
   const desktopItems = isEmpleado ? NAV_EMPLEADO_DESKTOP : [...NAV_CLIENTE, ITEM_EVENTOS];
-  const mobileItems  = isEmpleado ? NAV_EMPLEADO_MOBILE  : NAV_CLIENTE;
+  const mobileItems  = isEmpleado ? NAV_EMPLEADO_MOBILE  : NAV_CLIENTE_MOBILE;
 
   return (
     <>
@@ -156,17 +163,17 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
           <Link href="/portal/dashboard" className="flex items-center gap-2.5 py-3 group flex-shrink-0">
             <div
               aria-hidden="true"
-              className="h-8 w-8 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-bold text-xs shadow-[0_0_12px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px] group-hover:shadow-[0_0_16px_rgba(241,119,32,0.35)] transition-shadow"
+              className="h-8 w-8 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-display font-bold text-xs shadow-[0_0_12px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px] group-hover:shadow-[0_0_16px_rgba(241,119,32,0.35)] transition-shadow"
             >
               EI
             </div>
             <div>
-              <span className="text-sm font-semibold text-white block leading-tight">Escobar Instalaciones</span>
-              <span className="text-[9px] text-slate-600 font-mono tracking-widest uppercase">Mi Portal</span>
+              <span className="text-sm font-display font-semibold text-white block leading-tight">Escobar Instalaciones</span>
+              <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">Mi Central</span>
             </div>
           </Link>
 
-          <nav aria-label="Navegación principal del portal" className="flex items-center gap-5">
+          <nav aria-label="Navegación principal de Mi Central" className="flex items-center gap-5">
             {desktopItems.map((nav) => (
               <DesktopLink key={nav.href} nav={nav} pathname={pathname} />
             ))}
@@ -181,11 +188,11 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
         <Link href="/portal/dashboard" className="flex items-center gap-2 group">
           <div
             aria-hidden="true"
-            className="h-7 w-7 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-bold text-xs shadow-[0_0_8px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px]"
+            className="h-7 w-7 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-display font-bold text-xs shadow-[0_0_8px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px]"
           >
             EI
           </div>
-          <span className="text-sm font-semibold text-white">Escobar Inst.</span>
+          <span className="text-sm font-display font-semibold text-white">Escobar Inst.</span>
         </Link>
         <LogoutButton />
       </header>

@@ -103,6 +103,44 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  async redirects() {
+    return [
+      {
+        // Lista de empleados consolidada en /admin/trabajadores
+        source: "/admin/empleados",
+        destination: "/admin/trabajadores",
+        permanent: true,
+      },
+      {
+        // Tecnicos del portal consolidados en el tab Tecnicos del equipo
+        source: "/admin/tecnicos",
+        destination: "/admin/trabajadores?rol=TECNICO",
+        permanent: true,
+      },
+      {
+        source: "/admin/tecnicos/nuevo",
+        destination: "/admin/trabajadores/nuevo",
+        permanent: true,
+      },
+      {
+        // Las ordenes de trabajo del cliente viven en Soporte
+        source: "/portal/ot",
+        destination: "/portal/soporte",
+        permanent: true,
+      },
+      {
+        // Recibos y facturas consolidados en Documentos (tabs)
+        source: "/portal/recibos",
+        destination: "/portal/documentos?tab=recibos",
+        permanent: true,
+      },
+      {
+        source: "/portal/facturas",
+        destination: "/portal/documentos?tab=facturas",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

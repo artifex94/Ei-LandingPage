@@ -95,7 +95,7 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white capitalize">{fechaLabel}</h1>
+          <h1 className="text-xl font-display font-bold text-white capitalize">{fechaLabel}</h1>
           <p className="text-sm text-slate-400 mt-0.5">
             {tareas.length === 0
               ? "Sin tareas asignadas"
@@ -115,7 +115,7 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
       {/* ── Tareas sin hora ─────────────────────────────────────────────────── */}
       {tareasSinHora.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sin horario asignado</p>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sin horario asignado</p>
           {tareasSinHora.map((t) => (
             <TareaCard key={t.id} tarea={t} />
           ))}
@@ -125,7 +125,7 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
       {/* ── Timeline ────────────────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             Disponibilidad y tareas
           </p>
           <button
@@ -173,7 +173,7 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
                   className="w-14 flex-shrink-0 px-2 py-1 text-right select-none focus:outline-none"
                   aria-label={`${disponible ? "Desmarcar" : "Marcar"} disponibilidad ${horaLabel}`}
                 >
-                  <span className={`text-[10px] leading-none font-mono ${esHora ? "text-slate-400" : "text-transparent"}`}>
+                  <span className={`text-xs leading-none font-mono ${esHora ? "text-slate-400" : "text-transparent"}`}>
                     {esHora ? horaLabel : ""}
                   </span>
                 </button>
@@ -208,7 +208,7 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
                           overflow: "hidden",
                         }}
                       >
-                        <span className="font-bold text-[10px] mr-1 opacity-70">
+                        <span className="font-bold text-xs mr-1 opacity-70">
                           {t.hora_inicio}
                         </span>
                         {t.titulo}
@@ -227,11 +227,11 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
 
           {/* Línea de fin */}
           <div className="flex items-center border-t border-slate-700/50">
-            <span className="w-14 px-2 py-1 text-right text-[10px] font-mono text-slate-400">22:00</span>
+            <span className="w-14 px-2 py-1 text-right text-xs font-mono text-slate-400">22:00</span>
           </div>
         </div>
 
-        <p className="text-xs text-slate-600 mt-2 text-center">
+        <p className="text-xs text-slate-400 mt-2 text-center">
           Tocá un bloque para marcar / desmarcar tu disponibilidad
         </p>
       </div>
@@ -273,7 +273,7 @@ function TareaCard({ tarea }: { tarea: Tarea }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             {tarea.hora_inicio && (
-              <span className="text-[11px] font-mono font-bold text-slate-300 bg-slate-700 px-1.5 py-0.5 rounded">
+              <span className="text-xs font-mono font-bold text-slate-300 bg-slate-700 px-1.5 py-0.5 rounded">
                 {tarea.hora_inicio}
                 {tarea.hora_fin && `–${tarea.hora_fin}`}
               </span>
@@ -281,12 +281,12 @@ function TareaCard({ tarea }: { tarea: Tarea }) {
             <span className="text-sm font-semibold text-white truncate">{tarea.titulo}</span>
           </div>
           {(tarea.cuenta_calle || tarea.cuenta_localidad) && (
-            <p className="text-xs text-slate-500 mt-0.5 truncate">
+            <p className="text-xs text-slate-400 mt-0.5 truncate">
               {[tarea.cuenta_calle, tarea.cuenta_localidad].filter(Boolean).join(", ")}
             </p>
           )}
         </div>
-        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
+        <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
           tarea.estado === "COMPLETADA" ? "bg-emerald-500/20 text-emerald-400" :
           tarea.estado === "EN_CURSO"   ? "bg-sky-500/20 text-sky-400" :
           "bg-slate-700 text-slate-400"

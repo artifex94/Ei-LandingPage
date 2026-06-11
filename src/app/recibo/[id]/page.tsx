@@ -1,9 +1,10 @@
-import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { PrintButton } from "./PrintButton";
 import { METODO_LABEL } from "@/lib/constants/payment";
 import { siteConfig } from "@/config/site";
+import { UUID_RE } from "@/lib/constants/validation";
 
 const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -20,11 +21,10 @@ export default async function ReciboPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
 
   // Auth guard — el recibo pertenece al titular o a un admin
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId, perfil: sesionPerfil } = await requireSesion();
 
   const pago = await prisma.pago.findUnique({
     where: { id },
@@ -50,8 +50,7 @@ export default async function ReciboPage({
   if (!pago) notFound();
 
   // Solo el propio titular o un ADMIN puede ver el recibo
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id }, select: { rol: true } });
-  if (pago.cuenta.perfil.id !== user.id && perfil?.rol !== "ADMIN") notFound();
+  if (pago.cuenta.perfil.id !== userId && sesionPerfil.rol !== "ADMIN") notFound();
 
   if (pago.estado !== "PAGADO") {
     return (

@@ -1,8 +1,40 @@
-import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { cache } from "react";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { BatteryWarning, BatteryLow, Wrench } from "lucide-react";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SensorItem } from "@/components/portal/SensorItem";
+import { PortalSection } from "@/components/portal/PortalSection";
+import { Badge } from "@/components/ui/Badge";
+import { UUID_RE } from "@/lib/constants/validation";
+
+const getCuenta = cache(async (id: string, userId: string) =>
+  prisma.cuenta.findFirst({
+    where: { id, perfil_id: userId },
+    include: {
+      sensores: { orderBy: { codigo_zona: "asc" } },
+      pagos: {
+        where: { anio: new Date().getFullYear() },
+        orderBy: { mes: "desc" },
+      },
+      solicitudes: {
+        where: { estado: { not: "RESUELTA" } },
+        orderBy: { creada_en: "desc" },
+        take: 3,
+      },
+    },
+  })
+);
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  if (!UUID_RE.test(id)) return { title: "Mi cuenta" };
+  const { userId } = await requireSesion();
+  const cuenta = await getCuenta(id, userId);
+  return { title: cuenta?.descripcion ?? "Mi cuenta" };
+}
 
 // ─── Panel de estado del sistema ──────────────────────────────────────────────
 
@@ -56,7 +88,7 @@ function PanelEstado({
   }
 
   return (
-    <div className={`rounded-xl border px-5 py-4 ${estadoCls}`}>
+    <div className={`rounded-lg border px-5 py-4 ${estadoCls}`}>
       <div className="flex items-center justify-between gap-3 mb-3">
         <p className="font-semibold text-sm">
           {estadoIcon} {estadoLabel}
@@ -71,13 +103,22 @@ function PanelEstado({
           <span>Última activación: {tiempoRelativo(ultimaActivacion)}</span>
         )}
         {bateriaCritica > 0 && (
-          <span>🔴 {bateriaCritica} batería{bateriaCritica > 1 ? "s" : ""} crítica{bateriaCritica > 1 ? "s" : ""}</span>
+          <span className="inline-flex items-center gap-1">
+            <BatteryWarning aria-hidden="true" className="w-3.5 h-3.5 text-red-400" strokeWidth={1.8} />
+            {bateriaCritica} batería{bateriaCritica > 1 ? "s" : ""} crítica{bateriaCritica > 1 ? "s" : ""}
+          </span>
         )}
         {bateriaAdvertencia > 0 && (
-          <span>🟡 {bateriaAdvertencia} batería{bateriaAdvertencia > 1 ? "s" : ""} baja{bateriaAdvertencia > 1 ? "s" : ""}</span>
+          <span className="inline-flex items-center gap-1">
+            <BatteryLow aria-hidden="true" className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.8} />
+            {bateriaAdvertencia} batería{bateriaAdvertencia > 1 ? "s" : ""} baja{bateriaAdvertencia > 1 ? "s" : ""}
+          </span>
         )}
         {enMantenimiento > 0 && (
-          <span>🔧 {enMantenimiento} dispositivo{enMantenimiento > 1 ? "s" : ""} con alerta de mantenimiento</span>
+          <span className="inline-flex items-center gap-1">
+            <Wrench aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={1.8} />
+            {enMantenimiento} dispositivo{enMantenimiento > 1 ? "s" : ""} con alerta de mantenimiento
+          </span>
         )}
         {!hayProblemas && !hayAdvertencias && (
           <span>Todos los dispositivos funcionando correctamente</span>
@@ -95,26 +136,10 @@ export default async function CuentaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
+  const { userId } = await requireSesion();
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const cuenta = await prisma.cuenta.findFirst({
-    where: { id, perfil_id: user.id },
-    include: {
-      sensores: { orderBy: { codigo_zona: "asc" } },
-      pagos: {
-        where: { anio: new Date().getFullYear() },
-        orderBy: { mes: "desc" },
-      },
-      solicitudes: {
-        where: { estado: { not: "RESUELTA" } },
-        orderBy: { creada_en: "desc" },
-        take: 3,
-      },
-    },
-  });
+  const cuenta = await getCuenta(id, userId);
 
   if (!cuenta) notFound();
 
@@ -123,7 +148,7 @@ export default async function CuentaPage({
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {/* Breadcrumb */}
       <nav aria-label="Ruta de navegación">
         <ol className="flex items-center gap-2 text-sm text-slate-400">
@@ -143,18 +168,18 @@ export default async function CuentaPage({
       <section aria-labelledby="cuenta-heading">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 id="cuenta-heading" className="text-2xl font-bold text-white">
+            <h1 id="cuenta-heading" className="text-2xl font-display font-bold text-white">
               {cuenta.descripcion}
             </h1>
             <p className="text-slate-400 mt-1">
-              Ref. Softguard: {cuenta.softguard_ref}
+              Ref. Softguard: {cuenta.softguard_ref ?? "—"}
             </p>
           </div>
 
           {pagoPendiente && (
             <Link
               href="/portal/pagos"
-              className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-lg font-semibold min-h-[48px] text-sm transition-colors"
+              className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 border border-red-700 border-b-[3px] border-b-red-900 active:border-b active:translate-y-[2px] text-white px-5 py-2.5 rounded-sm font-bold uppercase tracking-widest min-h-[48px] text-xs transition-all duration-150 ease-mech-press"
             >
               ⚠ Pagar ahora — ${Number(pagoPendiente.importe).toLocaleString("es-AR")}
             </Link>
@@ -169,26 +194,17 @@ export default async function CuentaPage({
 
       {/* Solicitudes abiertas */}
       {cuenta.solicitudes.length > 0 && (
-        <section aria-labelledby="solicitudes-abiertas-heading">
-          <h2 id="solicitudes-abiertas-heading" className="text-lg font-semibold text-white mb-3">
-            Solicitudes en curso
-          </h2>
+        <PortalSection title="Solicitudes en curso" titleId="solicitudes-abiertas-heading" ledClass="bg-amber-400">
           <div className="space-y-2">
             {cuenta.solicitudes.map((s) => (
               <div
                 key={s.id}
-                className="bg-slate-800 rounded-xl border border-slate-700 px-4 py-3 flex items-center justify-between gap-3"
+                className="rounded-md border border-industrial-700 bg-industrial-800/60 px-4 py-3 flex items-center justify-between gap-3"
               >
                 <p className="text-slate-300 text-sm truncate">{s.descripcion}</p>
-                <span
-                  className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${
-                    s.estado === "EN_PROCESO"
-                      ? "bg-blue-900/40 text-blue-400"
-                      : "bg-amber-900/40 text-amber-400"
-                  }`}
-                >
+                <Badge variant={s.estado === "EN_PROCESO" ? "info" : "warning"} className="shrink-0">
                   {s.estado === "EN_PROCESO" ? "En proceso" : "Pendiente"}
-                </span>
+                </Badge>
               </div>
             ))}
           </div>
@@ -198,46 +214,39 @@ export default async function CuentaPage({
           >
             Ver historial completo →
           </Link>
-        </section>
+        </PortalSection>
       )}
 
       {/* Sensores */}
-      <section aria-labelledby="sensores-heading">
-        <h2 id="sensores-heading" className="text-lg font-semibold text-white mb-4">
-          Dispositivos instalados
-        </h2>
-
+      <PortalSection title="Dispositivos instalados" titleId="sensores-heading">
         {cuenta.sensores.length === 0 ? (
           <p className="text-slate-400">No hay dispositivos registrados.</p>
         ) : (
-          <ul className="space-y-3" role="list" aria-label="Lista de sensores">
+          <ul className="space-y-2" role="list" aria-label="Lista de sensores">
             {cuenta.sensores.map((sensor) => (
               <SensorItem key={sensor.id} sensor={sensor} />
             ))}
           </ul>
         )}
-      </section>
+      </PortalSection>
 
       {/* Solicitar mantenimiento */}
-      <section aria-labelledby="mant-heading">
-        <h2 id="mant-heading" className="text-lg font-semibold text-white mb-4">
-          ¿Algo no funciona bien?
-        </h2>
+      <PortalSection title="¿Algo no funciona bien?" titleId="mant-heading">
         <div className="flex flex-wrap gap-3">
           <Link
             href={`/portal/solicitud?cuenta=${cuenta.id}`}
-            className="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-lg font-medium min-h-[48px] border border-slate-600 transition-colors"
+            className="inline-flex items-center gap-2 bg-industrial-700 hover:bg-industrial-600 border border-industrial-600 border-b-[3px] border-b-industrial-950 active:border-b active:translate-y-[2px] text-slate-200 px-6 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest min-h-[48px] transition-all duration-150 ease-mech-press"
           >
             Solicitar asistencia técnica
           </Link>
           <Link
             href="/portal/solicitudes"
-            className="inline-flex items-center gap-2 text-slate-300 hover:text-white px-6 py-3 rounded-lg font-medium min-h-[48px] border border-slate-700 hover:border-slate-500 transition-colors text-sm"
+            className="inline-flex items-center gap-2 text-slate-300 hover:text-white px-6 py-2.5 rounded-sm font-medium min-h-[48px] border border-industrial-700 hover:border-industrial-600 transition-colors text-sm"
           >
             Ver mis solicitudes
           </Link>
         </div>
-      </section>
+      </PortalSection>
     </div>
   );
 }

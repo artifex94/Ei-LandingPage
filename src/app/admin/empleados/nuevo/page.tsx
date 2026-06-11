@@ -1,22 +1,21 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/session";
 import { NuevoEmpleadoForm } from "@/components/admin/NuevoEmpleadoForm";
 import { siteConfig } from "@/config/site";
 
-export const metadata = { title: "Nuevo empleado — Admin" };
+export const metadata = { title: "Nuevo empleado" };
 
 export default async function NuevoEmpleadoPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const esEscobarAdmin = user?.email === siteConfig.contact.email;
+  const adminPerfil = await requireAdmin();
+  const esEscobarAdmin = adminPerfil.email === siteConfig.contact.email;
 
   return (
     <div className="max-w-xl">
       <nav aria-label="Ruta de navegación" className="mb-6">
         <ol className="flex items-center gap-2 text-sm text-slate-400">
           <li>
-            <Link href="/admin/empleados" className="hover:text-white transition-colors">
-              Empleados
+            <Link href="/admin/trabajadores" className="hover:text-white transition-colors">
+              Equipo
             </Link>
           </li>
           <li aria-hidden="true">/</li>

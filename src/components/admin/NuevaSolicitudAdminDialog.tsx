@@ -20,7 +20,7 @@ export function NuevaSolicitudAdminDialog({ cuentas }: { cuentas: CuentaItem[] }
     <>
       <button
         onClick={() => setOpen(true)}
-        className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
+        className="text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-slate-900 px-4 py-2 min-h-[44px] rounded-lg transition-colors"
       >
         + Nueva solicitud
       </button>
@@ -29,11 +29,21 @@ export function NuevaSolicitudAdminDialog({ cuentas }: { cuentas: CuentaItem[] }
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
         >
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md space-y-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nueva-sol-title"
+            className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md space-y-4"
+          >
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-white">Nueva solicitud de mantenimiento</h2>
-              <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-white text-lg leading-none">×</button>
+              <h2 id="nueva-sol-title" className="text-base font-bold text-white">Nueva solicitud de mantenimiento</h2>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Cerrar diálogo"
+                className="text-slate-500 hover:text-white text-lg leading-none min-h-[36px] min-w-[36px] flex items-center justify-center rounded"
+              >×</button>
             </div>
 
             {state.ok && (
@@ -43,16 +53,16 @@ export function NuevaSolicitudAdminDialog({ cuentas }: { cuentas: CuentaItem[] }
             )}
             {state.errores && (
               <div className="bg-amber-900/30 border border-amber-700/60 text-amber-200 rounded-lg p-3 text-sm space-y-1">
-                {state.errores.map((e, i) => <p key={i}>{e}</p>)}
+                {state.errores.map((e) => <p key={e}>{e}</p>)}
               </div>
             )}
 
             <form action={action} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                <label htmlFor="nsa-cuenta" className="block text-xs font-semibold text-slate-400 mb-1.5">
                   Cuenta / Servicio <span className="text-red-400">*</span>
                 </label>
-                <select name="cuenta_id" required className={inputCls}>
+                <select id="nsa-cuenta" name="cuenta_id" required autoFocus className={inputCls}>
                   <option value="">Seleccionar cuenta…</option>
                   {cuentas.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -63,10 +73,11 @@ export function NuevaSolicitudAdminDialog({ cuentas }: { cuentas: CuentaItem[] }
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                <label htmlFor="nsa-descripcion" className="block text-xs font-semibold text-slate-400 mb-1.5">
                   Descripción <span className="text-red-400">*</span>
                 </label>
                 <textarea
+                  id="nsa-descripcion"
                   name="descripcion"
                   rows={3}
                   required
@@ -76,8 +87,8 @@ export function NuevaSolicitudAdminDialog({ cuentas }: { cuentas: CuentaItem[] }
               </div>
 
               <div className="w-40">
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Prioridad</label>
-                <select name="prioridad" defaultValue="MEDIA" className={inputCls}>
+                <label htmlFor="nsa-prioridad" className="block text-xs font-semibold text-slate-400 mb-1.5">Prioridad</label>
+                <select id="nsa-prioridad" name="prioridad" defaultValue="MEDIA" className={inputCls}>
                   <option value="BAJA">Baja</option>
                   <option value="MEDIA">Media</option>
                   <option value="ALTA">Alta</option>
@@ -95,7 +106,7 @@ export function NuevaSolicitudAdminDialog({ cuentas }: { cuentas: CuentaItem[] }
                 <button
                   type="submit"
                   disabled={pending}
-                  className="flex-1 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
+                  className="flex-1 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 px-4 py-2.5 rounded-lg transition-colors"
                 >
                   {pending ? "Creando…" : "Crear solicitud"}
                 </button>

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
 import {
   analizarXLS,
   aplicarCorreccionesSeleccionadas,
@@ -28,6 +29,25 @@ const CONFIANZA_ESTILOS: Record<string, string> = {
   MEDIA: "bg-amber-900/40 text-amber-400",
   BAJA: "bg-red-900/40 text-red-400",
 };
+
+const TUTORIAL_HIGIENIZAR = [
+  {
+    titulo: "⚠ Operación con impacto real",
+    descripcion: "Higienizar aplica correcciones masivas a perfiles de clientes. Revisá cada corrección antes de confirmar — no hay deshacer.",
+  },
+  {
+    titulo: "Paso 1 — Subir el XLS",
+    descripcion: "Subí el archivo XLS exportado de SoftGuard. El sistema lo analiza y detecta diferencias con los datos actuales en la base de datos.",
+  },
+  {
+    titulo: "Paso 2 — Revisar correcciones",
+    descripcion: "Cada corrección muestra confianza (alta/media/baja). Seleccioná solo las que estás seguro de aplicar. Las de baja confianza requieren revisión manual.",
+  },
+  {
+    titulo: "Paso 3 — Confirmar y aplicar",
+    descripcion: "Solo se aplican las correcciones seleccionadas. Las no seleccionadas se ignoran y no afectan la base de datos.",
+  },
+];
 
 export default function HigienizarPage() {
   const [estado, setEstado] = useState<Estado>("upload");
@@ -90,7 +110,7 @@ export default function HigienizarPage() {
 
   // ── Filtrado ───────────────────────────────────────────────────────────────
 
-  const correccionesFiltradas = correcciones.filter((c, _i) => {
+  const correccionesFiltradas = correcciones.filter((c) => {
     if (filtroConfianza !== "TODAS" && c.confianza !== filtroConfianza) return false;
     if (filtroCampo !== "TODOS" && c.campo !== filtroCampo) return false;
     return true;
@@ -151,7 +171,7 @@ export default function HigienizarPage() {
                 type="file"
                 accept=".xls,.xlsx"
                 required
-                className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600 file:cursor-pointer cursor-pointer"
+                className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-slate-900 hover:file:bg-orange-600 file:cursor-pointer cursor-pointer"
               />
               <p className="text-xs text-slate-500 mt-2">
                 El archivo &quot;Reporte Cuentas&quot; que se exporta desde Softguard.
@@ -170,7 +190,7 @@ export default function HigienizarPage() {
             <button
               type="submit"
               disabled={cargando}
-              className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-lg px-4 py-3 min-h-[48px] transition-colors"
+              className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 font-semibold rounded-lg px-4 py-3 min-h-[48px] transition-colors"
             >
               {cargando ? "Analizando..." : "Analizar archivo"}
             </button>
@@ -203,7 +223,7 @@ export default function HigienizarPage() {
           )}
 
           {estadisticas.sin_email > 0 && (
-            <div className="bg-slate-800 border border-amber-800/40 rounded-xl px-4 py-3 text-sm text-amber-400">
+            <div role="status" className="bg-slate-800 border border-amber-800/40 rounded-xl px-4 py-3 text-sm text-amber-400">
               {estadisticas.sin_email} cuenta{estadisticas.sin_email !== 1 ? "s" : ""} sin email registrado. No se puede corregir automáticamente — contactar a los clientes para obtenerlo.
             </div>
           )}
@@ -211,8 +231,9 @@ export default function HigienizarPage() {
           {/* Filtros */}
           <div className="flex flex-wrap gap-3 items-center">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-400">Confianza:</label>
+              <label htmlFor="filtro-confianza" className="text-xs text-slate-400">Confianza:</label>
               <select
+                id="filtro-confianza"
                 value={filtroConfianza}
                 onChange={(e) => setFiltroConfianza(e.target.value)}
                 className="bg-slate-700 border border-slate-600 text-white text-xs rounded px-2 py-1 focus:outline-2 focus:outline-orange-500"
@@ -224,8 +245,9 @@ export default function HigienizarPage() {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-400">Campo:</label>
+              <label htmlFor="filtro-campo" className="text-xs text-slate-400">Campo:</label>
               <select
+                id="filtro-campo"
                 value={filtroCampo}
                 onChange={(e) => setFiltroCampo(e.target.value)}
                 className="bg-slate-700 border border-slate-600 text-white text-xs rounded px-2 py-1 focus:outline-2 focus:outline-orange-500"
@@ -340,7 +362,7 @@ export default function HigienizarPage() {
               type="button"
               onClick={handleAplicar}
               disabled={cargando || seleccionadas.size === 0}
-              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-lg px-6 py-3 min-h-[48px] transition-colors"
+              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-slate-900 font-semibold rounded-lg px-6 py-3 min-h-[48px] transition-colors"
             >
               {cargando
                 ? "Aplicando..."
@@ -367,7 +389,8 @@ export default function HigienizarPage() {
                 : "bg-amber-900/20 border-amber-700"
             }`}
           >
-            <p className="text-4xl mb-3">{resultado.errores.length === 0 ? "✓" : "⚠"}</p>
+            <p className="text-4xl mb-3" aria-hidden="true">{resultado.errores.length === 0 ? "✓" : "⚠"}</p>
+            <span className="sr-only">{resultado.errores.length === 0 ? "Proceso completado sin errores" : "Proceso completado con errores"}</span>
             <p className="text-xl font-bold text-white mb-1">
               {resultado.aplicadas} corrección{resultado.aplicadas !== 1 ? "es" : ""} aplicada{resultado.aplicadas !== 1 ? "s" : ""}
             </p>
@@ -421,6 +444,12 @@ export default function HigienizarPage() {
           </div>
         </div>
       )}
+
+      <TutorialContextual
+        section="higienizar"
+        titulo="Guía rápida — Higienizar BD"
+        steps={TUTORIAL_HIGIENIZAR}
+      />
     </div>
   );
 }

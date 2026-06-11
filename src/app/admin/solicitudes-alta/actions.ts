@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { enviarWhatsApp, enviarWhatsAppTemplate } from "@/lib/twilio";
 import { registrarAudit } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
+import { UUID_RE } from "@/lib/constants/validation";
 
 export interface AltaActionResult {
   ok?: boolean;
@@ -26,7 +27,7 @@ export async function procesarAltaUsuario(
   if (!admin) return { errores: ["Sin permisos de administrador."] };
 
   const altaId = (formData.get("altaId") as string)?.trim();
-  if (!altaId) return { errores: ["ID de solicitud inválido."] };
+  if (!UUID_RE.test(altaId ?? "")) return { errores: ["ID de solicitud inválido."] };
 
   const alta = await prisma.altaUsuario.findUnique({ where: { id: altaId } });
   if (!alta) return { errores: ["Solicitud no encontrada."] };
@@ -206,7 +207,7 @@ export async function rechazarAltaUsuario(
   if (!admin) return { errores: ["Sin permisos de administrador."] };
 
   const altaId = (formData.get("altaId") as string)?.trim();
-  if (!altaId) return { errores: ["ID de solicitud inválido."] };
+  if (!UUID_RE.test(altaId ?? "")) return { errores: ["ID de solicitud inválido."] };
 
   const alta = await prisma.altaUsuario.findUnique({ where: { id: altaId } });
   if (!alta) return { errores: ["Solicitud no encontrada."] };
@@ -216,7 +217,7 @@ export async function rechazarAltaUsuario(
 
   await prisma.altaUsuario.update({
     where: { id: altaId },
-    data: { estado: "RECHAZADA" },
+    data: { estado: "RECHAZADA", procesada_por: admin.id, procesada_at: new Date() },
   });
 
   // Notify client

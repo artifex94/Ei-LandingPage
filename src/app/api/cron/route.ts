@@ -38,5 +38,5 @@ export async function POST(req: NextRequest) {
       `facturasBorradores=${r.facturasBorradores} facturasOmitidas=${r.facturasOmitidas}`,
   );
 
-  return NextResponse.json({ ok: true, periodo: `${r.mes}/${r.anio}`, ...r });
+  return NextResponse.json({ ok: true, periodo: `${r.mes}/${r.anio}` });
 }

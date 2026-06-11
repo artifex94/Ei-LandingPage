@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SolicitudCambioForm } from "@/components/portal/SolicitudCambioForm";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
+import { PortalSection } from "@/components/portal/PortalSection";
+import { Badge, type BadgeVariant } from "@/components/ui/Badge";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+
+export const metadata: Metadata = { title: "Mi perfil" };
 
 const CATEGORIA_LABEL: Record<string, string> = {
   ALARMA_MONITOREO: "Alarma y monitoreo",
@@ -18,10 +25,10 @@ const TIPO_TITULAR_LABEL: Record<string, string> = {
   VEHICULO: "Vehículo",
 };
 
-const ESTADO_CAMBIO_ESTILOS: Record<string, string> = {
-  PENDIENTE: "bg-amber-900/40 text-amber-400",
-  APROBADO: "bg-green-900/40 text-green-400",
-  RECHAZADO: "bg-red-900/40 text-red-400",
+const ESTADO_CAMBIO_VARIANT: Record<string, BadgeVariant> = {
+  PENDIENTE: "warning",
+  APROBADO:  "success",
+  RECHAZADO: "danger",
 };
 
 const CAMPO_LABEL: Record<string, string> = {
@@ -31,14 +38,10 @@ const CAMPO_LABEL: Record<string, string> = {
 };
 
 export default async function PerfilPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { userId } = await requireSesion();
 
   const perfil = await prisma.perfil.findUnique({
-    where: { id: user.id },
+    where: { id: userId },
     include: {
       solicitudes_cambio: {
         orderBy: { created_at: "desc" },
@@ -64,6 +67,44 @@ export default async function PerfilPage() {
 
   if (!perfil) redirect("/login");
 
+  type SolicitudRow = (typeof perfil.solicitudes_cambio)[number];
+
+  const solicitudColumns: Column<SolicitudRow>[] = [
+    {
+      id: "campo",
+      header: "Campo",
+      className: "px-5",
+      cell: (s) => <span className="text-slate-300">{CAMPO_LABEL[s.campo] ?? s.campo}</span>,
+    },
+    {
+      id: "valor",
+      header: "Valor propuesto",
+      className: "px-5 hidden sm:table-cell",
+      cell: (s) => <span className="block text-slate-300 truncate max-w-[200px]">{s.valor_nuevo}</span>,
+    },
+    {
+      id: "estado",
+      header: "Estado",
+      className: "px-5",
+      cell: (s) => (
+        <div>
+          <Badge variant={ESTADO_CAMBIO_VARIANT[s.estado] ?? "neutral"}>{s.estado}</Badge>
+          {s.notas_admin && <p className="text-xs text-slate-400 mt-1">{s.notas_admin}</p>}
+        </div>
+      ),
+    },
+    {
+      id: "fecha",
+      header: "Fecha",
+      className: "px-5 hidden md:table-cell",
+      cell: (s) => (
+        <span className="text-slate-400 whitespace-nowrap">
+          {new Date(s.created_at).toLocaleDateString("es-AR")}
+        </span>
+      ),
+    },
+  ];
+
   // Determinar qué campos tienen solicitud pendiente
   const pendientesPorCampo = new Set(
     perfil.solicitudes_cambio
@@ -78,21 +119,15 @@ export default async function PerfilPage() {
   ];
 
   return (
-    <div className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold text-white mb-1">Mi perfil</h1>
-        <p className="text-slate-400 text-sm">
-          Tu información personal registrada con Escobar Instalaciones.
-        </p>
-      </div>
+    <div className="space-y-7">
+      <PortalPageHeader
+        title="Mi perfil"
+        description="Tu información personal registrada con Escobar Instalaciones."
+      />
 
       {/* ── Datos de contacto ─────────────────────────────────────────────── */}
-      <section aria-labelledby="contacto-heading">
-        <h2 id="contacto-heading" className="text-lg font-semibold text-white mb-4">
-          Datos de contacto
-        </h2>
-
-        <div className="bg-slate-800 rounded-2xl border border-slate-700 divide-y divide-slate-700">
+      <PortalSection title="Datos de contacto" titleId="contacto-heading">
+        <div className="rounded-lg border border-industrial-700 bg-industrial-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.4)] divide-y divide-industrial-700/60">
           {/* DNI — solo lectura */}
           <div className="flex items-center justify-between gap-4 px-5 py-4">
             <div>
@@ -141,22 +176,18 @@ export default async function PerfilPage() {
         <p className="text-xs text-slate-500 mt-3">
           Los cambios solicitados son revisados por el equipo de Escobar Instalaciones antes de aplicarse.
         </p>
-      </section>
+      </PortalSection>
 
       {/* ── Mis instalaciones ─────────────────────────────────────────────── */}
       {perfil.cuentas.length > 0 && (
-        <section aria-labelledby="instalaciones-heading">
-          <h2 id="instalaciones-heading" className="text-lg font-semibold text-white mb-4">
-            Mis instalaciones
-          </h2>
-
-          <div className="space-y-3">
+        <PortalSection title="Mis instalaciones" titleId="instalaciones-heading">
+          <div className="space-y-2">
             {perfil.cuentas.map((cuenta) => {
               const tieneDir = cuenta.calle || cuenta.localidad || cuenta.provincia;
               return (
                 <div
                   key={cuenta.id}
-                  className="bg-slate-800 rounded-xl border border-slate-700 px-5 py-4"
+                  className="rounded-md border border-industrial-700 bg-industrial-800/60 px-4 py-3"
                 >
                   <div className="mb-3">
                     <p className="font-semibold text-white">{cuenta.descripcion}</p>
@@ -182,58 +213,19 @@ export default async function PerfilPage() {
               );
             })}
           </div>
-        </section>
+        </PortalSection>
       )}
 
       {/* ── Historial de solicitudes ───────────────────────────────────────── */}
       {perfil.solicitudes_cambio.length > 0 && (
-        <section aria-labelledby="historial-heading">
-          <h2 id="historial-heading" className="text-lg font-semibold text-white mb-4">
-            Historial de solicitudes
-          </h2>
-
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left text-xs font-medium text-slate-400 px-5 py-3">Campo</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-5 py-3 hidden sm:table-cell">Valor propuesto</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-5 py-3">Estado</th>
-                  <th className="text-left text-xs font-medium text-slate-400 px-5 py-3 hidden md:table-cell">Fecha</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/50">
-                {perfil.solicitudes_cambio.map((s) => (
-                  <tr key={s.id}>
-                    <td className="px-5 py-3 text-slate-300">
-                      {CAMPO_LABEL[s.campo] ?? s.campo}
-                    </td>
-                    <td className="px-5 py-3 text-slate-300 hidden sm:table-cell truncate max-w-[200px]">
-                      {s.valor_nuevo}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div>
-                        <span
-                          className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                            ESTADO_CAMBIO_ESTILOS[s.estado] ?? "bg-slate-700 text-slate-300"
-                          }`}
-                        >
-                          {s.estado}
-                        </span>
-                        {s.notas_admin && (
-                          <p className="text-xs text-slate-400 mt-1">{s.notas_admin}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-slate-400 hidden md:table-cell whitespace-nowrap">
-                      {new Date(s.created_at).toLocaleDateString("es-AR")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <PortalSection title="Historial de solicitudes" titleId="historial-heading">
+          <DataTable
+            columns={solicitudColumns}
+            rows={perfil.solicitudes_cambio}
+            keyExtractor={(s) => s.id}
+            caption="Historial de solicitudes de cambio"
+          />
+        </PortalSection>
       )}
     </div>
   );

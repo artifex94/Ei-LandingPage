@@ -58,3 +58,6 @@ Thumbs.db
 
 # ─── Vercel ───────────────────────────────────────────────────────────────────
 .vercel
+
+# SoftGuard capture (datos sensibles)
+scripts/.sg-capture.json

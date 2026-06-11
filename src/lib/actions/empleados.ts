@@ -1,18 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
-import { createClient } from "@/lib/supabase/server";
 import type { RolEmpleado } from "@/generated/prisma/client";
+import { UUID_RE } from "@/lib/constants/validation";
 
-async function getAdminActual() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const perfil = await prisma.perfil.findUnique({ where: { id: user.id } });
-  return perfil?.rol === "ADMIN" ? perfil : null;
-}
+const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
 
 export async function crearEmpleado(data: {
   perfil_id: string;
@@ -22,8 +17,11 @@ export async function crearEmpleado(data: {
   puede_facturar: boolean;
   color_calendario?: string;
 }) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  if (!UUID_RE.test(data.perfil_id)) throw new Error("perfil_id inválido.");
+  if (data.color_calendario && !HEX_COLOR_RE.test(data.color_calendario)) {
+    throw new Error("El color de calendario debe ser un valor hexadecimal válido (#rrggbb).");
+  }
+  const admin = await requireAdmin();
 
   const empleado = await prisma.empleado.create({ data });
 
@@ -36,14 +34,13 @@ export async function crearEmpleado(data: {
     detalle: { rol: data.rol_empleado, perfil_id: data.perfil_id },
   });
 
-  revalidatePath("/admin/empleados");
   revalidatePath("/admin/trabajadores");
   return empleado;
 }
 
 export async function toggleEmpleadoActivo(empleado_id: string, activo: boolean) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  if (!UUID_RE.test(empleado_id)) throw new Error("ID de empleado inválido.");
+  const admin = await requireAdmin();
 
   const empleado = await prisma.empleado.update({
     where: { id: empleado_id },
@@ -59,7 +56,6 @@ export async function toggleEmpleadoActivo(empleado_id: string, activo: boolean)
     detalle: {},
   });
 
-  revalidatePath("/admin/empleados");
   revalidatePath("/admin/trabajadores");
   return empleado;
 }
@@ -74,8 +70,11 @@ export async function actualizarEmpleado(
     color_calendario: string;
   }>
 ) {
-  const admin = await getAdminActual();
-  if (!admin) throw new Error("No autorizado");
+  if (!UUID_RE.test(empleado_id)) throw new Error("ID de empleado inválido.");
+  if (data.color_calendario && !HEX_COLOR_RE.test(data.color_calendario)) {
+    throw new Error("El color de calendario debe ser un valor hexadecimal válido (#rrggbb).");
+  }
+  const admin = await requireAdmin();
 
   const empleado = await prisma.empleado.update({
     where: { id: empleado_id },
@@ -91,7 +90,6 @@ export async function actualizarEmpleado(
     detalle: data,
   });
 
-  revalidatePath("/admin/empleados");
   revalidatePath("/admin/trabajadores");
   return empleado;
 }

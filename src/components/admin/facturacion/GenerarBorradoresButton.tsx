@@ -25,7 +25,7 @@ export function GenerarBorradoresButton({ anio, mes }: { anio: number; mes: numb
       <button
         onClick={handleClick}
         disabled={pending}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-medium transition-colors disabled:opacity-50"
       >
         {pending ? "Generando…" : `Generar borradores — ${MESES[mes]} ${anio}`}
       </button>

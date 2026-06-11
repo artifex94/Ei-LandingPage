@@ -4,8 +4,28 @@ import { prisma } from "@/lib/prisma/client";
 import { FacturacionTabs } from "@/components/admin/facturacion/FacturacionTabs";
 import { GenerarBorradoresButton } from "@/components/admin/facturacion/GenerarBorradoresButton";
 import { siteConfig } from "@/config/site";
+import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
-export const metadata: Metadata = { title: "Facturación — Admin" };
+const TUTORIAL_FACTURACION = [
+  {
+    titulo: "Flujo de facturación",
+    descripcion: "Cada mes: generás borradores → los exportás a ARCA → ARCA devuelve el archivo firmado → subís el PDF acá.",
+  },
+  {
+    titulo: "Generar borradores",
+    descripcion: 'El botón "Generar borradores" crea una factura borrador por cada titular que tiene "requiere_factura" activo.',
+  },
+  {
+    titulo: "Exportar a ARCA",
+    descripcion: "Desde la pestaña Borradores podés preparar el archivo para ARCA. Seguí los pasos del modal de instrucciones.",
+  },
+  {
+    titulo: "Subir PDF emitido",
+    descripcion: "Cuando ARCA procesa y devuelve la factura firmada, subís el PDF acá para que el cliente lo vea en su portal.",
+  },
+];
+
+export const metadata: Metadata = { title: "Facturación" };
 
 export default async function FacturacionPage() {
   const hoy = new Date();
@@ -15,12 +35,19 @@ export default async function FacturacionPage() {
   const [borradores, emitidas, titulares] = await Promise.all([
     prisma.factura.findMany({
       where: { estado: "BORRADOR" },
-      include: { perfil: true, items: true },
+      include: {
+        perfil: { select: { id: true, nombre: true } },
+        items: { select: { id: true, descripcion: true, cantidad: true, precio_unit: true, subtotal: true } },
+      },
       orderBy: { created_at: "desc" },
+      take: 200,
     }),
     prisma.factura.findMany({
       where: { estado: { in: ["EMITIDA_MANUAL", "EMITIDA_WSFE"] } },
-      include: { perfil: true, items: true },
+      include: {
+        perfil: { select: { id: true, nombre: true } },
+        items: { select: { id: true, descripcion: true, cantidad: true, precio_unit: true, subtotal: true } },
+      },
       orderBy: { fecha_emision: "desc" },
       take: 100,
     }),
@@ -82,6 +109,12 @@ export default async function FacturacionPage() {
       </div>
 
       <FacturacionTabs borradores={borradores} emitidas={emitidas} titulares={titulares} />
+
+      <TutorialContextual
+        section="facturacion"
+        titulo="Guía rápida — Facturación"
+        steps={TUTORIAL_FACTURACION}
+      />
     </div>
   );
 }
