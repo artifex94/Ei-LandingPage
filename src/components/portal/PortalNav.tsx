@@ -130,13 +130,13 @@ function BottomNavItem({ nav, pathname }: { nav: NavDef; pathname: string }) {
       href={nav.href}
       aria-current={active ? "page" : undefined}
       className={`
-        flex-1 flex flex-col items-center justify-center gap-1
+        flex-1 min-w-0 flex flex-col items-center justify-center gap-1
         min-h-[56px] py-2 rounded-sm transition-colors duration-150
         ${active ? "bg-tactical-500/10 text-tactical-500" : "text-slate-400 hover:text-slate-200"}
       `}
     >
       <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-      <span className={`text-xs leading-none font-mono tracking-wide ${active ? "font-semibold" : "font-medium"}`}>
+      <span className={`max-w-full truncate text-xs leading-none font-mono tracking-wide ${active ? "font-semibold" : "font-medium"}`}>
         {nav.mobileLabel}
       </span>
     </Link>

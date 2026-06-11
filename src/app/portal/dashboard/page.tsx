@@ -80,7 +80,9 @@ export default async function DashboardPage() {
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2" role="list">
           {cuentas.map((cuenta) => (
-            <li key={cuenta.id}>
+            // min-w-0: sin esto el truncate del título infla el min-content
+            // del grid item y desborda el viewport en mobile (grid blowout)
+            <li key={cuenta.id} className="min-w-0">
               <CuentaCard cuenta={cuenta} />
             </li>
           ))}
