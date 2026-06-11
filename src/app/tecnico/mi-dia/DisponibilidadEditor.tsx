@@ -1,19 +1,20 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-import { ChevronDown, Plus, X } from "lucide-react";
+import { ChevronDown, Minus, Plus } from "lucide-react";
 import { guardarDisponibilidad } from "@/lib/actions/disponibilidad";
 import {
   PRESETS,
-  TOTAL_SLOTS,
   disponibilidadDefault,
   horaASlot,
+  jornadaARangos,
   normalizarRangos,
   presetActivo,
-  primerHueco,
   rangosAHoras,
+  rangosAJornada,
   rangosAResumen,
-  slotAHora,
+  sumarMedia,
+  type Jornada,
   type Rango,
 } from "@/lib/disponibilidad-utils";
 import { BarraDisponibilidad } from "./BarraDisponibilidad";
@@ -32,19 +33,12 @@ interface Props {
   fechaInicial?: string;
 }
 
-const selectHoraCls =
-  "bg-industrial-800 border border-industrial-700 rounded-md px-2.5 py-2 text-sm font-mono " +
-  "tabular-nums text-white min-h-[44px] focus:outline-none focus:border-tactical-500 " +
-  "focus:ring-2 focus:ring-tactical-500/20 transition-colors";
-
-// Opciones de media hora del dominio: 06:00 … 21:30 (desde) / 06:30 … 22:00 (hasta)
-const HORAS_DESDE = Array.from({ length: TOTAL_SLOTS }, (_, i) => slotAHora(i));
-const HORAS_HASTA = Array.from({ length: TOTAL_SLOTS }, (_, i) => slotAHora(i + 1));
-
 /**
- * Editor híbrido de disponibilidad: presets de un tap + franjas Desde–Hasta
- * con la rueda de hora nativa + barra visual de solo lectura. Permite editar
- * hoy o cualquier día de las próximas dos semanas, con autosave.
+ * Editor de disponibilidad con el modelo de jornada laboral: "entro a las X,
+ * salgo a las Y", con corte opcional al mediodía. Presets de un tap para los
+ * casos comunes, steppers de 30 min para el ajuste fino y barra visual de
+ * solo lectura como feedback. Permite editar hoy o cualquier día de las
+ * próximas dos semanas, con autosave.
  */
 export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props) {
   const fechaValida = fechaInicial && dias.some((d) => d.iso === fechaInicial);
@@ -60,6 +54,7 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
   const [, startTransition] = useTransition();
 
   const rangosDia = disp[fechaSel] ?? disponibilidadDefault();
+  const jornada = rangosAJornada(rangosDia);
   const diaSel = dias.find((d) => d.iso === fechaSel);
   const preset = presetActivo(rangosDia);
 
@@ -90,34 +85,61 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
     guardar(fechaSel, rangos);
   }
 
-  // Los selects solo producen valores válidos → se guarda directo. Si el
-  // cambio invierte el rango, el otro extremo se corre 30 min para no
-  // perder la franja en la normalización.
-  function cambiarFranja(idx: number, campo: "desde" | "hasta", valor: string) {
-    const rangos = [...rangosDia];
-    const r = { ...rangos[idx], [campo]: valor };
-    if (r.desde >= r.hasta) {
-      if (campo === "desde") {
-        r.hasta = slotAHora(Math.min(TOTAL_SLOTS, horaASlot(valor) + 1));
-      } else {
-        r.desde = slotAHora(Math.max(0, horaASlot(valor) - 1));
-      }
+  function guardarJornada(j: Jornada | null) {
+    guardar(fechaSel, jornadaARangos(j));
+  }
+
+  // ── Movimientos de la jornada (pasos de 30 min, límites garantizados) ──
+
+  function moverEntro(pasos: number) {
+    if (!jornada) return;
+    const tope = jornada.corte ? jornada.corte.desde : jornada.salgo;
+    const nuevo = sumarMedia(jornada.entro, pasos);
+    if (nuevo >= tope) return;
+    guardarJornada({ ...jornada, entro: nuevo });
+  }
+
+  function moverSalgo(pasos: number) {
+    if (!jornada) return;
+    const piso = jornada.corte ? jornada.corte.hasta : jornada.entro;
+    const nuevo = sumarMedia(jornada.salgo, pasos);
+    if (nuevo <= piso) return;
+    guardarJornada({ ...jornada, salgo: nuevo });
+  }
+
+  function moverCorte(campo: "desde" | "hasta", pasos: number) {
+    if (!jornada?.corte) return;
+    const corte = { ...jornada.corte, [campo]: sumarMedia(jornada.corte[campo], pasos) };
+    const valido =
+      corte.desde > jornada.entro &&
+      corte.hasta < jornada.salgo &&
+      corte.desde < corte.hasta;
+    if (!valido) return;
+    guardarJornada({ ...jornada, corte });
+  }
+
+  // La jornada admite corte si hay lugar para 30 min de descanso con al
+  // menos 30 min de trabajo a cada lado (1h30 en total).
+  const admiteCorte =
+    jornada !== null && horaASlot(jornada.salgo) - horaASlot(jornada.entro) >= 3;
+
+  function toggleCorte() {
+    if (!jornada) return;
+    if (jornada.corte) {
+      guardarJornada({ ...jornada, corte: null });
+      return;
     }
-    rangos[idx] = r;
-    guardar(fechaSel, rangos);
-  }
-
-  // Sugerir la franja nueva en el primer hueco libre: si se solapara con
-  // una existente, la normalización la absorbería y el botón "no haría nada".
-  const huecoLibre = primerHueco(rangosDia);
-
-  function agregarFranja() {
-    if (!huecoLibre) return;
-    guardar(fechaSel, [...rangosDia, huecoLibre]);
-  }
-
-  function eliminarFranja(idx: number) {
-    guardar(fechaSel, rangosDia.filter((_, i) => i !== idx));
+    if (!admiteCorte) return;
+    // Corte sugerido: 12:00–13:00, corrido dentro de la jornada si no entra
+    let desde = sumarMedia("12:00", 0);
+    if (desde <= jornada.entro) desde = sumarMedia(jornada.entro, 1);
+    let hasta = sumarMedia(desde, 2);
+    if (hasta >= jornada.salgo) {
+      hasta = sumarMedia(jornada.salgo, -1);
+      desde = sumarMedia(hasta, -2);
+      if (desde <= jornada.entro) desde = sumarMedia(jornada.entro, 1);
+    }
+    guardarJornada({ ...jornada, corte: { desde, hasta } });
   }
 
   return (
@@ -218,72 +240,138 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
             })}
           </div>
 
-          {/* Franjas personalizadas */}
-          <div className="space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-              Franjas personalizadas
+          {jornada === null ? (
+            <p className="text-xs text-slate-500 italic text-center py-2">
+              Día marcado como no disponible — elegí un preset para reactivarlo.
             </p>
-            {rangosDia.length === 0 && (
-              <p className="text-xs text-slate-500 italic">
-                Sin franjas — el día está marcado como no disponible.
-              </p>
-            )}
-            {rangosDia.map((r, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <select
-                  value={r.desde}
-                  onChange={(e) => cambiarFranja(idx, "desde", e.target.value)}
-                  aria-label={`Franja ${idx + 1}: desde`}
-                  className={selectHoraCls}
-                >
-                  {HORAS_DESDE.map((h) => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
-                <span className="text-slate-500 text-sm" aria-hidden="true">–</span>
-                <select
-                  value={r.hasta}
-                  onChange={(e) => cambiarFranja(idx, "hasta", e.target.value)}
-                  aria-label={`Franja ${idx + 1}: hasta`}
-                  className={selectHoraCls}
-                >
-                  {HORAS_HASTA.map((h) => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => eliminarFranja(idx)}
-                  aria-label={`Eliminar franja ${r.desde}–${r.hasta}`}
-                  className="ml-auto min-h-[44px] min-w-[44px] flex items-center justify-center rounded-sm text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  <X className="w-4 h-4" aria-hidden="true" />
-                </button>
+          ) : (
+            <>
+              {/* Jornada: entro / salgo */}
+              <div className="space-y-3">
+                <HoraStepper
+                  label="Entro a las"
+                  valor={jornada.entro}
+                  onCambio={moverEntro}
+                  puedeMenos={jornada.entro > "06:00"}
+                  puedeMas={sumarMedia(jornada.entro, 1) < (jornada.corte?.desde ?? jornada.salgo)}
+                />
+                <HoraStepper
+                  label="Salgo a las"
+                  valor={jornada.salgo}
+                  onCambio={moverSalgo}
+                  puedeMenos={sumarMedia(jornada.salgo, -1) > (jornada.corte?.hasta ?? jornada.entro)}
+                  puedeMas={jornada.salgo < "22:00"}
+                />
               </div>
-            ))}
-            {huecoLibre ? (
-              <button
-                onClick={agregarFranja}
-                className="flex items-center gap-1.5 min-h-[44px] text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-                Agregar franja
-              </button>
-            ) : (
-              <p className="flex items-center min-h-[44px] text-xs text-slate-500 italic">
-                El día ya está cubierto — achicá una franja para hacer lugar.
-              </p>
-            )}
-          </div>
 
-          {/* Barra visual de lo configurado */}
-          <div className="pt-1">
-            <BarraDisponibilidad rangos={rangosDia} />
-            <p className="text-xs text-slate-500 mt-2 text-center font-mono tabular-nums">
-              {rangosAHoras(rangosDia)}h disponibles
-            </p>
-          </div>
+              {/* Corte al mediodía */}
+              <div className="rounded-md border border-industrial-700 bg-industrial-900/40 p-3 space-y-3">
+                <button
+                  onClick={toggleCorte}
+                  disabled={!jornada.corte && !admiteCorte}
+                  aria-pressed={Boolean(jornada.corte)}
+                  className="w-full flex items-center justify-between gap-3 min-h-[44px] disabled:opacity-50"
+                >
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                    Corte al mediodía
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border transition-colors ${
+                      jornada.corte
+                        ? "bg-tactical-500/30 border-tactical-500/50"
+                        : "bg-industrial-800 border-industrial-600"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-[18px] w-[18px] rounded-full transition-all ${
+                        jornada.corte ? "left-[22px] bg-tactical-400" : "left-0.5 bg-slate-500"
+                      }`}
+                    />
+                  </span>
+                </button>
+
+                {jornada.corte && (
+                  <div className="space-y-3">
+                    <HoraStepper
+                      label="Desde"
+                      valor={jornada.corte.desde}
+                      onCambio={(p) => moverCorte("desde", p)}
+                      puedeMenos={sumarMedia(jornada.corte.desde, -1) > jornada.entro}
+                      puedeMas={sumarMedia(jornada.corte.desde, 1) < jornada.corte.hasta}
+                    />
+                    <HoraStepper
+                      label="Hasta"
+                      valor={jornada.corte.hasta}
+                      onCambio={(p) => moverCorte("hasta", p)}
+                      puedeMenos={sumarMedia(jornada.corte.hasta, -1) > jornada.corte.desde}
+                      puedeMas={sumarMedia(jornada.corte.hasta, 1) < jornada.salgo}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Barra visual de lo configurado */}
+              <div className="pt-1">
+                <BarraDisponibilidad rangos={rangosDia} />
+                <p className="text-xs text-slate-500 mt-2 text-center font-mono tabular-nums">
+                  {rangosAResumen(rangosDia)} · {rangosAHoras(rangosDia)}h
+                </p>
+              </div>
+            </>
+          )}
         </div>
       )}
     </section>
+  );
+}
+
+// ── Stepper de hora (pasos de 30 min) ─────────────────────────────────────────
+
+const stepperBtnCls =
+  "flex items-center justify-center h-11 w-11 flex-shrink-0 rounded-sm " +
+  "bg-industrial-700 border border-industrial-600 border-b-[3px] border-b-industrial-950 " +
+  "active:border-b active:translate-y-[2px] text-slate-300 hover:text-white " +
+  "transition-all duration-150 ease-mech-press " +
+  "disabled:opacity-40 disabled:active:border-b-[3px] disabled:active:translate-y-0";
+
+function HoraStepper({
+  label,
+  valor,
+  onCambio,
+  puedeMenos,
+  puedeMas,
+}: {
+  label: string;
+  valor: string;
+  onCambio: (pasos: number) => void;
+  puedeMenos: boolean;
+  puedeMas: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm text-slate-300 min-w-0 truncate">{label}</span>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={() => onCambio(-1)}
+          disabled={!puedeMenos}
+          aria-label={`${label}: 30 minutos antes`}
+          className={stepperBtnCls}
+        >
+          <Minus className="w-4 h-4" aria-hidden="true" />
+        </button>
+        <span className="text-xl font-mono font-bold tabular-nums text-white w-[72px] text-center">
+          {valor}
+        </span>
+        <button
+          onClick={() => onCambio(1)}
+          disabled={!puedeMas}
+          aria-label={`${label}: 30 minutos después`}
+          className={stepperBtnCls}
+        >
+          <Plus className="w-4 h-4" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
   );
 }

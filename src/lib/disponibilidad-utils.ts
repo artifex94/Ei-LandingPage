@@ -88,24 +88,45 @@ export function rangosAHoras(rangos: Rango[]): number {
   return rangosASlots(rangos).filter(Boolean).length / 2;
 }
 
+// ── Modelo de jornada: "entro a las X, salgo a las Y, con corte opcional" ────
+
+export interface Jornada {
+  entro: string;
+  salgo: string;
+  corte: { desde: string; hasta: string } | null;
+}
+
+/** Suma `pasos` bloques de 30 min a una hora, clampeado al dominio 06–22. */
+export function sumarMedia(hora: string, pasos: number): string {
+  const slot = Math.max(0, Math.min(TOTAL_SLOTS, horaASlot(hora) + pasos));
+  return slotAHora(slot);
+}
+
 /**
- * Primer hueco libre de al menos `minSlots` bloques de 30 min entre las
- * franjas dadas, o null si el día está completo. Se usa para sugerir la
- * franja nueva en "+ Agregar franja" sin que la normalización la absorba.
+ * Interpreta los rangos persistidos como una jornada entro/salgo + corte.
+ * null = día no disponible. Con 3+ rangos (datos legacy del editor de slots)
+ * se toma el primero y el último como jornada y el primer hueco como corte —
+ * al volver a guardar queda canonizado a 2 franjas.
  */
-export function primerHueco(rangos: Rango[], minSlots = 2): Rango | null {
-  const slots = rangosASlots(rangos);
-  let i = 0;
-  while (i < slots.length) {
-    if (!slots[i]) {
-      const start = i;
-      while (i < slots.length && !slots[i]) i++;
-      if (i - start >= minSlots) {
-        return { desde: slotAHora(start), hasta: slotAHora(Math.min(i, start + 8)) };
-      }
-    } else {
-      i++;
-    }
+export function rangosAJornada(rangos: Rango[]): Jornada | null {
+  const norm = normalizarRangos(rangos);
+  if (norm.length === 0) return null;
+  if (norm.length === 1) {
+    return { entro: norm[0].desde, salgo: norm[0].hasta, corte: null };
   }
-  return null;
+  return {
+    entro: norm[0].desde,
+    salgo: norm[norm.length - 1].hasta,
+    corte: { desde: norm[0].hasta, hasta: norm[1].desde },
+  };
+}
+
+/** Jornada → rangos persistibles (ya canónicos por construcción). */
+export function jornadaARangos(j: Jornada | null): Rango[] {
+  if (!j) return [];
+  if (!j.corte) return [{ desde: j.entro, hasta: j.salgo }];
+  return [
+    { desde: j.entro, hasta: j.corte.desde },
+    { desde: j.corte.hasta, hasta: j.salgo },
+  ];
 }
