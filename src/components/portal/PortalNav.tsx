@@ -158,12 +158,12 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
           <Link href="/portal/dashboard" className="flex items-center gap-2.5 py-3 group flex-shrink-0">
             <div
               aria-hidden="true"
-              className="h-8 w-8 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-bold text-xs shadow-[0_0_12px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px] group-hover:shadow-[0_0_16px_rgba(241,119,32,0.35)] transition-shadow"
+              className="h-8 w-8 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-display font-bold text-xs shadow-[0_0_12px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px] group-hover:shadow-[0_0_16px_rgba(241,119,32,0.35)] transition-shadow"
             >
               EI
             </div>
             <div>
-              <span className="text-sm font-semibold text-white block leading-tight">Escobar Instalaciones</span>
+              <span className="text-sm font-display font-semibold text-white block leading-tight">Escobar Instalaciones</span>
               <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">Mi Central</span>
             </div>
           </Link>
@@ -183,11 +183,11 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
         <Link href="/portal/dashboard" className="flex items-center gap-2 group">
           <div
             aria-hidden="true"
-            className="h-7 w-7 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-bold text-xs shadow-[0_0_8px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px]"
+            className="h-7 w-7 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-display font-bold text-xs shadow-[0_0_8px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px]"
           >
             EI
           </div>
-          <span className="text-sm font-semibold text-white">Escobar Inst.</span>
+          <span className="text-sm font-display font-semibold text-white">Escobar Inst.</span>
         </Link>
         <LogoutButton />
       </header>

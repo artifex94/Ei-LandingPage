@@ -22,7 +22,7 @@ export default async function SolicitudPage({
   if (cuentas.length === 0) {
     return (
       <section>
-        <h1 className="text-2xl font-bold text-white mb-4">
+        <h1 className="text-2xl font-display font-bold text-white mb-4">
           Solicitar asistencia
         </h1>
         <p className="text-slate-400">No tenés servicios activos para solicitar asistencia.</p>
@@ -32,7 +32,7 @@ export default async function SolicitudPage({
 
   return (
     <section aria-labelledby="solicitud-heading">
-      <h1 id="solicitud-heading" className="text-2xl font-bold text-white mb-2">
+      <h1 id="solicitud-heading" className="text-2xl font-display font-bold text-white mb-2">
         Solicitar asistencia técnica
       </h1>
       <p className="text-slate-400 mb-8">

@@ -67,7 +67,7 @@ export default async function PagosPage({
   return (
     <section aria-labelledby="pagos-heading">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 id="pagos-heading" className="text-2xl font-bold text-white">
+        <h1 id="pagos-heading" className="text-2xl font-display font-bold text-white">
           Historial de pagos
         </h1>
 

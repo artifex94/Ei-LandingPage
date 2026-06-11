@@ -95,7 +95,7 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white capitalize">{fechaLabel}</h1>
+          <h1 className="text-xl font-display font-bold text-white capitalize">{fechaLabel}</h1>
           <p className="text-sm text-slate-400 mt-0.5">
             {tareas.length === 0
               ? "Sin tareas asignadas"

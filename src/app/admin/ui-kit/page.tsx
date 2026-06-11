@@ -47,11 +47,34 @@ export default function UiKitPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <header>
-        <h1 className="text-2xl font-bold text-white">UI Kit — Design System</h1>
+        <h1 className="text-2xl font-display font-bold text-white">UI Kit — Design System</h1>
         <p className="text-slate-400 text-sm mt-1">
           Documentación viva de las primitivas (Épica A). Smoke-test visual.
         </p>
       </header>
+
+      <Section title="Tipografía">
+        <div className="space-y-4">
+          <div>
+            <p className="font-display text-2xl font-bold text-white">Display — Chakra Petch</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              <code className="font-mono">font-display</code> — títulos de página, marca y números de panel. Nunca cuerpo de texto.
+            </p>
+          </div>
+          <div>
+            <p className="text-base text-slate-300">Cuerpo — Inter</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Default del body. Texto corrido, formularios, tablas.
+            </p>
+          </div>
+          <div>
+            <p className="font-mono text-sm text-slate-300 tracking-widest uppercase">Datos — JetBrains Mono</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              <code className="font-mono">font-mono</code> — labels técnicas, códigos, horarios y montos.
+            </p>
+          </div>
+        </div>
+      </Section>
 
       <Section title="Badge">
         <div className="flex flex-wrap gap-2">

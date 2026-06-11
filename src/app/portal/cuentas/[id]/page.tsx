@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { BatteryWarning, BatteryLow, Wrench } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SensorItem } from "@/components/portal/SensorItem";
@@ -100,13 +101,22 @@ function PanelEstado({
           <span>Última activación: {tiempoRelativo(ultimaActivacion)}</span>
         )}
         {bateriaCritica > 0 && (
-          <span>🔴 {bateriaCritica} batería{bateriaCritica > 1 ? "s" : ""} crítica{bateriaCritica > 1 ? "s" : ""}</span>
+          <span className="inline-flex items-center gap-1">
+            <BatteryWarning aria-hidden="true" className="w-3.5 h-3.5 text-red-400" strokeWidth={1.8} />
+            {bateriaCritica} batería{bateriaCritica > 1 ? "s" : ""} crítica{bateriaCritica > 1 ? "s" : ""}
+          </span>
         )}
         {bateriaAdvertencia > 0 && (
-          <span>🟡 {bateriaAdvertencia} batería{bateriaAdvertencia > 1 ? "s" : ""} baja{bateriaAdvertencia > 1 ? "s" : ""}</span>
+          <span className="inline-flex items-center gap-1">
+            <BatteryLow aria-hidden="true" className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.8} />
+            {bateriaAdvertencia} batería{bateriaAdvertencia > 1 ? "s" : ""} baja{bateriaAdvertencia > 1 ? "s" : ""}
+          </span>
         )}
         {enMantenimiento > 0 && (
-          <span>🔧 {enMantenimiento} dispositivo{enMantenimiento > 1 ? "s" : ""} con alerta de mantenimiento</span>
+          <span className="inline-flex items-center gap-1">
+            <Wrench aria-hidden="true" className="w-3.5 h-3.5" strokeWidth={1.8} />
+            {enMantenimiento} dispositivo{enMantenimiento > 1 ? "s" : ""} con alerta de mantenimiento
+          </span>
         )}
         {!hayProblemas && !hayAdvertencias && (
           <span>Todos los dispositivos funcionando correctamente</span>
@@ -156,7 +166,7 @@ export default async function CuentaPage({
       <section aria-labelledby="cuenta-heading">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 id="cuenta-heading" className="text-2xl font-bold text-white">
+            <h1 id="cuenta-heading" className="text-2xl font-display font-bold text-white">
               {cuenta.descripcion}
             </h1>
             <p className="text-slate-400 mt-1">

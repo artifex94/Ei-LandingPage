@@ -43,7 +43,7 @@ export default async function TurnoActualPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-white">Turno actual</h1>
+        <h1 className="text-xl font-display font-bold text-white">Turno actual</h1>
         <p className="text-sm text-slate-400 mt-0.5">
           {new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
         </p>

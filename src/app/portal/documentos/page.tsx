@@ -189,7 +189,7 @@ export default async function DocumentosPage({
 
       {/* ── Encabezado ─────────────────────────────────────────────────────── */}
       <div>
-        <h1 id="docs-heading" className="text-2xl font-bold text-white">
+        <h1 id="docs-heading" className="text-2xl font-display font-bold text-white">
           Documentos
         </h1>
         <p className="text-slate-400 text-sm mt-1">

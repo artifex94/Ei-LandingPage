@@ -18,13 +18,41 @@
   --color-tactical-400: #f7913a;     /* hover text / iconos activos            */
   --color-tactical-500: #f17720;     /* color principal de marca (botones CTA) */
   --color-tactical-600: #c75f0d;     /* borde inferior 3D / hover oscuro       */
+
+  /* ── Tipografía display (Chakra Petch via next/font) ── */
+  /* Solo para títulos, marca y números de panel — nunca cuerpo de texto.      */
+  --font-display: var(--font-chakra), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ── Base: fondo oscuro por defecto ────────────────────────────────────── */
 @layer base {
+  :root {
+    /* Controles nativos en oscuro: date pickers, selects, autofill, scrollbars */
+    color-scheme: dark;
+  }
+
   body {
     background-color: var(--color-industrial-900);
     color: rgb(148 163 184); /* slate-400 */
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-industrial-700) transparent;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
+  ::selection {
+    background-color: rgba(241, 119, 32, 0.35);
+    color: #fff;
   }
 }
 

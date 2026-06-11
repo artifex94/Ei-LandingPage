@@ -49,7 +49,7 @@ export default async function MisTurnosPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-white">Mis turnos</h1>
+        <h1 className="text-xl font-display font-bold text-white">Mis turnos</h1>
         <p className="text-sm text-slate-400 mt-0.5">Próximos 30 días</p>
       </div>
 

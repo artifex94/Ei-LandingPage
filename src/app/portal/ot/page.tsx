@@ -46,7 +46,7 @@ export default async function PortalOTPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Mis órdenes de servicio</h1>
+          <h1 className="text-2xl font-display font-bold text-white">Mis órdenes de servicio</h1>
           <p className="text-sm text-slate-400 mt-1">
             Solicitudes de instalación, mantenimiento o reparación.
           </p>

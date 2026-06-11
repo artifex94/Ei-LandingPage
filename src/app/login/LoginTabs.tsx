@@ -95,7 +95,7 @@ export function LoginTabs() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl">Mi Central</h1>
+        <h1 className="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl">Mi Central</h1>
         <p className="mt-2 text-sm font-bold uppercase tracking-[0.24em] text-orange-300">Ingresá</p>
       </div>
 

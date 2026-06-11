@@ -81,7 +81,7 @@ export default async function SoportePage() {
       {/* ── Encabezado ─────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 id="soporte-heading" className="text-2xl font-bold text-white">
+          <h1 id="soporte-heading" className="text-2xl font-display font-bold text-white">
             Soporte
           </h1>
           <p className="text-slate-400 text-sm mt-1">

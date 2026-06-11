@@ -34,7 +34,7 @@ export default async function SolicitudesPage() {
     <section className="space-y-8" aria-labelledby="solicitudes-heading">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 id="solicitudes-heading" className="text-2xl font-bold text-white">
+          <h1 id="solicitudes-heading" className="text-2xl font-display font-bold text-white">
             Mis solicitudes
           </h1>
           <p className="text-slate-400 text-sm mt-1">

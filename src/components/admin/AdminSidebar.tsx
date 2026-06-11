@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -255,14 +255,11 @@ function NavLink({
     <Link
       href={item.href}
       onClick={onClick}
-      className={`
-        flex items-center gap-2.5 px-3 py-2 rounded-md text-sm
-        min-h-[40px] transition-colors duration-150
-        ${isActive
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm min-h-[44px] lg:min-h-[40px] transition-colors duration-150 ${
+        isActive
           ? `${s.activeBg} ${s.activeText} ${s.activeBorder}`
           : `text-slate-400 ${s.hoverBg} hover:text-slate-200`
-        }
-      `}
+      }`}
     >
       <Icon
         className={`w-4 h-4 flex-shrink-0 ${isActive ? s.activeIconColor : s.inactiveIcon}`}
@@ -303,10 +300,7 @@ function CollapsibleSection({
         onClick={onToggle}
         aria-expanded={isOpen}
         aria-controls={`nav-section-${section.id}`}
-        className={`
-          w-full flex items-center gap-2 px-3 pt-3.5 pb-1.5 rounded-md
-          transition-colors duration-150 ${s.toggleHover}
-        `}
+        className={`w-full flex items-center gap-2 px-3 pt-3.5 pb-1.5 rounded-md transition-colors duration-150 ${s.toggleHover}`}
       >
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
         <span className={`text-xs font-bold uppercase tracking-widest flex-1 text-left ${s.labelColor}`}>
@@ -390,6 +384,53 @@ function NavContent({
   );
 }
 
+// ── Marca e identidad ─────────────────────────────────────────────────────────
+
+function BrandBlock({ compact = false }: { compact?: boolean }) {
+  return (
+    <Link href="/admin/dashboard" className="flex items-center gap-2.5 group">
+      <div
+        aria-hidden="true"
+        className={`${compact ? "h-7 w-7" : "h-8 w-8"} bg-tactical-500 rounded-sm flex items-center justify-center text-white font-display font-bold text-xs border border-tactical-600 border-b-[2px] shadow-[0_0_8px_rgba(241,119,32,0.2)] group-hover:shadow-[0_0_14px_rgba(241,119,32,0.35)] transition-shadow`}
+      >
+        EI
+      </div>
+      {compact ? (
+        <span className="text-sm font-display font-semibold text-white">Escobar · Admin</span>
+      ) : (
+        <div>
+          <span className="text-sm font-display font-semibold text-white block leading-tight">
+            Escobar Instalaciones
+          </span>
+          <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">Admin</span>
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function SidebarFooter({ nombreAdmin }: { nombreAdmin: string }) {
+  const inicial = nombreAdmin.trim().charAt(0).toUpperCase() || "A";
+
+  return (
+    <div className="flex-shrink-0 px-4 py-4 border-t border-industrial-700/60 space-y-2">
+      <div className="flex items-center gap-2.5 px-1">
+        <div
+          aria-hidden="true"
+          className="h-8 w-8 rounded-sm bg-industrial-800 border border-industrial-700 flex items-center justify-center text-xs font-display font-bold text-tactical-400"
+        >
+          {inicial}
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-slate-300 truncate">{nombreAdmin}</p>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Administrador</p>
+        </div>
+      </div>
+      <LogoutButton variant="sidebar" />
+    </div>
+  );
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export function AdminSidebar({
@@ -428,6 +469,16 @@ export function AdminSidebar({
     }
   }
 
+  // Cerrar el drawer con Escape (UX teclado en móvil/tablet con teclado)
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrawerOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [drawerOpen]);
+
   function toggleSection(id: NavSection["id"]) {
     setOpenSections((prev) => {
       const next = new Set(prev);
@@ -451,10 +502,8 @@ export function AdminSidebar({
   return (
     <>
       {/* ── Topbar mobile ─────────────────────────────────────────────────── */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 px-4 h-14 flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-          Escobar · Admin
-        </span>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-industrial-900/95 backdrop-blur-sm border-b border-industrial-700 px-4 h-14 flex items-center justify-between">
+        <BrandBlock compact />
         <button
           onClick={() => setDrawerOpen(true)}
           className="text-white p-2 hover:bg-slate-800 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors relative"
@@ -479,21 +528,10 @@ export function AdminSidebar({
       {/* ── Drawer mobile ─────────────────────────────────────────────────── */}
       <nav
         aria-label="Navegación del administrador (móvil)"
-        className={`
-          lg:hidden fixed top-0 left-0 bottom-0 z-50 w-64
-          bg-slate-900 border-r border-slate-800
-          flex flex-col
-          transition-transform duration-300 ease-in-out
-          ${drawerOpen ? "translate-x-0" : "-translate-x-full"}
-        `}
+        className={`lg:hidden fixed top-0 left-0 bottom-0 z-50 w-64 bg-industrial-900 border-r border-industrial-700 flex flex-col transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800 flex-shrink-0">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              Escobar Instalaciones
-            </p>
-            <p className="text-xs text-slate-400 mt-0.5">Panel de administración</p>
-          </div>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-industrial-700/60 flex-shrink-0">
+          <BrandBlock />
           <button
             onClick={() => setDrawerOpen(false)}
             className="text-slate-500 hover:text-white p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
@@ -504,7 +542,7 @@ export function AdminSidebar({
         </div>
 
         {/* Items scrollables */}
-        <div className="flex-1 overflow-y-auto py-3 px-3">
+        <div className="flex-1 overflow-y-auto overscroll-contain py-3 px-3">
           <NavContent
             badges={badges}
             openSections={openSections}
@@ -513,28 +551,20 @@ export function AdminSidebar({
           />
         </div>
 
-        <div className="flex-shrink-0 px-4 py-4 border-t border-slate-800 space-y-2">
-          <p className="text-xs text-slate-400 truncate">{nombreAdmin}</p>
-          <LogoutButton variant="sidebar" />
-        </div>
+        <SidebarFooter nombreAdmin={nombreAdmin} />
       </nav>
 
       {/* ── Sidebar fijo desktop ───────────────────────────────────────────── */}
       <nav
         aria-label="Navegación del administrador"
-        className="hidden lg:flex sticky top-0 h-screen w-56 flex-col bg-slate-900 border-r border-slate-800 flex-shrink-0"
+        className="hidden lg:flex sticky top-0 h-screen w-56 flex-col bg-industrial-900 border-r border-industrial-700/60 flex-shrink-0"
       >
-        <div className="px-4 py-5 flex-shrink-0 border-b border-slate-800/60">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Escobar Instalaciones
-          </p>
-          <p className="text-xs text-slate-600 mt-0.5 uppercase tracking-wider">
-            Panel de administración
-          </p>
+        <div className="px-4 py-4 flex-shrink-0 border-b border-industrial-700/60">
+          <BrandBlock />
         </div>
 
         {/* Items scrollables */}
-        <div className="flex-1 overflow-y-auto py-3 px-3">
+        <div className="flex-1 overflow-y-auto overscroll-contain py-3 px-3">
           <NavContent
             badges={badges}
             openSections={openSections}
@@ -542,10 +572,7 @@ export function AdminSidebar({
           />
         </div>
 
-        <div className="flex-shrink-0 px-4 py-4 border-t border-slate-800 space-y-2">
-          <p className="text-xs text-slate-400 truncate">{nombreAdmin}</p>
-          <LogoutButton variant="sidebar" />
-        </div>
+        <SidebarFooter nombreAdmin={nombreAdmin} />
       </nav>
     </>
   );

@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  CreditCard, FileText, Zap, Wrench, ClipboardList, User,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { CuentaCard } from "@/components/portal/CuentaCard";
@@ -30,7 +34,7 @@ export default async function DashboardPage() {
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 animate-led-idle flex-shrink-0" aria-hidden="true" />
           <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">Central activa</span>
         </div>
-        <h1 id="dashboard-heading" className="text-2xl font-bold text-white">
+        <h1 id="dashboard-heading" className="text-2xl font-display font-bold text-white">
           Hola, {perfil.nombre.split(" ")[0]}
         </h1>
         <p className="text-slate-400 text-sm mt-1">
@@ -68,20 +72,26 @@ export default async function DashboardPage() {
           Accesos rápidos
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {[
-            { href: "/portal/pagos",       label: "Mis pagos",        icon: "💳" },
-            { href: "/portal/facturas",    label: "Facturas",         icon: "📄" },
-            { href: "/portal/eventos",     label: "Eventos",          icon: "⚡" },
-            { href: "/portal/solicitud",   label: "Reportar problema",icon: "🔧" },
-            { href: "/portal/solicitudes", label: "Mis solicitudes",  icon: "📋" },
-            { href: "/portal/perfil",      label: "Mi perfil",        icon: "👤" },
-          ].map(({ href, label, icon }) => (
+          {(
+            [
+              { href: "/portal/pagos",       label: "Mis pagos",         icon: CreditCard },
+              { href: "/portal/facturas",    label: "Facturas",          icon: FileText },
+              { href: "/portal/eventos",     label: "Eventos",           icon: Zap },
+              { href: "/portal/solicitud",   label: "Reportar problema", icon: Wrench },
+              { href: "/portal/solicitudes", label: "Mis solicitudes",   icon: ClipboardList },
+              { href: "/portal/perfil",      label: "Mi perfil",         icon: User },
+            ] satisfies { href: string; label: string; icon: LucideIcon }[]
+          ).map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               className="flex items-center gap-2.5 rounded-lg border border-industrial-700 bg-industrial-800/60 hover:bg-industrial-800 hover:border-industrial-600 px-3 py-2.5 text-sm text-slate-300 hover:text-white transition-colors min-h-[44px] group"
             >
-              <span aria-hidden="true" className="text-base leading-none">{icon}</span>
+              <Icon
+                aria-hidden="true"
+                className="w-4 h-4 flex-shrink-0 text-slate-500 group-hover:text-tactical-400 transition-colors"
+                strokeWidth={1.8}
+              />
               <span className="font-medium leading-tight">{label}</span>
               <span className="text-slate-700 group-hover:text-slate-500 ml-auto text-xs" aria-hidden="true">›</span>
             </Link>
