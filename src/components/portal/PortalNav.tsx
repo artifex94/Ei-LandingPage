@@ -60,6 +60,12 @@ const ITEM_EVENTOS: NavDef = {
   icon: Bell,
 };
 
+// En mobile, Eventos reemplaza a Documentos (consulta esporádica, accesible
+// desde los accesos rápidos del dashboard y el nav desktop).
+const NAV_CLIENTE_MOBILE: NavDef[] = NAV_CLIENTE.map((nav) =>
+  nav.href === "/portal/documentos" ? ITEM_EVENTOS : nav
+);
+
 const NAV_EMPLEADO_MOBILE: NavDef[] = [
   { href: "/portal/dashboard",   label: "Mis servicios", mobileLabel: "Inicio",  icon: ShieldCheck },
   { href: "/portal/mis-turnos",  label: "Mis turnos",    mobileLabel: "Turnos",  icon: CalendarDays },
@@ -147,7 +153,7 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
   const pathname = usePathname();
 
   const desktopItems = isEmpleado ? NAV_EMPLEADO_DESKTOP : [...NAV_CLIENTE, ITEM_EVENTOS];
-  const mobileItems  = isEmpleado ? NAV_EMPLEADO_MOBILE  : NAV_CLIENTE;
+  const mobileItems  = isEmpleado ? NAV_EMPLEADO_MOBILE  : NAV_CLIENTE_MOBILE;
 
   return (
     <>
