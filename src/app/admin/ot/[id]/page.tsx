@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { AsignarTecnicoForm } from "@/components/admin/ot/AsignarTecnicoForm";
 import { CambiarEstadoOTButtons } from "@/components/admin/ot/CambiarEstadoOTButtons";
+import { EstadoSerTecCard } from "@/components/admin/ot/EstadoSerTecCard";
 
 import { UUID_RE } from "@/lib/constants/validation";
 
@@ -114,6 +116,19 @@ export default async function OTDetallePage({
           )}
         </Card>
       </div>
+
+      {/* Estado real en la central (si la OT se promovió a SoftGuard ST) */}
+      {ot.st_softguard_numero != null && (
+        <Suspense
+          fallback={
+            <Card titulo={`SoftGuard — Servicio Técnico (orden #${ot.st_softguard_numero})`}>
+              <p className="text-sm text-slate-500">Consultando la central…</p>
+            </Card>
+          }
+        >
+          <EstadoSerTecCard numero={ot.st_softguard_numero} />
+        </Suspense>
+      )}
 
       {/* Asignar técnico (si no está completada/cancelada) */}
       {!["COMPLETADA", "CANCELADA"].includes(ot.estado) && (
