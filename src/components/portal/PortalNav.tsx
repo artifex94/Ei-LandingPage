@@ -37,7 +37,7 @@ const NAV_CLIENTE: NavDef[] = [
     label: "Soporte",
     mobileLabel: "Soporte",
     icon: Headphones,
-    alsoActive: ["/portal/solicitudes", "/portal/ot", "/portal/solicitud"],
+    alsoActive: ["/portal/solicitudes", "/portal/solicitud"],
   },
   {
     href: "/portal/documentos",

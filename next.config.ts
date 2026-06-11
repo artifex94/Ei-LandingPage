@@ -122,6 +122,12 @@ const nextConfig: NextConfig = {
         destination: "/admin/trabajadores/nuevo",
         permanent: true,
       },
+      {
+        // Las ordenes de trabajo del cliente viven en Soporte
+        source: "/portal/ot",
+        destination: "/portal/soporte",
+        permanent: true,
+      },
     ];
   },
   async headers() {

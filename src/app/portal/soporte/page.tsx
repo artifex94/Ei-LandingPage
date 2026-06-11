@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Wrench } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SolicitarOTButton } from "@/components/portal/SolicitarOTButton";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
+import { PortalSection } from "@/components/portal/PortalSection";
+import { Badge, type BadgeVariant } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const metadata: Metadata = { title: "Soporte" };
 
 // ── Configuraciones de display ────────────────────────────────────────────────
 
-const OT_ESTADO_BADGE: Record<string, string> = {
-  SOLICITADA: "bg-amber-500/20 text-amber-300",
-  ASIGNADA:   "bg-blue-500/20 text-blue-300",
-  EN_RUTA:    "bg-indigo-500/20 text-indigo-300",
-  EN_SITIO:   "bg-emerald-500/20 text-emerald-300",
-  COMPLETADA: "bg-slate-700 text-slate-400",
-  CANCELADA:  "bg-red-500/20 text-red-300",
+const OT_ESTADO_VARIANT: Record<string, BadgeVariant> = {
+  SOLICITADA: "warning",
+  ASIGNADA:   "info",
+  EN_RUTA:    "info",
+  EN_SITIO:   "success",
+  COMPLETADA: "neutral",
+  CANCELADA:  "danger",
 };
 const OT_ESTADO_LABEL: Record<string, string> = {
   SOLICITADA: "Recibida",
@@ -28,10 +33,10 @@ const OT_TIPO_LABEL: Record<string, string> = {
   INSTALACION: "Instalación", CORRECTIVO: "Correctivo",
   PREVENTIVO:  "Preventivo",  RETIRO: "Retiro",
 };
-const SOL_ESTADO: Record<string, { label: string; cls: string }> = {
-  PENDIENTE:  { label: "Pendiente",  cls: "bg-amber-900/40 text-amber-400" },
-  EN_PROCESO: { label: "En proceso", cls: "bg-blue-900/40 text-blue-400" },
-  RESUELTA:   { label: "Resuelta",   cls: "bg-green-900/40 text-green-400" },
+const SOL_ESTADO: Record<string, { label: string; variant: BadgeVariant }> = {
+  PENDIENTE:  { label: "Pendiente",  variant: "warning" },
+  EN_PROCESO: { label: "En proceso", variant: "info" },
+  RESUELTA:   { label: "Resuelta",   variant: "success" },
 };
 const SOL_PRIORIDAD: Record<string, string> = {
   BAJA: "text-slate-400", MEDIA: "text-amber-400", ALTA: "text-red-400",
@@ -76,69 +81,51 @@ export default async function SoportePage() {
   const hayActividad = otsActivas.length > 0 || solAbiertas.length > 0;
 
   return (
-    <section className="space-y-10" aria-labelledby="soporte-heading">
+    <section className="space-y-7" aria-labelledby="soporte-heading">
 
       {/* ── Encabezado ─────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 id="soporte-heading" className="text-2xl font-display font-bold text-white">
-            Soporte
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Tus solicitudes de asistencia y visitas técnicas.
-          </p>
-        </div>
-        <SolicitarOTButton cuentas={cuentas} perfil_id={userId} />
-      </div>
+      <PortalPageHeader
+        title="Soporte"
+        titleId="soporte-heading"
+        description="Tus solicitudes de asistencia y visitas técnicas."
+        action={<SolicitarOTButton cuentas={cuentas} perfil_id={userId} />}
+      />
 
       {/* ── Sin actividad ──────────────────────────────────────────────────── */}
       {!hayActividad && ots.length === 0 && solicitudesRaw.length === 0 && (
-        <div className="bg-slate-800 rounded-xl border border-slate-700 p-10 text-center">
-          <p className="text-slate-400 mb-4">No tenés solicitudes ni visitas registradas.</p>
-          <p className="text-slate-500 text-sm">
-            Usá el botón <span className="text-white font-medium">"Solicitar servicio"</span> si necesitás asistencia técnica.
-          </p>
-        </div>
+        <EmptyState
+          icon={Wrench}
+          title="No tenés solicitudes ni visitas registradas."
+          description='Usá el botón "Solicitar servicio" si necesitás asistencia técnica.'
+        />
       )}
 
       {/* ── Visitas activas ─────────────────────────────────────────────────── */}
       {otsActivas.length > 0 && (
-        <div>
-          <h2 className="text-sm font-bold uppercase tracking-widest text-sky-400 mb-3 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" aria-hidden="true" />
-            Visitas en curso
-          </h2>
-          <div className="space-y-3">
+        <PortalSection title="Visitas en curso" ledClass="bg-sky-400 animate-led-idle">
+          <div className="space-y-2">
             {otsActivas.map((ot) => (
               <OTCard key={ot.id} ot={ot} destacada />
             ))}
           </div>
-        </div>
+        </PortalSection>
       )}
 
       {/* ── Solicitudes abiertas ────────────────────────────────────────────── */}
       {solAbiertas.length > 0 && (
-        <div>
-          <h2 className="text-sm font-bold uppercase tracking-widest text-amber-400 mb-3 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true" />
-            Solicitudes abiertas
-          </h2>
-          <div className="space-y-3">
+        <PortalSection title="Solicitudes abiertas" ledClass="bg-amber-400">
+          <div className="space-y-2">
             {solAbiertas.map((s) => (
               <SolicitudCard key={s.id} s={s} />
             ))}
           </div>
-        </div>
+        </PortalSection>
       )}
 
       {/* ── Historial ───────────────────────────────────────────────────────── */}
       {(otsHistorial.length > 0 || solResueltas.length > 0) && (
-        <div>
-          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-600" aria-hidden="true" />
-            Historial
-          </h2>
-          <div className="space-y-3">
+        <PortalSection title="Historial" ledClass="bg-slate-600">
+          <div className="space-y-2">
             {/* OTs completadas/canceladas */}
             {otsHistorial.map((ot) => (
               <OTCard key={ot.id} ot={ot} destacada={false} />
@@ -148,7 +135,7 @@ export default async function SoportePage() {
               <SolicitudCard key={s.id} s={s} />
             ))}
           </div>
-        </div>
+        </PortalSection>
       )}
     </section>
   );
@@ -168,16 +155,16 @@ type OT = {
 };
 
 function OTCard({ ot, destacada }: { ot: OT; destacada: boolean }) {
-  const badge  = OT_ESTADO_BADGE[ot.estado] ?? "bg-slate-700 text-slate-400";
-  const label  = OT_ESTADO_LABEL[ot.estado] ?? ot.estado;
-  const tipo   = OT_TIPO_LABEL[ot.tipo] ?? ot.tipo;
+  const variant = OT_ESTADO_VARIANT[ot.estado] ?? "neutral";
+  const label   = OT_ESTADO_LABEL[ot.estado] ?? ot.estado;
+  const tipo    = OT_TIPO_LABEL[ot.tipo] ?? ot.tipo;
 
   return (
     <div
-      className={`rounded-xl border px-5 py-4 transition-colors ${
+      className={`rounded-md border px-4 py-3 transition-colors ${
         destacada
           ? "bg-sky-950/40 border-sky-800/60"
-          : "bg-slate-800 border-slate-700"
+          : "bg-industrial-800/60 border-industrial-700 hover:bg-industrial-800"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -186,17 +173,17 @@ function OTCard({ ot, destacada }: { ot: OT; destacada: boolean }) {
             <span className="text-xs font-mono text-slate-500">
               #{String(ot.numero).padStart(4, "0")}
             </span>
-            <span className="text-xs text-slate-400 bg-slate-700/60 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
               {tipo}
             </span>
           </div>
-          <p className={`font-medium leading-snug ${destacada ? "text-white" : "text-slate-200"}`}>
+          <p className={`text-sm font-medium leading-snug ${destacada ? "text-white" : "text-slate-200"}`}>
             {ot.descripcion}
           </p>
           {ot.fecha_visita && (
             <p className="text-xs text-slate-400 mt-1.5">
               Visita:{" "}
-              <span className={destacada ? "text-sky-300 font-medium" : ""}>
+              <span className={`font-mono tabular-nums${destacada ? " text-sky-300 font-medium" : ""}`}>
                 {new Date(ot.fecha_visita).toLocaleString("es-AR", {
                   day: "2-digit", month: "2-digit", year: "numeric",
                   hour: "2-digit", minute: "2-digit",
@@ -205,9 +192,7 @@ function OTCard({ ot, destacada }: { ot: OT; destacada: boolean }) {
             </p>
           )}
         </div>
-        <span className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${badge}`}>
-          {label}
-        </span>
+        <Badge variant={variant} className="shrink-0">{label}</Badge>
       </div>
       {ot.estado === "COMPLETADA" && ot.conformidad_firmada && (
         <p className="text-xs text-emerald-500 mt-2">✓ Conformidad firmada</p>
@@ -227,11 +212,11 @@ type Solicitud = {
 };
 
 function SolicitudCard({ s }: { s: Solicitud }) {
-  const estado    = SOL_ESTADO[s.estado] ?? { label: s.estado, cls: "bg-slate-700 text-slate-300" };
+  const estado    = SOL_ESTADO[s.estado] ?? { label: s.estado, variant: "neutral" as BadgeVariant };
   const prioColor = SOL_PRIORIDAD[s.prioridad] ?? "text-slate-400";
 
   return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 px-5 py-4">
+    <div className="rounded-md border border-industrial-700 bg-industrial-800/60 hover:bg-industrial-800 transition-colors px-4 py-3">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <Link
@@ -240,24 +225,22 @@ function SolicitudCard({ s }: { s: Solicitud }) {
           >
             {s.cuenta.descripcion}
           </Link>
-          <p className="text-white font-medium mt-0.5 leading-snug">{s.descripcion}</p>
+          <p className="text-sm text-white font-medium mt-0.5 leading-snug">{s.descripcion}</p>
         </div>
-        <span className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${estado.cls}`}>
-          {estado.label}
-        </span>
+        <Badge variant={estado.variant} className="shrink-0">{estado.label}</Badge>
       </div>
       <div className="flex items-center gap-4 text-xs text-slate-500">
         <span>
           Prioridad:{" "}
           <span className={`font-medium ${prioColor}`}>{s.prioridad.charAt(0) + s.prioridad.slice(1).toLowerCase()}</span>
         </span>
-        <span>
+        <span className="font-mono tabular-nums">
           {new Date(s.creada_en).toLocaleDateString("es-AR", {
             day: "numeric", month: "short", year: "numeric",
           })}
         </span>
         {s.resuelta_en && (
-          <span className="text-green-500">
+          <span className="text-emerald-500">
             Resuelta el{" "}
             {new Date(s.resuelta_en).toLocaleDateString("es-AR", {
               day: "numeric", month: "short",

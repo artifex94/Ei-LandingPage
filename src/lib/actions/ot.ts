@@ -84,7 +84,7 @@ export async function crearOT(data: {
   });
 
   revalidatePath("/admin/ot");
-  revalidatePath("/portal/ot");
+  revalidatePath("/portal/soporte");
   return ot;
 }
 
