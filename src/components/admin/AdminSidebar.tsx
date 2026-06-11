@@ -7,7 +7,7 @@ import {
   Menu, X, ChevronDown,
   LayoutDashboard,
   Users, ShieldCheck, CreditCard, AlertTriangle, Wrench, FilePen,
-  ClipboardList, CalendarDays, Truck, UserCog, CalendarCheck,
+  ClipboardList, CalendarDays, Truck, CalendarCheck,
   Receipt, Bell, Briefcase,
   FileUp, Database, ScrollText, Radio, Settings, UmbrellaOff,
   UserPlus, Activity,
@@ -27,7 +27,7 @@ interface NavItem {
 }
 
 interface NavSection {
-  id: "general" | "pendientes" | "campo" | "monitoreo" | "clientes" | "cobranzas" | "equipo" | "sistema";
+  id: "general" | "pendientes" | "operacion" | "clientes" | "equipo" | "sistema";
   label: string | null;
   items: NavItem[];
 }
@@ -53,35 +53,23 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: "campo",
-    label: "Campo",
+    id: "operacion",
+    label: "Operación",
     items: [
-      { href: "/admin/ot",     label: "Órdenes de trabajo", icon: ClipboardList, badge: "otsPendientes" },
-      { href: "/admin/agenda", label: "Agenda técnica",     icon: CalendarCheck },
-    ],
-  },
-  {
-    id: "monitoreo",
-    label: "Monitoreo",
-    items: [
-      { href: "/admin/monitoreo", label: "En vivo",   icon: Activity },
-      { href: "/admin/turnos",    label: "Turnos",    icon: CalendarDays },
-      { href: "/admin/ausencias", label: "Ausencias", icon: UmbrellaOff },
+      { href: "/admin/monitoreo", label: "En vivo",           icon: Activity },
+      { href: "/admin/ot",        label: "Órdenes de trabajo", icon: ClipboardList, badge: "otsPendientes" },
+      { href: "/admin/agenda",    label: "Agenda técnica",     icon: CalendarCheck },
+      { href: "/admin/turnos",    label: "Turnos",             icon: CalendarDays },
+      { href: "/admin/ausencias", label: "Ausencias",          icon: UmbrellaOff },
     ],
   },
   {
     id: "clientes",
     label: "Clientes",
     items: [
-      { href: "/admin/clientes",  label: "Clientes",  icon: Users },
-      { href: "/admin/cuentas",   label: "Cuentas",   icon: ShieldCheck },
-      { href: "/admin/morosidad", label: "Morosidad", icon: AlertTriangle, badge: "cuentasEnMora" },
-    ],
-  },
-  {
-    id: "cobranzas",
-    label: "Cobranzas",
-    items: [
+      { href: "/admin/clientes",    label: "Clientes",    icon: Users },
+      { href: "/admin/cuentas",     label: "Cuentas",     icon: ShieldCheck },
+      { href: "/admin/morosidad",   label: "Morosidad",   icon: AlertTriangle, badge: "cuentasEnMora" },
       { href: "/admin/pagos",       label: "Pagos",       icon: CreditCard },
       { href: "/admin/facturacion", label: "Facturación", icon: Receipt },
     ],
@@ -90,20 +78,19 @@ const NAV_SECTIONS: NavSection[] = [
     id: "equipo",
     label: "Equipo",
     items: [
-      { href: "/admin/trabajadores", label: "Trabajadores",      icon: Briefcase },
-      { href: "/admin/tecnicos",     label: "Técnicos del portal", icon: UserCog },
-      { href: "/admin/vehiculo",     label: "Vehículo",          icon: Truck },
+      { href: "/admin/trabajadores", label: "Equipo",   icon: Briefcase },
+      { href: "/admin/vehiculo",     label: "Vehículo", icon: Truck },
     ],
   },
   {
     id: "sistema",
     label: "Sistema",
     items: [
+      { href: "/admin/configuracion",  label: "Configuración",  icon: Settings },
+      { href: "/admin/sync-softguard", label: "SoftGuard",      icon: Radio },
       { href: "/admin/importar",       label: "Importar datos", icon: FileUp },
       { href: "/admin/higienizar",     label: "Higienizar BD",  icon: Database },
       { href: "/admin/auditoria",      label: "Auditoría",      icon: ScrollText },
-      { href: "/admin/sync-softguard", label: "SoftGuard",      icon: Radio },
-      { href: "/admin/configuracion",  label: "Configuración",  icon: Settings },
     ],
   },
 ];
@@ -135,7 +122,7 @@ const SECTION_STYLE = {
     chevron:         "text-rose-700",
     toggleHover:     "hover:bg-rose-500/5",
   },
-  campo: {
+  operacion: {
     labelColor:      "text-indigo-400",
     dot:             "bg-indigo-500",
     activeBg:        "bg-indigo-500/10",
@@ -146,18 +133,6 @@ const SECTION_STYLE = {
     hoverBg:         "hover:bg-indigo-500/5",
     chevron:         "text-indigo-600",
     toggleHover:     "hover:bg-indigo-500/5",
-  },
-  monitoreo: {
-    labelColor:      "text-cyan-400",
-    dot:             "bg-cyan-500",
-    activeBg:        "bg-cyan-500/10",
-    activeText:      "text-cyan-100",
-    activeBorder:    "border-l-2 border-cyan-500",
-    activeIconColor: "text-cyan-400",
-    inactiveIcon:    "text-slate-500",
-    hoverBg:         "hover:bg-cyan-500/5",
-    chevron:         "text-cyan-700",
-    toggleHover:     "hover:bg-cyan-500/5",
   },
   clientes: {
     labelColor:      "text-blue-400",
@@ -170,18 +145,6 @@ const SECTION_STYLE = {
     hoverBg:         "hover:bg-blue-500/5",
     chevron:         "text-blue-600",
     toggleHover:     "hover:bg-blue-500/5",
-  },
-  cobranzas: {
-    labelColor:      "text-emerald-400",
-    dot:             "bg-emerald-500",
-    activeBg:        "bg-emerald-500/10",
-    activeText:      "text-emerald-100",
-    activeBorder:    "border-l-2 border-emerald-500",
-    activeIconColor: "text-emerald-400",
-    inactiveIcon:    "text-slate-500",
-    hoverBg:         "hover:bg-emerald-500/5",
-    chevron:         "text-emerald-600",
-    toggleHover:     "hover:bg-emerald-500/5",
   },
   equipo: {
     labelColor:      "text-amber-400",
