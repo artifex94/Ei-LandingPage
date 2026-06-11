@@ -172,9 +172,33 @@ visual del usuario** antes de seguir propagando:
 >   linkea "Vista operadores →" (/admin/eventos sigue en el sidebar).
 > - Pendiente opcional de la fase (punto 4 del plan): aviso sonoro para P1.
 >
-> **Siguiente: Fase 3 — cerrar el ciclo de mantenimiento** (detección → acción:
-> fallo sostenido → SolicitudMantenimiento automática; bloque Panel en
-> /admin/cuentas/[id]; OT ↔ SerTec con vencimiento).
+> **Fase 3 CERRADA (2026-06-11, aprobada por el usuario; 88/88 tests):**
+>
+> - **Detección → acción**: `sg_fallo_ac_desde` nuevo en Cuenta (db push aplicado;
+>   la central solo da el bool de AC, el "desde" se deriva en el sync). Lógica pura
+>   en `src/lib/softguard/fallo-sostenido.ts` (16 tests): fallo TST o AC sostenido
+>   > umbral (`SOFTGUARD_FALLO_SOSTENIDO_HORAS`, default 24 h) → crea
+>   `SolicitudMantenimiento` prioridad ALTA con prefijo `[AUTO]`. Dedupe: no crea si
+>   hay solicitud abierta o una [AUTO] de las últimas 48 h (cooldown
+>   `COOLDOWN_AUTO_MS` en sync.ts). `syncCuentasWebApi` pasó de updateMany a lectura
+>   de estado previo + update por id; reporta `solicitudesCreadas` (visible en el
+>   log del cron como `cuentas.solicitudesAuto`).
+>   ⚠ Al deployar: las cuentas con fallo TST viejo (la central informa el desde)
+>   generan su [AUTO] en el PRIMER sync; las ~29 con fallo AC arrancan reloj y
+>   generan en tanda ~24 h después si persisten. Es el comportamiento esperado.
+> - **Bloque "Panel — central de monitoreo"** en `/admin/cuentas/[id]`: situación,
+>   alimentación (con desde), test periódico (con desde y último test), último
+>   evento, pie con synced_at. El panel de operadores también muestra ahora el
+>   "desde" del fallo de AC.
+> - **OT ↔ SerTec**: `EstadoSerTecCard` (RSC async en Suspense) en `/admin/ot/[id]`
+>   cuando hay `st_softguard_numero`: abierta/cerrada real en la central,
+>   vencimiento (resaltado VENCIDA), técnico y observaciones. Match por número en
+>   memoria (sin filtros del API no validados); si la central no responde, degrada
+>   a aviso sin romper la página.
+>
+> **Siguiente: Fase 4 — la capa cliente** (estado del sistema en el dashboard del
+> cliente, avisos de fallo enganchados a la solicitud de F3; el punto 2 —
+> EventoTimeLineFull — requiere sondear params con la app APAGADA primero).
 >
 > Deuda menor detectada (no bloquea): el badge "configurado/no configurado" de
 > `ConfiguracionForm` lee `process.env` en un client component → para vars server-only
