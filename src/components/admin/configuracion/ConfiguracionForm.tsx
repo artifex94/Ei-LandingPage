@@ -93,8 +93,8 @@ export function ConfiguracionForm({ tarifaActual }: { tarifaActual: number }) {
         <h2 className="text-sm font-bold text-white uppercase tracking-wider">Variables de entorno</h2>
         <div className="space-y-2 text-xs font-mono">
           {[
-            { key: "SOFTGUARD_DB_HOST",       label: "SoftGuard DB Host" },
-            { key: "SOFTGUARD_DB_USER",       label: "SoftGuard DB User" },
+            { key: "SOFTGUARD_API_BASE",      label: "SoftGuard API base (:8080)" },
+            { key: "SOFTGUARD_API_USER",      label: "SoftGuard API user" },
             { key: "SOFTGUARD_EMBED_SECRET",  label: "Embed Secret (rotable)" },
             { key: "TWILIO_ACCOUNT_SID",      label: "Twilio SID" },
             { key: "TWILIO_PHONE_NUMBER",     label: "Twilio número" },

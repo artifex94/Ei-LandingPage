@@ -29,7 +29,7 @@ import {
   invalidateWebApiSession,
   fetchEventosHistoricoMM,
   fetchEventosPendientes,
-} from "@/lib/softguard/web-api";
+} from "@/lib/softguard/api";
 
 export const dynamic = "force-dynamic";
 

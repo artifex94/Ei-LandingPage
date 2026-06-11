@@ -21,7 +21,7 @@ import {
   fetchCuentasCount,
   fetchOrdenesServicioCount,
   type ModuloSuite,
-} from "@/lib/softguard/web-api";
+} from "@/lib/softguard/api";
 
 export const dynamic = "force-dynamic";
 

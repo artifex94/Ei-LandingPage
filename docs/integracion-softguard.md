@@ -2,9 +2,17 @@
 
 Documentación operativa para conectar el portal Next.js a SoftGuard.
 
+> **⚠ PIPELINE SQL RETIRADO (2026-06-11).** El acceso directo a SQL Server (TCP 1433,
+> vistas `vw_ei_*`, dependencia `mssql`, modo mock) se eliminó del código: el puerto está
+> filtrado en el MikroTik y el ACL de la API web lo reemplazó por completo (los tres jobs
+> del cron corren por `:8080`). Las secciones marcadas **[RETIRADO]** más abajo quedan solo
+> como referencia histórica por si algún día se abre el 1433 — el código vive en la
+> historia de git (commits previos a esta fecha: `client.ts`, `queries.ts`, `schema.ts`,
+> `scripts/seed-vista-cuentas.sql`, `scripts/seed-sensores-softguard.ts`).
+
 ---
 
-## ⚠ Estado de conectividad — diagnóstico 2026-06-10
+## Estado de conectividad — diagnóstico 2026-06-10
 
 Se probó la conexión real al servidor de SoftGuard (`566204623fa9.sn.mynetname.net`, DDNS MikroTik → `200.117.55.15`):
 
@@ -16,16 +24,10 @@ Se probó la conexión real al servidor de SoftGuard (`566204623fa9.sn.mynetname
 | TCP 443 | ✅ abierto (Microsoft-HTTPAPI) |
 | UDP 1434 (SQL Browser) | ❌ sin respuesta |
 
-**Conclusión:** el acceso directo a SQL (la arquitectura descrita más abajo) está bloqueado
-por el firewall del cliente. Hay dos caminos para destrabarlo:
-
-1. **Abrir 1433 / VPN**: port-forward TCP 1433 al SQL Server con regla de firewall para la IP
-   del portal, o una VPN a la LAN de SoftGuard. El código SQL (`queries.ts`/`sync.ts`) ya está
-   listo para esto.
-2. **API web (:8080)** — ✅ **camino activo, funcionando**. La suite web expone una API REST
-   autenticada. El login (`/OAuthLogin.ashx`) NO tiene reCAPTCHA enforced server-side, así que
-   se automatiza con usuario/clave → cookie `OAuth_Token`. Implementado en
-   `src/lib/softguard/web-api.ts`. Verificado 2026-06-10: ping OK, 2045 códigos de alarma.
+**Conclusión:** la API web (:8080) es **el camino activo**. La suite web expone una API
+REST autenticada; el login (`/OAuthLogin.ashx`) no tiene reCAPTCHA enforced server-side,
+así que se automatiza con usuario/clave → cookie `OAuth_Token`. El acceso SQL directo
+quedó descartado y su código fue retirado (ver nota al inicio).
 
 ---
 
@@ -33,7 +35,8 @@ por el firewall del cliente. Hay dos caminos para destrabarlo:
 
 `src/lib/softguard/api/` es el **anti-corruption layer (ACL)** sobre la suite web: el portal
 nunca habla el dialecto de SoftGuard directamente. Organización (espeja los módulos del
-Desktop de la suite); `web-api.ts` queda como shim de compatibilidad que re-exporta todo:
+Desktop de la suite); los consumidores importan SIEMPRE de `@/lib/softguard/api` (el shim
+`web-api.ts` fue retirado junto con el pipeline SQL):
 
 | Archivo | Módulo de la suite | Expone |
 |---|---|---|
@@ -112,7 +115,7 @@ Los 26 módulos del Desktop reportan `disponible=1`. Estado de integración en e
 
 ---
 
-## Arquitectura general
+## [RETIRADO] Arquitectura general — pipeline SQL directo
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -145,7 +148,7 @@ SoftGuard es **fuente de verdad operativa** (cuentas, eventos, OTs). El portal l
 
 ---
 
-## Prerrequisitos en el servidor SQL Server
+## [RETIRADO] Prerrequisitos en el servidor SQL Server
 
 Estos pasos los ejecuta un sysadmin del servidor (Ramiro u operador de SoftGuard):
 
@@ -185,61 +188,46 @@ El servidor SQL debe aceptar conexiones TCP en el puerto 1433 (o el configurado 
 
 ---
 
-## Variables de entorno
+## [RETIRADO] Variables de entorno del pipeline SQL
 
-Agregar en `.env.local` (desarrollo) o en los secretos del servidor de producción:
-
-```env
-SOFTGUARD_DB_HOST=192.168.x.x        # IP o hostname del SQL Server
-SOFTGUARD_DB_PORT=1433               # Puerto (default 1433)
-SOFTGUARD_DB_USER=EI_PORTAL_RO       # Usuario read-only
-SOFTGUARD_DB_PASS=<contraseña>       # Password del usuario
-SOFTGUARD_DB_NAME=_Datos             # Nombre de la BD de SoftGuard
-
-# Opcional: forzar modo mock aunque existan credenciales
-# SOFTGUARD_MOCK=true
-```
-
-Si `SOFTGUARD_DB_HOST` o `SOFTGUARD_DB_PASS` no están presentes, el portal activa automáticamente el **modo mock** (datos ficticios, sin conexión real). Esto permite desarrollar y ejecutar CI sin necesidad de acceso al servidor SoftGuard.
-
----
-
-## Modo mock (desarrollo y CI)
-
-El modo mock está activo cuando:
-- `SOFTGUARD_MOCK=true` está en el entorno, **o**
-- `SOFTGUARD_DB_HOST` no está configurada, **o**
-- `SOFTGUARD_DB_PASS` no está configurada.
-
-En modo mock, `withSoftguardConnection()` devuelve datos ficticios definidos en `queries.ts` (constantes `MOCK_CUENTAS`, etc.) sin abrir ninguna conexión TCP. El portal muestra un banner naranja de advertencia en `/admin/sync-softguard`.
+Las variables `SOFTGUARD_DB_HOST/PORT/USER/PASS/NAME` y `SOFTGUARD_MOCK` ya no se leen
+en ningún lado: se pueden borrar de `.env.local` y de los secretos de producción. Las
+variables vigentes son las del ACL (`SOFTGUARD_API_BASE/USER/PASS/CLIENT_ID/TIMEOUT_MS`),
+documentadas en §"Camino activo" y visibles en `/admin/sync-softguard`.
 
 ---
 
 ## Rotación de credenciales
 
-`EI_PORTAL_RO` debe rotar su contraseña cada **90 días**:
+El usuario de la suite web que usa el portal debe rotar su clave periódicamente:
 
-1. En SQL Server: `ALTER LOGIN EI_PORTAL_RO WITH PASSWORD = '<nueva>';`
-2. Actualizar `SOFTGUARD_DB_PASS` en producción y reiniciar el servidor Next.js.
-3. Verificar en `/admin/sync-softguard` que el ping vuelve a responder OK.
+1. En la suite web de SoftGuard: cambiar la clave del usuario del portal.
+2. Actualizar `SOFTGUARD_API_PASS` en producción y reiniciar el servidor Next.js.
+3. Verificar en `/admin/sync-softguard` que las sondas de módulos responden OK.
 
 ---
 
 ## Jobs de sincronización
 
-| Función | Frecuencia sugerida | Tabla destino |
+| Función | Frecuencia | Tabla destino |
 |---|---|---|
-| `syncCuentas()` | cada 6 horas | `cuentas` (actualiza `zona_geografica`) |
-| `syncEventos()` | cada 5 minutos | `eventos_alarma` (upsert por unique key) |
-| `syncEstadoOT()` | cada 30 minutos | `ordenes_trabajo` (campo `st_softguard_numero`) |
+| `syncCuentasWebApi()` | cada corrida del cron | `cuentas` (dirección + proyección `sg_*` del panel) |
+| `syncEventosWebApi()` | cada corrida del cron | `eventos_alarma` (upsert por unique key) |
+| `syncEstadoOTWebApi()` | cada corrida del cron | `ordenes_trabajo` (cierre por criterio SerTec) |
 
-Los jobs se llaman desde el cron mensual (`scripts/cron-mensual.ts`) o desde endpoints HTTP en `/api/sync-softguard/`. Todos son idempotentes: si falla a mitad, la próxima ejecución completa el trabajo sin duplicar registros.
+Los tres corren en secuencia en `POST /api/cron/softguard` (Bearer `CRON_SECRET`,
+recomendado cada 5 min). Todos son idempotentes: si falla a mitad, la próxima ejecución
+completa el trabajo sin duplicar registros.
 
 ---
 
 ## Modo degradado
 
-Si SoftGuard no está disponible, `withSoftguardConnection()` captura el error, cierra el pool roto y devuelve `{ ok: false, error: "..." }`. El portal continúa funcionando con sus propios datos (Prisma/Supabase). Las rutas que usan datos de SoftGuard muestran un banner de "datos no disponibles" sin romper la experiencia del usuario.
+Si la central no está disponible (mantenimiento/microcorte), `restGet` invalida la cookie
+de sesión y reintenta UNA vez con login fresco; si tampoco responde, lanza error y cada
+consumidor degrada: el cron loguea y devuelve contadores en cero, y el multimonitor del
+dashboard cae a los datos ya sincronizados en la DB con badge "SIN CONEXIÓN" (botón ↻ de
+reconexión manual, `?relogin=1`). El portal sigue funcionando con sus propios datos.
 
 ---
 
@@ -257,10 +245,10 @@ Para que los operadores del centro de monitoreo puedan ver el perfil comercial d
 
 ```
 SoftGuard DSS
-     │ (evento de alarma procesado)
+     │ (evento de alarma recibido)
      ▼
-EventosTimeLine (SQL Server _Datos)
-     │ syncEventos() cada 5 min
+API web :8080 (EventosPendientes / ReporteHistoricoMM)
+     │ syncEventosWebApi() vía cron + lectura en vivo (/api/admin/eventos-live)
      ▼
 EventoAlarma (PostgreSQL portal)
      │ query Prisma

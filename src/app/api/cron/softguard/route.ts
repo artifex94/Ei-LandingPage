@@ -1,27 +1,22 @@
 /**
  * POST /api/cron/softguard
  *
- * Ejecuta los tres jobs de sincronización SoftGuard → portal en secuencia:
- *   1. syncCuentas  — enriquece localidad/provincia en Cuenta
- *   2. syncEventos  — importa eventos de alarma nuevos
- *   3. syncEstadoOT — cierra OTs que SoftGuard marcó como cerradas
+ * Ejecuta los tres jobs de sincronización SoftGuard → portal en secuencia,
+ * todos por el ACL de la API web (:8080):
+ *   1. syncCuentasWebApi  — dirección + proyección sg_* del panel en Cuenta
+ *   2. syncEventosWebApi  — importa eventos de alarma nuevos
+ *   3. syncEstadoOTWebApi — cierra OTs que la central marcó como cerradas
  *
  * Autenticación: Bearer <CRON_SECRET>
  *
- * Frecuencia recomendada (configurar en cron-job.org o Vercel Cron):
- *   syncEventos  → cada 5 min
- *   syncEstadoOT → cada 30 min
- *   syncCuentas  → cada 6 h
- *
- * Este endpoint ejecuta los tres en cada llamada. Llamarlo cada 5 min
- * es seguro porque syncCuentas y syncEstadoOT son operaciones livianas.
+ * Frecuencia recomendada (configurar en cron-job.org o Vercel Cron): cada 5 min.
+ * Es seguro: los jobs corren en secuencia para no martillar la suite web.
  */
 
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { syncCuentas, syncCuentasWebApi, syncEventos, syncEventosWebApi, syncEstadoOT, syncEstadoOTWebApi } from "@/lib/softguard/sync";
-import { isMockMode } from "@/lib/softguard/client";
-import { softguardWebApiConfigured } from "@/lib/softguard/web-api";
+import { syncCuentasWebApi, syncEventosWebApi, syncEstadoOTWebApi } from "@/lib/softguard/sync";
+import { softguardWebApiConfigured } from "@/lib/softguard/api";
 
 export async function POST(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -43,19 +38,22 @@ export async function POST(req: NextRequest) {
 
   const t0 = Date.now();
 
-  // Fuente de eventos: si el SQL directo está en mock (firewall) pero la API web
-  // está configurada, leer eventos de la API REST de la suite web (:8080).
-  const usarWebApi = isMockMode() && softguardWebApiConfigured();
+  if (!softguardWebApiConfigured()) {
+    return NextResponse.json(
+      { ok: false, error: "SoftGuard API web sin configurar (SOFTGUARD_API_*)" },
+      { status: 503 },
+    );
+  }
 
-  // Ejecutar en secuencia para no saturar el pool de SQL Server (max: 5 conex.)
-  const cuentas = usarWebApi ? await syncCuentasWebApi() : await syncCuentas();
-  const eventos = usarWebApi ? await syncEventosWebApi() : await syncEventos();
-  const ots     = usarWebApi ? await syncEstadoOTWebApi() : await syncEstadoOT();
+  // En secuencia para no martillar la suite web con requests concurrentes.
+  const cuentas = await syncCuentasWebApi();
+  const eventos = await syncEventosWebApi();
+  const ots     = await syncEstadoOTWebApi();
 
   const duracion_ms = Date.now() - t0;
 
   console.log(
-    `[cron/softguard] fuente=${usarWebApi ? "webapi" : isMockMode() ? "mock" : "sql"} ` +
+    `[cron/softguard] fuente=webapi ` +
     `cuentas.actualizadas=${cuentas.actualizadas} cuentas.sinMatch=${cuentas.sinMatch} ` +
     `eventos.synced=${eventos.synced} eventos.nuevos=${eventos.nuevos} ` +
     `ots.revisadas=${ots.revisadas} ots.completadas=${ots.completadas} ` +
@@ -65,7 +63,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok:         true,
     duracion_ms,
-    fuente:     usarWebApi ? "webapi" : isMockMode() ? "mock" : "sql",
+    fuente:     "webapi",
     cuentas,
     eventos,
     ots,

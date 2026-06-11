@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
 import { MultiMonitorLive } from "@/components/admin/MultiMonitorLive";
-import { softguardWebApiConfigured, fetchEventosPendientes } from "@/lib/softguard/web-api";
+import { softguardWebApiConfigured, fetchEventosPendientes } from "@/lib/softguard/api";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
