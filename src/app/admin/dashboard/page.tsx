@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
+import { MultiMonitorLive } from "@/components/admin/MultiMonitorLive";
+import { softguardWebApiConfigured, fetchEventosPendientes } from "@/lib/softguard/web-api";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -20,8 +22,12 @@ const TUTORIAL_DASHBOARD = [
     descripcion: "Cobros del mes, estado de cuentas y pendientes de gestión. Con esas tres sabés cómo está el negocio en 5 segundos.",
   },
   {
-    titulo: "Técnicos y monitoreo",
-    descripcion: "Las secciones inferiores muestran el estado operativo del equipo en tiempo real.",
+    titulo: "Multimonitoreo",
+    descripcion: "Los últimos eventos de la central en vivo, con su estado: pendiente (ámbar) o procesado. Al lado, los operadores que los vigilan y la cobertura del día.",
+  },
+  {
+    titulo: "Técnicos en campo",
+    descripcion: "La sección inferior muestra el estado operativo del equipo técnico y sus OT activas.",
   },
 ];
 
@@ -37,7 +43,6 @@ export default async function AdminDashboardPage() {
     totalActivas,
     suspendidas,
     enMantenimiento,
-    bajaDefinitiva,
     solicitudesPendientes,
     cambiosPendientes,
     eventosSinProcesar,
@@ -55,7 +60,6 @@ export default async function AdminDashboardPage() {
     prisma.cuenta.count({ where: { estado: "ACTIVA" } }),
     prisma.cuenta.count({ where: { estado: "SUSPENDIDA_PAGO" } }),
     prisma.cuenta.count({ where: { estado: "EN_MANTENIMIENTO" } }),
-    prisma.cuenta.count({ where: { estado: "BAJA_DEFINITIVA" } }),
     prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
     prisma.solicitudCambioInfo.count({ where: { estado: "PENDIENTE" } }),
     prisma.eventoAlarma.count({ where: { estado: "NUEVO" } }),
@@ -136,10 +140,26 @@ export default async function AdminDashboardPage() {
 
   const totalPendientes = solicitudesPendientes + altasUsuarioPendientes + cambiosPendientes;
 
-  const alertaUrgente = eventosSinProcesar > 0
+  // Una sola fuente de verdad para "¿hay algo urgente?": la cola viva de la
+  // central (la misma que muestra el multimonitor). Si la API no responde en
+  // 4 s o no está configurada, cae al conteo local sincronizado por el cron.
+  let eventosUrgentes = eventosSinProcesar;
+  if (softguardWebApiConfigured()) {
+    try {
+      const pendientes = await Promise.race([
+        fetchEventosPendientes(undefined, 200).catch(() => null),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 4_000)),
+      ]);
+      if (pendientes !== null) eventosUrgentes = pendientes.length;
+    } catch {
+      // fallback silencioso al conteo local
+    }
+  }
+
+  const alertaUrgente = eventosUrgentes > 0
     ? {
         tipo: "critico" as const,
-        texto: `${eventosSinProcesar} evento${eventosSinProcesar > 1 ? "s" : ""} de alarma sin procesar`,
+        texto: `${eventosUrgentes} evento${eventosUrgentes > 1 ? "s" : ""} de alarma sin procesar`,
         href: "/admin/eventos?estado=NUEVO",
       }
     : turnosHoy.length === 0
@@ -163,7 +183,7 @@ export default async function AdminDashboardPage() {
 
   // ── Ops score diario ──────────────────────────────────────────────────────
   const opsScore = Math.min(100, Math.round(
-    (eventosSinProcesar === 0 ? 30 : Math.max(0, 30 - eventosSinProcesar * 6)) +
+    (eventosUrgentes === 0 ? 30 : Math.max(0, 30 - eventosUrgentes * 6)) +
     Math.round((pctCobros / 100) * 45) +
     (totalPendientes === 0 ? 25 : Math.max(0, 25 - totalPendientes * 4))
   ));
@@ -185,7 +205,7 @@ export default async function AdminDashboardPage() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-display font-bold text-white tracking-tight">Dashboard</h1>
           <time
             dateTime={hoy.toISOString().slice(0, 10)}
             className="text-xs text-slate-500 mt-0.5 block"
@@ -196,14 +216,14 @@ export default async function AdminDashboardPage() {
 
         {/* Ops Score */}
         <div className="text-right shrink-0">
-          <p className={`text-3xl font-black tabular-nums leading-none ${scoreColor}`}>{opsScore}</p>
+          <p className={`text-3xl font-display font-bold tabular-nums leading-none ${scoreColor}`}>{opsScore}</p>
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mt-0.5">{scoreLabel}</p>
         </div>
       </div>
 
       {/* ── Alerta única ───────────────────────────────────────────────────── */}
       {alertaUrgente && (
-        <a
+        <Link
           href={alertaUrgente.href}
           className={`group flex items-center justify-between gap-3 rounded-xl border px-5 py-4 transition-all duration-200 ${
             alertaUrgente.tipo === "critico"
@@ -234,14 +254,14 @@ export default async function AdminDashboardPage() {
           }`}>
             Atender →
           </span>
-        </a>
+        </Link>
       )}
 
       {/* ── Tres métricas ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
         {/* ── Cobros ── */}
-        <a
+        <Link
           href="/admin/pagos"
           className={`group relative rounded-xl border overflow-hidden p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl active:translate-y-0 ${
             pctCobros === 100
@@ -298,10 +318,10 @@ export default async function AdminDashboardPage() {
           {countVencido > 0 && (
             <p className="mt-1 text-xs text-amber-400/80">{countVencido} con pagos vencidos</p>
           )}
-        </a>
+        </Link>
 
         {/* ── Cuentas ── */}
-        <a
+        <Link
           href="/admin/cuentas"
           className="group relative rounded-xl border border-slate-700/60 overflow-hidden bg-gradient-to-br from-slate-800/80 to-slate-900/60 p-5 transition-all duration-200 hover:border-slate-600 hover:-translate-y-1 hover:shadow-2xl active:translate-y-0"
         >
@@ -344,10 +364,10 @@ export default async function AdminDashboardPage() {
               </div>
             )}
           </div>
-        </a>
+        </Link>
 
         {/* ── Por resolver ── */}
-        <a
+        <Link
           href={totalPendientes > 0 ? "/admin/mantenimiento" : "/admin/clientes"}
           className={`group relative rounded-xl border overflow-hidden p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl active:translate-y-0 ${
             totalPendientes > 0
@@ -386,40 +406,109 @@ export default async function AdminDashboardPage() {
               </p>
             )}
           </div>
-        </a>
+        </Link>
       </div>
 
-      {/* ── Turnos de hoy ──────────────────────────────────────────────────── */}
-      {turnosHoy.length > 0 && (
-        <div className="rounded-xl border border-slate-700/60 bg-gradient-to-br from-slate-800/60 to-slate-900/40 px-5 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-              Cobertura hoy
-            </span>
-            <Link href="/admin/turnos" className="text-xs text-slate-500 hover:text-orange-400 transition-colors">
-              Gestionar →
-            </Link>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {turnosHoy.map((t) => (
-              <div
-                key={t.id}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium ${franjaStyle(t.franja)}`}
-              >
-                <span className="font-bold">{franjaTurno(t.franja)}</span>
-                <span className="opacity-30">·</span>
-                <span className="font-normal opacity-90">{t.empleado.perfil.nombre}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Ops grid ───────────────────────────────────────────────────────── */}
+      {/* ── Operación en vivo: eventos de la central + quién los vigila ────── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
 
-        {/* Técnicos en campo */}
+        {/* Multimonitoreo */}
+        <MultiMonitorLive limit={8} />
+
+        {/* Central de monitoreo */}
         <section className="rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-800/60 to-slate-900/40 p-5">
+          <SectionHeader
+            title="Central de monitoreo"
+            href="/admin/eventos"
+            linkLabel={
+              eventosMonitoreoAbiertos > 0
+                ? `${eventosMonitoreoAbiertos} abiertos`
+                : "Ver eventos"
+            }
+          />
+
+          {monitoresOperativos.length === 0 ? (
+            <EmptyState text="No hay operadores de monitoreo configurados." />
+          ) : (
+            <div className="space-y-2">
+              {monitoresOperativos.map((monitor) => {
+                const turnoActivo = monitor.turnos.find((t) => t.estado === "EN_CURSO") ?? monitor.turnos[0];
+                const activo = turnoActivo?.estado === "EN_CURSO";
+                return (
+                  <div
+                    key={monitor.id}
+                    className="relative flex items-center justify-between gap-3 rounded-lg border border-slate-700/40 bg-slate-900/70 overflow-hidden px-4 py-3"
+                    style={{
+                      borderLeft: `2px solid ${activo ? "rgba(52,211,153,0.5)" : "rgba(51,65,85,0.4)"}`,
+                    }}
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-white">{monitor.perfil.nombre}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {turnoActivo
+                          ? `${franjaTurno(turnoActivo.franja)} · ${estadoTurno(turnoActivo.estado)}`
+                          : "Sin turno hoy"}
+                      </p>
+                    </div>
+                    <StatusPill estado={turnoActivo?.estado ?? "SIN_TURNO"} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {turnosHoy.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-700/50">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                  Cobertura hoy
+                </p>
+                <Link href="/admin/turnos" className="text-[11px] font-semibold text-slate-500 hover:text-orange-400 transition-colors">
+                  Gestionar →
+                </Link>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {turnosHoy.map((t) => (
+                  <div
+                    key={t.id}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium ${franjaStyle(t.franja)}`}
+                  >
+                    <span className="font-bold">{franjaTurno(t.franja)}</span>
+                    <span className="opacity-30">·</span>
+                    <span className="font-normal opacity-90">{t.empleado.perfil.nombre}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {eventosPorOperador.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-700/50">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-3">
+                Eventos hoy por operador
+              </p>
+              <div className="space-y-1.5">
+                {eventosPorOperador.map((op) => (
+                  <div key={op.operador} className="flex items-center gap-3 text-xs">
+                    <span className="text-slate-500 flex-1 truncate">{op.operador}</span>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-1 rounded-full bg-orange-500/50"
+                        style={{ width: `${Math.max(16, (op.total / (eventosPorOperador[0]?.total ?? 1)) * 48)}px` }}
+                        aria-hidden="true"
+                      />
+                      <span className="font-bold text-white tabular-nums w-6 text-right">{op.total}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* ── Técnicos en campo ──────────────────────────────────────────── */}
+      <section className="rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-800/60 to-slate-900/40 p-5">
           <SectionHeader
             title="Técnicos en campo"
             href="/admin/ot"
@@ -428,7 +517,7 @@ export default async function AdminDashboardPage() {
           {tecnicosOperativos.length === 0 ? (
             <EmptyState text="No hay técnicos activos configurados." />
           ) : (
-            <div className="space-y-2.5">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
               {tecnicosOperativos.map((tecnico) => {
                 const turnoActivo = tecnico.turnos.find((t) => t.estado === "EN_CURSO") ?? tecnico.turnos[0];
                 const otPrincipal = tecnico.ordenes_trabajo[0];
@@ -489,73 +578,6 @@ export default async function AdminDashboardPage() {
             </div>
           )}
         </section>
-
-        {/* Central de monitoreo */}
-        <section className="rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-800/60 to-slate-900/40 p-5">
-          <SectionHeader
-            title="Central de monitoreo"
-            href="/admin/eventos"
-            linkLabel={
-              eventosMonitoreoAbiertos > 0
-                ? `${eventosMonitoreoAbiertos} abiertos`
-                : "Ver eventos"
-            }
-          />
-
-          {monitoresOperativos.length === 0 ? (
-            <EmptyState text="No hay operadores de monitoreo configurados." />
-          ) : (
-            <div className="space-y-2">
-              {monitoresOperativos.map((monitor) => {
-                const turnoActivo = monitor.turnos.find((t) => t.estado === "EN_CURSO") ?? monitor.turnos[0];
-                const activo = turnoActivo?.estado === "EN_CURSO";
-                return (
-                  <div
-                    key={monitor.id}
-                    className="relative flex items-center justify-between gap-3 rounded-lg border border-slate-700/40 bg-slate-900/70 overflow-hidden px-4 py-3"
-                    style={{
-                      borderLeft: `2px solid ${activo ? "rgba(52,211,153,0.5)" : "rgba(51,65,85,0.4)"}`,
-                    }}
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-white">{monitor.perfil.nombre}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {turnoActivo
-                          ? `${franjaTurno(turnoActivo.franja)} · ${estadoTurno(turnoActivo.estado)}`
-                          : "Sin turno hoy"}
-                      </p>
-                    </div>
-                    <StatusPill estado={turnoActivo?.estado ?? "SIN_TURNO"} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {eventosPorOperador.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-700/50">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-3">
-                Eventos hoy por operador
-              </p>
-              <div className="space-y-1.5">
-                {eventosPorOperador.map((op, i) => (
-                  <div key={op.operador} className="flex items-center gap-3 text-xs">
-                    <span className="text-slate-500 flex-1 truncate">{op.operador}</span>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-1 rounded-full bg-orange-500/50"
-                        style={{ width: `${Math.max(16, (op.total / (eventosPorOperador[0]?.total ?? 1)) * 48)}px` }}
-                        aria-hidden="true"
-                      />
-                      <span className="font-bold text-white tabular-nums w-6 text-right">{op.total}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
 
       <TutorialContextual
         section="dashboard"
