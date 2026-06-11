@@ -9,6 +9,7 @@ import { FormField } from "@/components/ui/FormField";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
@@ -43,6 +44,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function UiKitPage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const toast = useToast();
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -160,6 +162,29 @@ export default function UiKitPage() {
         >
           <p className="text-slate-300 text-sm">Contenido del modal.</p>
         </Modal>
+      </Section>
+
+      <Section title="Toast">
+        <p className="text-xs text-slate-500">
+          Resultado de operaciones vía <code className="text-slate-400">useToast()</code>;
+          la validación de campos sigue siendo inline.
+        </p>
+        <div className="flex gap-3">
+          <Button
+            onClick={() =>
+              toast({ title: "Cambios guardados", description: "La operación terminó bien." })
+            }
+          >
+            Toast de éxito
+          </Button>
+          <Button
+            onClick={() =>
+              toast({ variant: "error", title: "No se pudo guardar", description: "Error simulado del servidor." })
+            }
+          >
+            Toast de error
+          </Button>
+        </div>
       </Section>
     </div>
   );

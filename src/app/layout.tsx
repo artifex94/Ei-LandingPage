@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Chakra_Petch } from "next/font/google";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const inter = Inter({ subsets: ["latin"] });
 const jetBrainsMono = JetBrains_Mono({
@@ -54,7 +55,7 @@ export default function RootLayout({
   return (
     <html lang="es" className="scroll-smooth">
       <body className={`${inter.className} ${jetBrainsMono.variable} ${chakraPetch.variable} antialiased`}>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

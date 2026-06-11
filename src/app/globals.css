@@ -103,6 +103,15 @@
   animation: led-violencia 1.2s cubic-bezier(0.4, 0.0, 0.6, 1.0) infinite;
 }
 
+/* ── Toasts (Toast.tsx) — entrada con slide sutil desde la derecha ──────── */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@utility animate-toast-in {
+  animation: toast-in 0.18s ease-out;
+}
+
 /* ── Curvas de Bézier mecánicas ─────────────────────────────────────────── */
 @utility ease-mech-press {
   transition-timing-function: cubic-bezier(0.2, 0.0, 0.0, 1.0);

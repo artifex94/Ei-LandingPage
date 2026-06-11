@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { asignarTecnico } from "@/lib/actions/ot";
+import { useToast } from "@/components/ui/Toast";
 
 type EmpleadoConPerfil = { id: string; perfil: { nombre: string } };
 
@@ -17,13 +18,13 @@ export function AsignarTecnicoForm({
   fecha_actual?: Date;
 }) {
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
+  // Validación de campos inline; el resultado de la operación va por toast.
   const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setOk(false);
     const fd = new FormData(e.currentTarget);
     const tecnico_id = fd.get("tecnico_id") as string;
     const fecha_str  = fd.get("fecha_visita") as string;
@@ -36,9 +37,16 @@ export function AsignarTecnicoForm({
     startTransition(async () => {
       try {
         await asignarTecnico(ot_id, tecnico_id, new Date(fecha_str));
-        setOk(true);
+        toast({
+          title: "Técnico asignado",
+          description: "Vehículo reservado automáticamente.",
+        });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error desconocido");
+        toast({
+          variant: "error",
+          title: "No se pudo asignar el técnico",
+          description: err instanceof Error ? err.message : undefined,
+        });
       }
     });
   }
@@ -73,7 +81,6 @@ export function AsignarTecnicoForm({
         {pending ? "Asignando…" : "Asignar"}
       </button>
 
-      {ok    && <p className="text-xs text-emerald-400">✓ Asignado (vehículo reservado automáticamente)</p>}
       {error && <p className="text-xs text-red-400">{error}</p>}
     </form>
   );

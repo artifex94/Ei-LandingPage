@@ -222,17 +222,26 @@ visual del usuario** antes de seguir propagando:
 > siempre muestra "no configurado" (preexistente; arreglarlo implica pasar el estado
 > desde un server component).
 
-## Después: ÉPICA B (toasts, optimistic, error boundaries)
+## ÉPICA B (Fase 5) — estado real al 2026-06-11
 
-Próxima épica grande una vez cerrada A. Resumen (detalle en el feedback original):
-
-- **RF-B1**: Sistema de **toasts global** con `@radix-ui/react-toast` (ya instalado, usado en 1
-  solo lugar). Provider en el layout raíz; toda Server Action devuelve éxito/error visible.
-- **RF-B2**: **Optimistic UI** con `useOptimistic` (React 19) en acciones frecuentes
-  (marcar OT, aprobar solicitud, cambiar estado).
-- **RF-B3**: **Error boundaries** por área — `error.tsx` en cada segmento de `admin/`,
-  `portal/`, `tecnico/` (hoy solo ~5 de ~62 rutas). Con reintento.
-- **RF-B4**: `not-found.tsx` consistentes en rutas `[id]`.
+- **RF-B1 HECHO (en working tree, pendiente revisión visual)**: sistema de toasts
+  global. `src/components/ui/Toast.tsx` (`ToastProvider` montado en el layout raíz +
+  `useToast()`; variantes success/error, apilables, swipe, cierre accesible, animación
+  `animate-toast-in` en globals). Demo en /admin/ui-kit, 3 tests. **Criterio del DS:
+  validación de campos → inline junto al campo; resultado de la operación → toast.**
+  Adoptado en el flujo de la Fase 3: `CambiarEstadoOTButtons` (antes se tragaba los
+  errores en silencio), `AsignarTecnicoForm` y `AccionesForm` de mantenimiento (ídem
+  con `.catch(console.error)`). El resto de las Server Actions se migra a demanda
+  con el mismo patrón.
+- **RF-B3/B4 YA CUBIERTOS (descubrimiento de esta sesión)**: las TRES áreas tienen
+  `error.tsx` (con reset + digest) y `not-found.tsx` a nivel segmento — en App Router
+  eso cubre todas las rutas hijas; el "~5 de ~62" del feedback original contaba por
+  ruta, innecesario. No hay trabajo acá.
+- **RF-B2 PENDIENTE (próximo work-unit)**: `useOptimistic` en acciones frecuentes.
+  OJO análisis previo: solo aporta donde el estado visible vive en un CLIENT component
+  (p. ej. KanbanBoard de mantenimiento); en los detalles RSC (badge de estado de OT)
+  el dato vive en el server component padre y useOptimistic no llega — habría que
+  mover estado a client primero. Evaluar caso por caso antes de tocar.
 
 Luego **Épica C** (filtros por URL, bulk actions, command palette), **D** (a11y axe, mobile
 técnico, reduced-motion), **E** (pulido dashboard, estados con personalidad). Ver
