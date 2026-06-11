@@ -46,3 +46,44 @@ export function slotsARangos(slots: boolean[]): Rango[] {
 export function disponibilidadDefault(): Rango[] {
   return [{ desde: HORA_INICIO_DEFAULT, hasta: HORA_FIN_DEFAULT }];
 }
+
+/**
+ * Canoniza una lista de rangos: mergea solapados y adyacentes, descarta
+ * rangos inválidos (desde >= hasta) y clampea al dominio 06:00–22:00.
+ * Pasar por la grilla de slots da todo eso gratis.
+ */
+export function normalizarRangos(rangos: Rango[]): Rango[] {
+  return slotsARangos(rangosASlots(rangos));
+}
+
+export interface PresetDisponibilidad {
+  id: string;
+  label: string;
+  rangos: Rango[];
+}
+
+export const PRESETS: PresetDisponibilidad[] = [
+  { id: "todo-dia",      label: "Todo el día",   rangos: [{ desde: "06:00", hasta: "22:00" }] },
+  { id: "manana",        label: "Mañana",        rangos: [{ desde: "06:00", hasta: "14:00" }] },
+  { id: "tarde",         label: "Tarde",         rangos: [{ desde: "14:00", hasta: "22:00" }] },
+  { id: "no-disponible", label: "No disponible", rangos: [] },
+];
+
+/** Id del preset que coincide exactamente con los rangos dados, o null si es una configuración personalizada. */
+export function presetActivo(rangos: Rango[]): string | null {
+  const norm = JSON.stringify(normalizarRangos(rangos));
+  const match = PRESETS.find((p) => JSON.stringify(normalizarRangos(p.rangos)) === norm);
+  return match?.id ?? null;
+}
+
+/** Resumen legible de los rangos: "06:00–14:00 · 16:00–18:00" o "Sin disponibilidad". */
+export function rangosAResumen(rangos: Rango[]): string {
+  const norm = normalizarRangos(rangos);
+  if (norm.length === 0) return "Sin disponibilidad";
+  return norm.map((r) => `${r.desde}–${r.hasta}`).join(" · ");
+}
+
+/** Horas totales disponibles de una lista de rangos (en horas, paso 0.5). */
+export function rangosAHoras(rangos: Rango[]): number {
+  return rangosASlots(rangos).filter(Boolean).length / 2;
+}
