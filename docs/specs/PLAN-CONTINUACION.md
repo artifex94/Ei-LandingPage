@@ -2,7 +2,7 @@
 
 > **NUEVA SESIÓN: EMPEZÁ ACÁ.** Si el usuario dice "continua", leé este archivo completo
 > y seguí desde "Próximo paso inmediato". Spec maestro: `docs/specs/epica-a-design-system.md`.
-> Última actualización: 2026-06-10.
+> Última actualización: 2026-06-11.
 
 ## Contexto en 30 segundos
 
@@ -35,32 +35,130 @@ que lo pida.** Todo el trabajo actual está en working tree, sin commitear.
 - **WU-4 (tablas) COMPLETO**: 18 tablas migradas a `DataTable`. Cero `<table>` cruda en `src`
   salvo `DataTable` y 4 exclusiones documentadas (`CalendarioTurnos`, `GestionSensores`,
   `higienizar`, `recibo/[id]`).
-- **WU-6 (modales) parcial**: 3/9 hechos — `PagoModal`, `ModalSubirPdf`, `ModalPrepararArca`.
+- **WU-6 (modales) COMPLETO (2026-06-11)**: 9/9 migrados. Cero `@radix-ui/react-dialog`
+  directo fuera de `src/components/ui/Modal.tsx` (chequeable con `rg -l`). El primitivo
+  se extendió de forma backward-compatible para cubrir el paywall:
+  - `dismissible={false}` → sin botón ✕, Escape y click-afuera bloqueados, `onClose`
+    no se acepta (union discriminada). Usado por `PagoRequeridoModal` — migrarlo sin
+    esto habría dejado cerrar el modal de suspensión con Escape (bug).
+  - `titleHidden` → `Dialog.Title` queda `sr-only`; el modal dibuja su header propio
+    en children (paywall: ícono + título centrado `font-display`).
+  - `className` → clases extra en el Content (paywall: `border-red-800`).
+  - Tests: 6 en `Modal.test.tsx` (28/28 del suite verde).
+  Cambios visuales a validar en la revisión: paywall pierde `backdrop-blur` y pasa a
+  fondo `slate-800` (caja deuda y botón sesión subidos a `slate-700`); inputs de los
+  4 formularios migrados suben de `slate-800` a `slate-700`; headers armonizados al
+  estilo del primitivo (`text-xl font-bold`).
 
-## Próximo paso inmediato → cerrar WU-6 (Épica A)
+## Frente activo: modernización del shell + área Mi Central (portal)
 
-Adoptar el primitivo `Modal` (`src/components/ui/Modal.tsx`) en los **6 modales restantes**
-que aún usan `@radix-ui/react-dialog` directo:
+Trabajo en working tree (sin commitear, junto con lo de abajo). **Pendiente de revisión
+visual del usuario** antes de seguir propagando:
 
-1. `src/components/portal/PagoTotalModal.tsx`        (portal, cara al cliente)
-2. `src/components/portal/PagoRequeridoModal.tsx`    (portal)
-3. `src/components/portal/SolicitarOTButton.tsx`     (patrón Dialog.Trigger → necesita `useState(open)`)
-4. `src/components/admin/ot/NuevaOTButton.tsx`        (patrón Dialog.Trigger)
-5. `src/components/admin/vehiculo/NuevaReservaDialog.tsx` (patrón Dialog.Trigger)
-6. `src/components/admin/empleados/NuevoEmpleadoDialog.tsx` (patrón Dialog.Trigger)
+- **Tipografía display**: `Chakra_Petch` via next/font (`--font-chakra` → `font-display` en
+  `globals.css`). Aplicada a: marca (login, PortalNav, AdminSidebar `BrandBlock`, layout
+  técnico), títulos h1 de dashboards (admin/portal/mi-día), ui-kit (sección "Tipografía"),
+  y **todos los h1 del portal** (16 páginas: pagos, facturas, recibos, eventos, perfil,
+  solicitudes, soporte, ot, documentos, mis-turnos, turno-actual, cuentas/[id], etc.).
+- **globals.css base**: `color-scheme: dark`, scrollbars finos, `::selection` naranja,
+  `touch-action: manipulation`, sin tap-highlight.
+- **AdminSidebar**: `BrandBlock` + `SidebarFooter` (avatar con inicial), Escape cierra drawer,
+  `overscroll-contain`, colores `industrial-*`, targets táctiles 44px.
+- **Layout técnico**: header + tab nav en un solo bloque sticky (sin `top-[57px]` mágico).
+- **Emojis → lucide** en portal: accesos rápidos del dashboard, `PagoRequeridoModal`
+  (AlertTriangle/CreditCard/MessageCircle/LogOut), banda de dispositivos en `cuentas/[id]`
+  (BatteryWarning/BatteryLow/Wrench). Los **glifos monocromos** (✓ ✕ ⚠ ○ ↻ ◎) se conservan:
+  son estética industrial deliberada (debate glifo-vs-lucide sigue abierto, ver
+  "Optimizaciones opcionales").
+- Dashboard admin: `<a>` → `<Link>` y unused vars arreglados (era deuda lint preexistente).
+- **Panel Multimonitoreo en dashboard admin** (pedido del usuario, 2026-06-10):
+  `src/components/admin/MultiMonitorLive.tsx` (client, polling 15 s, pausa con pestaña
+  oculta, flash naranja en eventos nuevos, prioridad 1=rojo/2=ámbar) +
+  `GET /api/admin/eventos-live` (cola EventosPendientes vía API web :8080 → "EN VIVO";
+  fallback a EventoAlarma de la DB → "DIFERIDO"; auth ADMIN). No persiste eventos — eso
+  sigue siendo del cron. Pendiente de revisión visual.
+  **DATOS OK (2026-06-10 tarde)**: tras asignar línea ESI + módulo "Monitoreo Web Remoto" al
+  usuario web, los eventos fluyen. La fuente del endpoint ahora es `fetchEventosHistoricoMM()`
+  (misma query que la grilla oficial; trae descripción legible sin catálogo). Bugfix incluido:
+  `softguard_ref` se compone `linea-cuenta` ("ESI-0175") vía `refCuenta()` — antes el match
+  con `Cuenta.softguard_ref` fallaba. **Regla del usuario: SOLO LECTURA contra SoftGuard**
+  (no atender/procesar eventos vía API; eso es manual en su módulo, se implementará después).
+  Sonda de diagnóstico: `scripts/sg-probe-eventos.mjs`. Verificado contra API real: eventos
+  ESI-0175 Apertura/Cierre normalizados. Pendiente: revisión visual del panel con datos.
+  **v2 del panel (mismo día)**: poll 10 s; `?limit=` en el endpoint (clamp 5–100, dashboard
+  pide 12); estado **procesado/pendiente por evento** cruzando ReporteHistoricoMM ×
+  EventosPendientes por `rec_iid` (verificado: 19/100 matches reales — COF/LOW sin atender).
+  Próximo (pedido del usuario): **vista extensa para operadores de monitoreo** reutilizando
+  `MultiMonitorLive` con límite mayor (el endpoint ya lo soporta).
+  **v3 — reorganización del dashboard (aprobada por el usuario)**: zonas por modo de lectura —
+  negocio (alerta + 3 métricas) / operación en vivo (grid 2 col: `MultiMonitorLive limit={8}`
+  sin scroll interno + Central de monitoreo con cobertura-hoy fusionada adentro) / Técnicos en
+  campo full-width (cards en grid 2 col xl). La **alerta única y el Ops Score** ahora usan la
+  cola viva (`fetchEventosPendientes` con `Promise.race` 4 s → fallback al conteo del cron) —
+  una sola fuente de verdad con el panel. Tutorial actualizado (4 pasos). Pendiente revisión
+  visual.
+  **v4 — resiliencia de sesión** (la central tiene mantenimientos/microcortes): `restGet`
+  ahora invalida la cookie y reintenta UNA vez con login fresco ante HTTP de error o no-JSON
+  (antes una cookie muerta quedaba cacheada hasta 25 min y el panel quedaba trabado);
+  `?relogin=1` fuerza login nuevo (`invalidateWebApiSession()`); el panel tiene botón ↻ de
+  reconexión manual y campo `degradado` en la respuesta → badge "SIN CONEXIÓN" aun mostrando
+  lo último sincronizado de la DB.
+  **Visión del usuario (norte del producto)**: el portal admin como FACHADA moderna sobre la
+  suite web SoftGuard (anti-corruption layer en `web-api.ts`); próximos módulos: CRM y otros;
+  todo SOLO LECTURA hasta nuevo aviso; meta final: exponer la información a los clientes.
+  Ver memoria `vision-fachada-softguard`.
+  **v5 — salud de módulos + CRM inspeccionado**: `SoftGuardModulosPanel` en
+  `/admin/sync-softguard` + `GET /api/admin/softguard-status` (sesión, 5 sondas con latencia,
+  DesktopModules con disponibilidad, conteo de cuentas como chequeo de permisos).
+  `sg-capture.mjs` ahora acepta el módulo por argv. CRM (`WebCRM`) habilitado y capturado:
+  `CuentaByDealer` sin filtros → 203 cuentas completas con estado de test (`sta_*`) —
+  candidata a reemplazar `syncCuentas` (SQL bloqueado). Catálogos: Tipos, Geography,
+  PlantillasSms, ListasEmergencia, TGEquipos. Falta capturar el DETALLE de cuenta
+  (contactos/zonas/usuarios) navegando una cuenta en la UI del CRM.
+  **v6 — puente CRM→portal (proyección de cuentas) HECHO**: campos `sg_*` en `Cuenta`
+  (situación, fallo TST, último test, fallo AC, último evento, synced_at) aplicados con
+  `prisma db push` — ⚠️ NO usar `migrate dev`: detecta drift y pide RESET (borraría datos);
+  el proyecto convive con drift, usar db push para DDL aditivo. `fetchCuentasDealer()` en
+  web-api + `syncCuentasWebApi()` en sync.ts (no blanquea dirección cargada a mano) cableado
+  al cron. Primer sync real: 184 actualizadas / 19 sinMatch (internas _SG) / 0 errores;
+  hallazgo: 29 cuentas con fallo de AC. Columna "Panel" (OK / Sin 220v / Sin reportar) en
+  `/admin/cuentas` (tabla + card mobile, tooltip con último evento). Pendiente: mostrar la
+  proyección en el detalle de cuenta admin y en el portal del cliente; capturar detalle CRM.
+  **v7 — ACL formalizado (goal del usuario, CUMPLIDO)**: `src/lib/softguard/api/` con
+  `core.ts` (transporte: login, restGet con retry, normalización), `monitoreo.ts`, `crm.ts`,
+  `sistema.ts`, `index.ts` (barrel con la receta de extensión); `web-api.ts` quedó como shim
+  de compatibilidad (`export * from "./api"`) — cero imports rotos. Inventario de los 26
+  módulos + endpoints validados + gotchas + receta documentados en
+  `docs/integracion-softguard.md` §"Camino activo". Smoke en vivo: los 3 adaptadores OK.
+  Gotcha: logins concurrentes del mismo usuario pisan el handshake OAuth (no correr
+  sg-capture en paralelo con la app).
+  **v8 — SerTec integrado (módulo habilitado por el usuario)**: el ícono del Desktop se llama
+  "Servicio Técnico" (no "SerTec" — por eso fallaba la captura). `api/sertec.ts`:
+  `fetchOrdenesServicio` / `fetchOrdenesServicioCount` (GET /Rest/search/ServTec, modelo
+  `stc_*`). **Criterio de cierre EMPÍRICO**: la UI filtra activas con `stc_nestado in
+  (1,2,5,6)`; cerrada = estado fuera del set + `stc_dfecha_cierre` válida — el "estado=2 =
+  CERRADA" del pipeline SQL era INCORRECTO (nunca validado). `syncEstadoOTWebApi()` cableado
+  al cron → los TRES jobs (cuentas/eventos/OTs) corren por la API web; el pipeline SQL quedó
+  solo como fallback si algún día abren el 1433. Sonda SerTec en el panel de salud; módulos
+  "en uso": WebRemoto + WebCRM + SerTec. Verificado en vivo: orden #1 estado=4 → cerrada=true.
+  Fix hidratación: classNames multilínea normalizados en `AdminSidebar` y `tecnico/layout`
+  (el patrón multilínea en client components causa hydration mismatch; en RSC es inocuo).
 
-**Cómo migrar (patrón ya aplicado 3 veces):**
-- Reemplazar `Dialog.Root/Portal/Overlay/Content/Title/Description/Close` por
-  `<Modal open onClose title description size>`. `size`: `md` (max-w-md) / `lg` (max-w-lg).
-- Los 4 con `Dialog.Trigger` (botón que abre): agregar `const [open, setOpen] = useState(false)`,
-  dejar el botón disparador con `onClick={() => setOpen(true)}` y envolver el contenido en
-  `<Modal open={open} onClose={() => setOpen(false)} …>`.
-- **Cuidado de contraste**: el `Modal` tiene fondo `bg-slate-800`. Si el modal original era
-  `bg-slate-900` con inputs/`pre` en `bg-slate-800`, subí esos a `bg-slate-700` / `bg-slate-900`
-  para no perder contraste (así se hizo en `ModalSubirPdf` y `ModalPrepararArca`).
-- Botones "Cancelar" que usaban `Dialog.Close` → cambiar a `onClick={onClose}` (o `setOpen(false)`).
-- Verificar tsc + lint + `npm run test:unit`. Frenar y pedir revisión visual del usuario antes
-  de dar Épica A por cerrada (estos modales son cara-al-cliente y admin críticos).
+## Próximo paso inmediato → `docs/specs/plan-iteracion-fachada.md` (Fase 0, cierre)
+
+> **2026-06-11**: WU-6 quedó COMPLETO y verificado (tsc + lint + 28 tests). Lo que resta
+> de la Fase 0 son los DOS gates del usuario, en este orden:
+>
+> 1. **Revisión visual integral** (`npm run dev`): dashboard, cuentas, sync-softguard,
+>    tipografía/shell **y los 6 modales recién migrados** (lista de cambios visuales en
+>    la sección WU-6 de arriba). Ajustes finos que surjan.
+> 2. Con el OK visual → **ejecutar los commits work-unit** (el plan de 7 commits por
+>    dominio quedó propuesto en la sesión del 2026-06-11: ACL / multimonitoreo / sync
+>    API web + proyección / salud de módulos / DS shell / WU-6 modales / docs specs).
+>    No mezclar dominios en un commit. Regla vigente: no commitear sin OK del usuario.
+>
+> Cerrada la Fase 0 (git status limpio + Épica A declarada terminada) → **Fase 1:
+> tests del ACL** (fixtures con filas reales + mapeos + retry de sesión).
 
 ## Después: ÉPICA B (toasts, optimistic, error boundaries)
 
