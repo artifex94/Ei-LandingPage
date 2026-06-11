@@ -64,6 +64,7 @@ export default async function MiSemanaPage({
 
     return {
       fecha:      fechaStr,
+      fechaISO:   format(fecha, "yyyy-MM-dd"),
       label:      format(fecha, "EEE d", { locale: es }),
       labelLargo: format(fecha, "EEEE d 'de' MMMM", { locale: es }),
       esHoy:      isSameDay(fecha, hoy),

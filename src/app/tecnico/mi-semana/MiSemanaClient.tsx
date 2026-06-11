@@ -17,7 +17,8 @@ interface TareaDia {
 }
 
 interface DiaSemana {
-  fecha:       string;   // ISO
+  fecha:       string;   // ISO completo
+  fechaISO:    string;   // "yyyy-MM-dd" (para links de edición)
   label:       string;   // "Lun 14"
   labelLargo:  string;   // "Lunes 14 de abril"
   esHoy:       boolean;
@@ -122,6 +123,14 @@ function VistaDesktop({ dias }: { dias: DiaSemana[] }) {
               dia.tareas.map((t) => <TareaChip key={t.id} t={t} />)
             )}
           </div>
+
+          {/* Editar disponibilidad del día */}
+          <Link
+            href={`/tecnico/mi-dia?fecha=${dia.fechaISO}`}
+            className="block text-center text-[11px] text-slate-500 hover:text-orange-400 transition-colors py-1"
+          >
+            Disponibilidad →
+          </Link>
         </div>
       ))}
     </div>
@@ -203,6 +212,12 @@ function VistaMobile({ dias }: { dias: DiaSemana[] }) {
                     .sort((a, b) => (a.hora_inicio ?? "").localeCompare(b.hora_inicio ?? ""))
                     .map((t) => <TareaChip key={t.id} t={t} />)
                 )}
+                <Link
+                  href={`/tecnico/mi-dia?fecha=${dia.fechaISO}`}
+                  className="flex items-center justify-center min-h-[44px] text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors"
+                >
+                  Configurar disponibilidad →
+                </Link>
               </div>
             )}
           </div>
