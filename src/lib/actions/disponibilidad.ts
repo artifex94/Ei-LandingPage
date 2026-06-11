@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
-import type { Rango } from "@/lib/disponibilidad-utils";
+import { normalizarRangos, type Rango } from "@/lib/disponibilidad-utils";
 
 export async function guardarDisponibilidad(
   fechaISO: string,
@@ -41,11 +41,15 @@ export async function guardarDisponibilidad(
   const fecha = new Date(fechaISO);
   fecha.setHours(0, 0, 0, 0);
 
+  // La coherencia del dominio (06-22, sin solapes) no puede depender solo
+  // del cliente: se canoniza también acá antes de persistir.
+  const rangosCanonicos = normalizarRangos(rangos);
+
   await prisma.$transaction([
     prisma.disponibilidadTecnico.deleteMany({
       where: { tecnico_id: user.id, fecha },
     }),
-    ...rangos.map((r) =>
+    ...rangosCanonicos.map((r) =>
       prisma.disponibilidadTecnico.create({
         data: { tecnico_id: user.id, fecha, desde: r.desde, hasta: r.hasta },
       })
