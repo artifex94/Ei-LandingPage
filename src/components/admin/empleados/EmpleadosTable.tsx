@@ -27,10 +27,13 @@ const ROL_LABEL: Record<string, string> = {
 export function EmpleadosTable({
   empleados,
   basePath = "/admin/trabajadores",
+  tareasSemana,
 }: {
   empleados: EmpleadoConPerfil[];
   rolLabel: Record<string, string>;
   basePath?: string;
+  /** Tareas activas de la semana por perfil_id; agrega la columna si está presente */
+  tareasSemana?: Record<string, number>;
 }) {
   const [pending, startTransition] = useTransition();
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -84,6 +87,29 @@ export function EmpleadosTable({
         </div>
       ),
     },
+    ...(tareasSemana
+      ? [
+          {
+            id: "tareas",
+            header: "Tareas esta semana",
+            align: "center",
+            cell: (emp) => {
+              const count = tareasSemana[emp.perfil_id] ?? 0;
+              return count > 0 ? (
+                <Link
+                  href={`/admin/agenda?tecnico=${emp.perfil_id}`}
+                  aria-label={`Ver ${count} tareas de ${emp.perfil.nombre}`}
+                  className="inline-block bg-orange-500/20 text-orange-300 text-xs font-bold px-2.5 py-0.5 rounded-full hover:bg-orange-500/30 transition-colors"
+                >
+                  {count}
+                </Link>
+              ) : (
+                <span className="text-slate-500">—</span>
+              );
+            },
+          } satisfies Column<EmpleadoConPerfil>,
+        ]
+      : []),
     {
       id: "estado",
       header: "Estado",

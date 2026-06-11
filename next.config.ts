@@ -111,6 +111,17 @@ const nextConfig: NextConfig = {
         destination: "/admin/trabajadores",
         permanent: true,
       },
+      {
+        // Tecnicos del portal consolidados en el tab Tecnicos del equipo
+        source: "/admin/tecnicos",
+        destination: "/admin/trabajadores?rol=TECNICO",
+        permanent: true,
+      },
+      {
+        source: "/admin/tecnicos/nuevo",
+        destination: "/admin/trabajadores/nuevo",
+        permanent: true,
+      },
     ];
   },
   async headers() {

@@ -60,7 +60,6 @@ const PATH_MAP: [string, keyof typeof AREAS][] = [
   ["/admin/facturacion",        "clientes"],
   ["/admin/trabajadores",       "equipo"],
   ["/admin/empleados",          "equipo"],
-  ["/admin/tecnicos",           "equipo"],
   ["/admin/vehiculo",           "equipo"],
   ["/admin/importar",           "sistema"],
   ["/admin/higienizar",         "sistema"],

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { startOfWeek, endOfWeek } from "date-fns";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { EmpleadosTable } from "@/components/admin/empleados/EmpleadosTable";
@@ -61,6 +62,32 @@ export default async function TrabajadoresPage({
     prisma.empleado.count(),
   ]);
 
+  // En el tab Técnicos se muestra la carga de tareas de la semana en curso
+  let tareasSemana: Record<string, number> | undefined;
+  if (filtroRol === "TECNICO") {
+    const hoy = new Date();
+    const lunes = startOfWeek(hoy, { weekStartsOn: 1 });
+    const domingo = endOfWeek(hoy, { weekStartsOn: 1 });
+
+    const tecnicos = await prisma.perfil.findMany({
+      where: { rol: "TECNICO" },
+      select: {
+        id: true,
+        _count: {
+          select: {
+            tareas_asignadas: {
+              where: {
+                fecha: { gte: lunes, lte: domingo },
+                estado: { in: ["PENDIENTE", "EN_CURSO"] },
+              },
+            },
+          },
+        },
+      },
+    });
+    tareasSemana = Object.fromEntries(tecnicos.map((t) => [t.id, t._count.tareas_asignadas]));
+  }
+
   const activosCount = empleados.filter((e) => e.activo).length;
 
   const tabsVisibles = TABS.filter((t) => t.key !== "ADMIN_GENERAL" || esEscobarAdmin);
@@ -102,6 +129,7 @@ export default async function TrabajadoresPage({
         empleados={empleados}
         rolLabel={ROL_LABEL}
         basePath="/admin/trabajadores"
+        tareasSemana={tareasSemana}
       />
 
       <TutorialContextual
