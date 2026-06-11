@@ -196,9 +196,26 @@ visual del usuario** antes de seguir propagando:
 >   memoria (sin filtros del API no validados); si la central no responde, degrada
 >   a aviso sin romper la página.
 >
-> **Siguiente: Fase 4 — la capa cliente** (estado del sistema en el dashboard del
-> cliente, avisos de fallo enganchados a la solicitud de F3; el punto 2 —
-> EventoTimeLineFull — requiere sondear params con la app APAGADA primero).
+> **Fase 4 IMPLEMENTADA en sus puntos 1 y 3 (2026-06-11, madrugada) — en working
+> tree, PENDIENTE de revisión visual del usuario (88/88 tests, tsc/lint verdes):**
+>
+> - **`EstadoSistemaCard`** en el dashboard del cliente (arriba de las CuentaCards;
+>   solo aparece si alguna cuenta tiene `sg_synced_at`): todas OK → "reportando con
+>   normalidad" + último test; fallo → aviso en lenguaje del cliente («X» está
+>   funcionando a batería / no se está reportando, con el desde) y el **enganche
+>   F3**: si la cuenta tiene solicitud u OT abierta → badge "Visita técnica en
+>   gestión"; si no → CTA "Solicitar visita técnica" (/portal/solicitud). LED
+>   emerald/amber/red según severidad, estética industrial del portal.
+> - **Punto 2 (EventoTimeLineFull) NO cableado aún**: el endpoint está descubierto
+>   pero sin mapear el filtro por cuenta. Sonda lista: con la app y el cron
+>   APAGADOS correr `node --env-file=.env.local scripts/sg-probe-timeline.mjs 0175
+>   ESI` — prueba 6 variantes de filtrado y dice cuál funciona. Con el shape
+>   validado: adaptador en `api/monitoreo.ts` + fixture + test + sección en
+>   /portal/eventos.
+>
+> Con el OK visual → commit work-unit de la Fase 4 (parcial). Quedan: punto 2 tras
+> la sonda, aviso sonoro P1 (opcional F2), y **Fase 5 = Épica B** (toasts,
+> optimistic, error boundaries).
 >
 > Deuda menor detectada (no bloquea): el badge "configurado/no configurado" de
 > `ConfiguracionForm` lee `process.env` en un client component → para vars server-only

@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { CuentaCard } from "@/components/portal/CuentaCard";
+import { EstadoSistemaCard } from "@/components/portal/EstadoSistemaCard";
 import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = { title: "Inicio" };
@@ -22,9 +23,27 @@ export default async function DashboardPage() {
         where: { estado: { in: ["PENDIENTE", "VENCIDO", "PROCESANDO"] } },
         select: { id: true, estado: true, importe: true, mes: true, anio: true },
       },
+      // Para "visita técnica en gestión" en la tarjeta de estado del sistema.
+      solicitudes: { where: { estado: { not: "RESUELTA" } }, select: { id: true } },
+      ordenes_trabajo: {
+        where: { estado: { notIn: ["COMPLETADA", "CANCELADA"] } },
+        select: { id: true },
+      },
     },
     orderBy: { descripcion: "asc" },
   });
+
+  const estadoSistema = cuentas.map((c) => ({
+    id: c.id,
+    descripcion: c.descripcion,
+    sincronizada: c.sg_synced_at !== null,
+    enFalloAc: c.sg_en_fallo_ac,
+    falloAcDesde: c.sg_fallo_ac_desde,
+    enFalloTst: c.sg_en_fallo_tst,
+    falloTstDesde: c.sg_fallo_tst_desde,
+    ultimoTst: c.sg_ultimo_tst,
+    enGestion: c.solicitudes.length > 0 || c.ordenes_trabajo.length > 0,
+  }));
 
   return (
     <section aria-labelledby="dashboard-heading">
@@ -41,6 +60,8 @@ export default async function DashboardPage() {
           Estado de tu cuenta y servicios contratados con Escobar Instalaciones
         </p>
       </div>
+
+      <EstadoSistemaCard cuentas={estadoSistema} />
 
       {cuentas.length === 0 ? (
         <div className="bg-industrial-800 rounded-lg border border-industrial-700 p-8 text-center shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
