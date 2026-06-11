@@ -3,7 +3,7 @@ import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { CalendarioPagos, type PagoPlano } from "@/components/portal/CalendarioPagos";
 import { BannerDeudaTotal } from "@/components/portal/BannerDeudaTotal";
-import { getEventosHeatmap } from "@/lib/actions/eventos";
+import Select from "@/components/ui/Select";
 
 export const metadata: Metadata = { title: "Mis pagos" };
 
@@ -57,13 +57,6 @@ export default async function PagosPage({
     }
   }
 
-  // Heatmap de eventos de alarma — en paralelo para todas las cuentas
-  const eventosHeatmapPorCuenta = await Promise.all(
-    cuentas.map((c) =>
-      getEventosHeatmap(c.id, anio).catch(() => [])
-    )
-  );
-
   return (
     <section aria-labelledby="pagos-heading">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -76,20 +69,21 @@ export default async function PagosPage({
           <form method="GET">
             <label htmlFor="anio-select" className="sr-only">Seleccionar año</label>
             <div className="flex items-center gap-2">
-              <select
-                id="anio-select"
-                name="anio"
-                defaultValue={anio}
-                className="bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 text-base min-h-[52px] focus:outline-2 focus:outline-orange-500"
-                aria-label="Año a consultar"
-              >
-                {aniosDisponibles.map((a) => (
-                  <option key={a} value={a}>{a}</option>
-                ))}
-              </select>
+              <div className="w-28">
+                <Select
+                  id="anio-select"
+                  name="anio"
+                  defaultValue={anio}
+                  aria-label="Año a consultar"
+                >
+                  {aniosDisponibles.map((a) => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </Select>
+              </div>
               <button
                 type="submit"
-                className="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white px-5 py-3 rounded-xl text-base min-h-[52px] transition-colors font-semibold"
+                className="bg-industrial-700 hover:bg-industrial-600 border border-industrial-600 border-b-[3px] border-b-industrial-950 active:border-b active:translate-y-[2px] text-slate-300 hover:text-slate-200 px-5 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest min-h-[48px] transition-all duration-150 ease-mech-press"
               >
                 Ver
               </button>
@@ -109,21 +103,20 @@ export default async function PagosPage({
         <p className="text-slate-400 text-lg">No tenés servicios activos.</p>
       ) : (
         <div className="space-y-10">
-          {cuentas.map((cuenta, i) => (
+          {cuentas.map((cuenta) => (
             <div key={cuenta.id}>
               <div className="flex items-baseline gap-3 mb-4">
                 <h2 className="text-lg font-semibold text-white">
                   {cuenta.descripcion}
                 </h2>
                 <span className="text-xs text-slate-500 font-mono hidden sm:inline">
-                  Actividad del sistema de alarma · {anio}
+                  Estado de pagos · {anio}
                 </span>
               </div>
               <CalendarioPagos
                 pagos={cuenta.pagos.map((p) => ({ ...p, importe: Number(p.importe) }))}
                 anio={anio}
                 cuentaId={cuenta.id}
-                eventosHeatmap={eventosHeatmapPorCuenta[i]}
               />
             </div>
           ))}
