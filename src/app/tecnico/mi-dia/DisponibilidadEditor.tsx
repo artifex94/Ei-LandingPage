@@ -167,7 +167,7 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
           </h2>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
-          <span className="text-xs text-slate-400 font-mono tabular-nums truncate">
+          <span className="text-sm text-slate-300 font-mono tabular-nums truncate">
             {rangosAResumen(rangosDia)}
           </span>
           {guardando && <span className="text-xs text-slate-500">Guardando…</span>}
@@ -206,10 +206,10 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
                       : "bg-industrial-800 border-industrial-700 text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-wider leading-none">
+                  <span className="text-[11px] font-bold uppercase tracking-wide leading-none">
                     {d.esHoy ? "HOY" : d.dia}
                   </span>
-                  <span className="text-sm font-mono font-bold tabular-nums leading-tight">
+                  <span className="text-base font-mono font-bold tabular-nums leading-tight">
                     {d.num}
                   </span>
                 </button>
@@ -226,7 +226,7 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
                   key={p.id}
                   onClick={() => aplicarPreset(p.rangos)}
                   aria-pressed={activo}
-                  className={`min-h-[44px] px-3 rounded-sm border text-xs font-bold uppercase tracking-widest
+                  className={`min-h-[48px] px-3 rounded-sm border text-sm font-semibold
                               transition-all duration-150 ease-mech-press
                               ${activo
                                 ? "bg-tactical-500/15 border-tactical-500/40 text-tactical-300"
@@ -241,8 +241,9 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
           </div>
 
           {jornada === null ? (
-            <p className="text-xs text-slate-500 italic text-center py-2">
-              Día marcado como no disponible — elegí un preset para reactivarlo.
+            <p className="text-sm text-slate-400 text-center py-3">
+              Este día está marcado como no disponible.
+              <span className="block text-slate-500 mt-0.5">Elegí un preset para reactivarlo.</span>
             </p>
           ) : (
             <>
@@ -272,8 +273,11 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
                   aria-pressed={Boolean(jornada.corte)}
                   className="w-full flex items-center justify-between gap-3 min-h-[44px] disabled:opacity-50"
                 >
-                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <span className="text-sm font-semibold text-slate-200">
                     Corte al mediodía
+                    <span className="block text-xs font-normal text-slate-500 mt-0.5">
+                      Pausa sin disponibilidad entre la mañana y la tarde
+                    </span>
                   </span>
                   <span
                     aria-hidden="true"
@@ -314,8 +318,9 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
               {/* Barra visual de lo configurado */}
               <div className="pt-1">
                 <BarraDisponibilidad rangos={rangosDia} />
-                <p className="text-xs text-slate-500 mt-2 text-center font-mono tabular-nums">
-                  {rangosAResumen(rangosDia)} · {rangosAHoras(rangosDia)}h
+                <p className="text-sm text-slate-300 mt-2.5 text-center font-mono tabular-nums">
+                  {rangosAResumen(rangosDia)}
+                  <span className="text-slate-500"> · {rangosAHoras(rangosDia)}h disponibles</span>
                 </p>
               </div>
             </>
@@ -350,7 +355,7 @@ function HoraStepper({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-sm text-slate-300 min-w-0 truncate">{label}</span>
+      <span className="text-base font-medium text-slate-200 min-w-0 truncate">{label}</span>
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
           onClick={() => onCambio(-1)}
@@ -360,7 +365,7 @@ function HoraStepper({
         >
           <Minus className="w-4 h-4" aria-hidden="true" />
         </button>
-        <span className="text-xl font-mono font-bold tabular-nums text-white w-[72px] text-center">
+        <span className="text-2xl font-mono font-bold tabular-nums text-white w-[84px] text-center">
           {valor}
         </span>
         <button

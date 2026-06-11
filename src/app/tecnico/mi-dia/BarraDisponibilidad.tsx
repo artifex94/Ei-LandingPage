@@ -36,9 +36,9 @@ export function BarraDisponibilidad({ rangos }: { rangos: Rango[] }) {
           );
         })}
       </div>
-      <div className="flex justify-between mt-1">
+      <div className="flex justify-between mt-1.5">
         {MARCAS.map((m) => (
-          <span key={m} className="text-[10px] font-mono text-slate-500 tabular-nums">
+          <span key={m} className="text-xs font-mono text-slate-400 tabular-nums">
             {m}
           </span>
         ))}
