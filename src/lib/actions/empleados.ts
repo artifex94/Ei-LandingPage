@@ -34,7 +34,6 @@ export async function crearEmpleado(data: {
     detalle: { rol: data.rol_empleado, perfil_id: data.perfil_id },
   });
 
-  revalidatePath("/admin/empleados");
   revalidatePath("/admin/trabajadores");
   return empleado;
 }
@@ -57,7 +56,6 @@ export async function toggleEmpleadoActivo(empleado_id: string, activo: boolean)
     detalle: {},
   });
 
-  revalidatePath("/admin/empleados");
   revalidatePath("/admin/trabajadores");
   return empleado;
 }
@@ -92,7 +90,6 @@ export async function actualizarEmpleado(
     detalle: data,
   });
 
-  revalidatePath("/admin/empleados");
   revalidatePath("/admin/trabajadores");
   return empleado;
 }

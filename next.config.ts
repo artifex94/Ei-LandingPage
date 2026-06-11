@@ -103,6 +103,16 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  async redirects() {
+    return [
+      {
+        // Lista de empleados consolidada en /admin/trabajadores
+        source: "/admin/empleados",
+        destination: "/admin/trabajadores",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

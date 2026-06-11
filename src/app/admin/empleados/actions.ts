@@ -216,7 +216,6 @@ export async function actualizarEmpleado(
   });
 
   revalidatePath(`/admin/empleados/${id}`);
-  revalidatePath("/admin/empleados");
   revalidatePath("/admin/trabajadores");
   revalidatePath(`/admin/trabajadores/${id}`);
   return { ok: true };

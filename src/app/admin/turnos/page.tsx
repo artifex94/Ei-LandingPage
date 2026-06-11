@@ -135,8 +135,8 @@ export default async function TurnosPage({
           <p className="text-slate-300 font-medium">No hay monitores activos.</p>
           <p className="text-sm text-slate-500 mt-2">
             Habilitá empleados como monitores en{" "}
-            <Link href="/admin/empleados" className="text-orange-400 underline">
-              Empleados
+            <Link href="/admin/trabajadores" className="text-orange-400 underline">
+              Equipo
             </Link>
             .
           </p>

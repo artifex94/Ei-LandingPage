@@ -26,7 +26,7 @@ const ROL_LABEL: Record<string, string> = {
 
 export function EmpleadosTable({
   empleados,
-  basePath = "/admin/empleados",
+  basePath = "/admin/trabajadores",
 }: {
   empleados: EmpleadoConPerfil[];
   rolLabel: Record<string, string>;

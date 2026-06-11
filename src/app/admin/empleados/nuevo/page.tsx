@@ -14,8 +14,8 @@ export default async function NuevoEmpleadoPage() {
       <nav aria-label="Ruta de navegación" className="mb-6">
         <ol className="flex items-center gap-2 text-sm text-slate-400">
           <li>
-            <Link href="/admin/empleados" className="hover:text-white transition-colors">
-              Empleados
+            <Link href="/admin/trabajadores" className="hover:text-white transition-colors">
+              Equipo
             </Link>
           </li>
           <li aria-hidden="true">/</li>
