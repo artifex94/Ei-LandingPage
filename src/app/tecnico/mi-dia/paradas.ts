@@ -87,7 +87,9 @@ export function fusionarParadas(tareas: TareaDia[], ots: OTDia[]): Parada[] {
   });
 
   const deOTs: Parada[] = ots
-    .filter((o) => !otsVinculadas.has(o.id))
+    // Las canceladas solo sirven para heredar estado a su tarea vinculada;
+    // como parada propia son ruido.
+    .filter((o) => !otsVinculadas.has(o.id) && o.estado !== "CANCELADA")
     .map((o) => ({
       origen: "OT",
       id: o.id,

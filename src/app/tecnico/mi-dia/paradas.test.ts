@@ -92,6 +92,33 @@ describe("fusionarParadas", () => {
     const [p] = fusionarParadas([tarea()], []);
     expect(p.href).toBe("/tecnico/tareas/t1");
   });
+
+  it("tarea EN_CURSO con OT completada hereda COMPLETADA (no es falso 'Ahora')", () => {
+    const paradas = fusionarParadas(
+      [tarea({ ot_id: "ot1", estado: "EN_CURSO" })],
+      [ot({ id: "ot1", estado: "COMPLETADA" })]
+    );
+    expect(paradas).toHaveLength(1);
+    expect(paradas[0].completada).toBe(true);
+    expect(paradas[0].activa).toBe(false);
+    expect(seleccionarHero(paradas).parada).toBeNull();
+  });
+
+  it("una OT cancelada hereda estado a su tarea pero no aparece como parada propia", () => {
+    const paradas = fusionarParadas(
+      [tarea({ ot_id: "ot1", estado: "PENDIENTE" })],
+      [ot({ id: "ot1", estado: "CANCELADA" }), ot({ id: "ot2", estado: "CANCELADA" })]
+    );
+    expect(paradas).toHaveLength(1);
+    expect(paradas[0].completada).toBe(true);
+    expect(paradas.find((p) => p.id === "ot2")).toBeUndefined();
+  });
+
+  it("una OT completada huérfana sí aparece (es parte de la jornada hecha)", () => {
+    const paradas = fusionarParadas([], [ot({ estado: "COMPLETADA" })]);
+    expect(paradas).toHaveLength(1);
+    expect(paradas[0].completada).toBe(true);
+  });
 });
 
 describe("seleccionarHero", () => {

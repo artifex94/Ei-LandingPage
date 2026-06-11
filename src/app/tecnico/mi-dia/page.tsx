@@ -49,12 +49,14 @@ export default async function MiDiaPage() {
 
   // Las OTs cuelgan de Empleado.id (no de Perfil.id) — sin registro de
   // empleado, el técnico solo ve sus tareas agendadas.
+  // Se incluyen las cerradas del día: la tarea vinculada hereda el estado
+  // real de la OT (nada actualiza TareaAgendada al completar una OT).
   const otsRaw = empleado
     ? await prisma.ordenTrabajo.findMany({
         where: {
           tecnico_id: empleado.id,
           fecha_visita: { gte: hoy, lt: manana },
-          estado: { in: ["ASIGNADA", "EN_RUTA", "EN_SITIO"] },
+          estado: { in: ["ASIGNADA", "EN_RUTA", "EN_SITIO", "COMPLETADA", "CANCELADA"] },
         },
         include: {
           cuenta: {
