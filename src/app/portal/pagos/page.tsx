@@ -3,6 +3,7 @@ import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { CalendarioPagos, type PagoPlano } from "@/components/portal/CalendarioPagos";
 import { BannerDeudaTotal } from "@/components/portal/BannerDeudaTotal";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 import Select from "@/components/ui/Select";
 
 export const metadata: Metadata = { title: "Mis pagos" };
@@ -59,37 +60,38 @@ export default async function PagosPage({
 
   return (
     <section aria-labelledby="pagos-heading">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 id="pagos-heading" className="text-2xl font-display font-bold text-white">
-          Historial de pagos
-        </h1>
-
-        {/* Selector de año */}
-        {aniosDisponibles.length > 1 && (
-          <form method="GET">
-            <label htmlFor="anio-select" className="sr-only">Seleccionar año</label>
-            <div className="flex items-center gap-2">
-              <div className="w-28">
-                <Select
-                  id="anio-select"
-                  name="anio"
-                  defaultValue={anio}
-                  aria-label="Año a consultar"
-                >
-                  {aniosDisponibles.map((a) => (
-                    <option key={a} value={a}>{a}</option>
-                  ))}
-                </Select>
-              </div>
-              <button
-                type="submit"
-                className="bg-industrial-700 hover:bg-industrial-600 border border-industrial-600 border-b-[3px] border-b-industrial-950 active:border-b active:translate-y-[2px] text-slate-300 hover:text-slate-200 px-5 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest min-h-[48px] transition-all duration-150 ease-mech-press"
-              >
-                Ver
-              </button>
-            </div>
-          </form>
-        )}
+      <div className="mb-6">
+        <PortalPageHeader
+          title="Historial de pagos"
+          titleId="pagos-heading"
+          action={
+            aniosDisponibles.length > 1 ? (
+              <form method="GET">
+                <label htmlFor="anio-select" className="sr-only">Seleccionar año</label>
+                <div className="flex items-center gap-2">
+                  <div className="w-28">
+                    <Select
+                      id="anio-select"
+                      name="anio"
+                      defaultValue={anio}
+                      aria-label="Año a consultar"
+                    >
+                      {aniosDisponibles.map((a) => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </Select>
+                  </div>
+                  <button
+                    type="submit"
+                    className="bg-industrial-700 hover:bg-industrial-600 border border-industrial-600 border-b-[3px] border-b-industrial-950 active:border-b active:translate-y-[2px] text-slate-300 hover:text-slate-200 px-5 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest min-h-[48px] transition-all duration-150 ease-mech-press"
+                  >
+                    Ver
+                  </button>
+                </div>
+              </form>
+            ) : undefined
+          }
+        />
       </div>
 
       {/* Banner de deuda total — solo para el año actual */}
