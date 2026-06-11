@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCuentaCount } from "@/lib/softguard/queries";
 import { isMockMode } from "@/lib/softguard/client";
 import { SoftGuardPingPanel } from "@/components/admin/SoftGuardSyncStatus";
+import { SoftGuardModulosPanel } from "@/components/admin/SoftGuardModulosPanel";
 import { prisma } from "@/lib/prisma/client";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
@@ -96,6 +97,8 @@ export default async function SyncSoftGuardPage() {
       </Link>
 
       <SoftGuardPingPanel initialResult={result} />
+
+      <SoftGuardModulosPanel />
 
       <section aria-labelledby="sg-info-heading" className="rounded-lg border border-slate-700 bg-slate-800 p-5 space-y-3">
         <h2 id="sg-info-heading" className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
