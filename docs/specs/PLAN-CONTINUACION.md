@@ -157,9 +157,24 @@ visual del usuario** antes de seguir propagando:
 > - **Fase 1 HECHA**: 36 tests del ACL con fixtures fieles al contrato real
 >   (`src/lib/softguard/api/*.test.ts` + `fixtures.ts`). Suite total: 64/64.
 >
-> **Siguiente: Fase 2 — vista de operadores `/admin/monitoreo`** (MultiMonitorLive
-> `limit={50}` pantalla completa, filtros client-side, panel lateral con cruce de
-> datos del portal). Después Fase 3 (detección → SolicitudMantenimiento automática).
+> **Fase 2 CERRADA (2026-06-11, aprobada visualmente por el usuario):**
+>
+> - `src/components/admin/eventos-live.ts`: hook `useEventosLive` compartido entre el
+>   panel del dashboard y la vista de operadores + `filtrarEventos` puro (con tests) +
+>   formato de hora FIJO 24 h sin locale (toLocaleTimeString varía según el ICU del
+>   runtime — gotcha real detectado por los tests).
+> - `/admin/monitoreo` (`MonitorOperadores`): 50 eventos pantalla completa, filtros
+>   (búsqueda cuenta/titular, prioridad P1/P2/resto, solo pendientes), panel lateral
+>   al seleccionar evento con contexto del PORTAL vía `GET /api/admin/cuenta-contexto`
+>   (cliente + teléfono click-to-call, proyección sg_* del panel, OTs y solicitudes
+>   abiertas, link al detalle de cuenta). Cache por ref en el cliente.
+> - Sidebar: ítem "En vivo" primero en la sección Monitoreo. El panel del dashboard
+>   linkea "Vista operadores →" (/admin/eventos sigue en el sidebar).
+> - Pendiente opcional de la fase (punto 4 del plan): aviso sonoro para P1.
+>
+> **Siguiente: Fase 3 — cerrar el ciclo de mantenimiento** (detección → acción:
+> fallo sostenido → SolicitudMantenimiento automática; bloque Panel en
+> /admin/cuentas/[id]; OT ↔ SerTec con vencimiento).
 >
 > Deuda menor detectada (no bloquea): el badge "configurado/no configurado" de
 > `ConfiguracionForm` lee `process.env` en un client component → para vars server-only

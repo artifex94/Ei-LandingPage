@@ -3,90 +3,30 @@
 /**
  * Panel de multimonitoreo del dashboard admin.
  *
- * Replica la grilla en vivo del Multimonitor de SoftGuard: pollea
- * /api/admin/eventos-live cada 10 s (pausado mientras la pestaña no está
- * visible) y muestra los últimos eventos recibidos con prioridad por color
- * y estado procesado/pendiente por fila.
+ * Replica la grilla en vivo del Multimonitor de SoftGuard con el feed
+ * compartido de `eventos-live.ts` (poll 10 s, pausa con pestaña oculta,
+ * flash en eventos nuevos) y muestra los últimos eventos recibidos con
+ * prioridad por color y estado procesado/pendiente por fila.
  *
  * fuente="live" → grilla real de la central (LED verde, EN VIVO).
  * fuente="db"   → últimos eventos sincronizados por el cron (DIFERIDO).
  *
  * `limit`: cantidad de eventos a mostrar (12 en el dashboard admin; la vista
- * extensa de operadores reutilizará este componente con un límite mayor).
+ * extensa de operadores es /admin/monitoreo → `MonitorOperadores`).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { RefreshCw } from "lucide-react";
-import type { EventosLiveResponse, EventoLive } from "@/app/api/admin/eventos-live/route";
-
-const POLL_MS = 10_000;
-const FLASH_MS = 4_000;
-
-type Conexion = "cargando" | "ok" | "error";
-type EstadoCentral = "cargando" | "vivo" | "diferido" | "caido";
+import type { EventoLive } from "@/app/api/admin/eventos-live/route";
+import {
+  useEventosLive,
+  hora,
+  prioridadStyle,
+  type EstadoCentral,
+} from "./eventos-live";
 
 export function MultiMonitorLive({ limit = 15 }: { limit?: number }) {
-  const [data, setData] = useState<EventosLiveResponse | null>(null);
-  const [conexion, setConexion] = useState<Conexion>("cargando");
-  const [reconectando, setReconectando] = useState(false);
-  const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
-  const vistosRef = useRef<Set<string> | null>(null);
-
-  const poll = useCallback(async (opts?: { relogin?: boolean }) => {
-    if (opts?.relogin) setReconectando(true);
-    try {
-      const url = `/api/admin/eventos-live?limit=${limit}${opts?.relogin ? "&relogin=1" : ""}`;
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = (await res.json()) as EventosLiveResponse;
-
-      // Resaltar solo lo que entró después de la primera carga.
-      if (vistosRef.current) {
-        const previos = vistosRef.current;
-        const nuevos = json.eventos.filter((e) => !previos.has(e.id)).map((e) => e.id);
-        if (nuevos.length > 0) {
-          setFlashIds((prev) => new Set([...prev, ...nuevos]));
-          setTimeout(() => {
-            setFlashIds((prev) => {
-              const next = new Set(prev);
-              for (const id of nuevos) next.delete(id);
-              return next;
-            });
-          }, FLASH_MS);
-        }
-      }
-      vistosRef.current = new Set(json.eventos.map((e) => e.id));
-
-      setData(json);
-      setConexion("ok");
-    } catch {
-      setConexion("error");
-    } finally {
-      setReconectando(false);
-    }
-  }, [limit]);
-
-  useEffect(() => {
-    void poll();
-    const interval = setInterval(() => {
-      if (!document.hidden) void poll();
-    }, POLL_MS);
-    const onVisible = () => {
-      if (!document.hidden) void poll();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [poll]);
-
-  const estado: EstadoCentral =
-    conexion === "cargando" ? "cargando"
-    : conexion === "error" || data?.degradado ? "caido"
-    : data?.fuente === "live" ? "vivo"
-    : "diferido";
+  const { data, estado, reconectando, flashIds, poll } = useEventosLive(limit);
 
   return (
     <section className="rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-800/60 to-slate-900/40 p-5">
@@ -112,10 +52,10 @@ export function MultiMonitorLive({ limit = 15 }: { limit?: number }) {
             <span className="sr-only">Reconectar con la central</span>
           </button>
           <Link
-            href="/admin/eventos"
+            href="/admin/monitoreo"
             className="text-[11px] font-semibold text-slate-500 hover:text-orange-400 transition-colors"
           >
-            Ver todos →
+            Vista operadores →
           </Link>
         </div>
       </div>
@@ -146,9 +86,9 @@ export function MultiMonitorLive({ limit = 15 }: { limit?: number }) {
   );
 }
 
-// ── Subcomponentes ────────────────────────────────────────────────────────────
+// ── Subcomponentes (los badges también los usa la vista de operadores) ────────
 
-function EstadoConexion({ estado }: { estado: EstadoCentral }) {
+export function EstadoConexion({ estado }: { estado: EstadoCentral }) {
   if (estado === "caido") {
     return (
       <span className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-red-400">
@@ -174,6 +114,22 @@ function EstadoConexion({ estado }: { estado: EstadoCentral }) {
     );
   }
   return null;
+}
+
+export function EstadoEvento({ procesado }: { procesado: boolean }) {
+  if (procesado) {
+    return (
+      <span className="shrink-0 self-center rounded-md border border-slate-700/40 bg-slate-900/50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+        Procesado
+      </span>
+    );
+  }
+  return (
+    <span className="shrink-0 self-center flex items-center gap-1.5 rounded-md border border-amber-700/50 bg-amber-950/40 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-led-alert" aria-hidden="true" />
+      Pendiente
+    </span>
+  );
 }
 
 function FilaEvento({ evento, flash }: { evento: EventoLive; flash: boolean }) {
@@ -210,22 +166,6 @@ function FilaEvento({ evento, flash }: { evento: EventoLive; flash: boolean }) {
   );
 }
 
-function EstadoEvento({ procesado }: { procesado: boolean }) {
-  if (procesado) {
-    return (
-      <span className="shrink-0 self-center rounded-md border border-slate-700/40 bg-slate-900/50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
-        Procesado
-      </span>
-    );
-  }
-  return (
-    <span className="shrink-0 self-center flex items-center gap-1.5 rounded-md border border-amber-700/50 bg-amber-950/40 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300">
-      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-led-alert" aria-hidden="true" />
-      Pendiente
-    </span>
-  );
-}
-
 function Skeleton() {
   return (
     <div className="space-y-2 py-2" aria-hidden="true">
@@ -234,37 +174,4 @@ function Skeleton() {
       ))}
     </div>
   );
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function hora(iso: string): string {
-  return new Date(iso).toLocaleTimeString("es-AR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-/** Prioridad SoftGuard: 1 = crítica. Sin prioridad → neutro. */
-function prioridadStyle(p: number | null): { borde: string; badge: string; texto: string } {
-  if (p === 1) {
-    return {
-      borde: "rgba(239,68,68,0.6)",
-      badge: "border-red-700/60 bg-red-950/50 text-red-300",
-      texto: "text-red-200",
-    };
-  }
-  if (p === 2) {
-    return {
-      borde: "rgba(245,158,11,0.5)",
-      badge: "border-amber-700/50 bg-amber-950/40 text-amber-300",
-      texto: "text-amber-100",
-    };
-  }
-  return {
-    borde: "rgba(51,65,85,0.5)",
-    badge: "border-slate-700/50 bg-slate-900/60 text-slate-400",
-    texto: "text-slate-200",
-  };
 }

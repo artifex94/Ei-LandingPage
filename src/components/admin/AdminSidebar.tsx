@@ -10,7 +10,7 @@ import {
   ClipboardList, CalendarDays, Truck, UserCog, CalendarCheck,
   Receipt, Bell, Briefcase,
   FileUp, Database, ScrollText, Radio, Settings, UmbrellaOff,
-  UserPlus,
+  UserPlus, Activity,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/components/ui/LogoutButton";
@@ -64,6 +64,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: "monitoreo",
     label: "Monitoreo",
     items: [
+      { href: "/admin/monitoreo", label: "En vivo",   icon: Activity },
       { href: "/admin/turnos",    label: "Turnos",    icon: CalendarDays },
       { href: "/admin/ausencias", label: "Ausencias", icon: UmbrellaOff },
     ],
