@@ -58,20 +58,26 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
   const [slots, setSlots] = useState<boolean[]>(() => rangosASlots(rangosIniciales));
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const manejarToggle = useCallback((idx: number) => {
     const nuevosSlots = toggleSlot(slots, idx);
     setSlots(nuevosSlots);
     setGuardado(false);
+    setErrorGuardado(null);
 
     // Auto-guardar con debounce visual
     setGuardando(true);
     startTransition(async () => {
       const rangos = slotsARangos(nuevosSlots);
-      await guardarDisponibilidad(fechaISO, rangos);
+      const res = await guardarDisponibilidad(fechaISO, rangos);
       setGuardando(false);
-      setGuardado(true);
+      if (res.ok) {
+        setGuardado(true);
+      } else {
+        setErrorGuardado(res.error ?? "No se pudo guardar.");
+      }
     });
   }, [slots, fechaISO]);
 
@@ -108,7 +114,10 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
         </div>
         <div className="text-right text-xs">
           {guardando && <span className="text-slate-500">Guardando…</span>}
-          {guardado  && !guardando && <span className="text-emerald-400">✓ Guardado</span>}
+          {guardado && !guardando && <span className="text-emerald-400">✓ Guardado</span>}
+          {errorGuardado && !guardando && (
+            <span role="alert" className="text-red-400">⚠ {errorGuardado}</span>
+          )}
         </div>
       </div>
 
@@ -135,10 +144,15 @@ export function MiDiaClient({ fechaISO, fechaLabel, tareas, rangosIniciales }: P
               setSlots(nuevosSlots);
               setGuardando(true);
               setGuardado(false);
+              setErrorGuardado(null);
               startTransition(async () => {
-                await guardarDisponibilidad(fechaISO, slotsARangos(nuevosSlots));
+                const res = await guardarDisponibilidad(fechaISO, slotsARangos(nuevosSlots));
                 setGuardando(false);
-                setGuardado(true);
+                if (res.ok) {
+                  setGuardado(true);
+                } else {
+                  setErrorGuardado(res.error ?? "No se pudo guardar.");
+                }
               });
             }}
             className="text-xs text-slate-400 hover:text-white transition-colors"

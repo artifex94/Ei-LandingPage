@@ -39,7 +39,7 @@ export default async function MiDiaPage() {
 
   return (
     <MiDiaClient
-      fechaISO={hoy.toISOString()}
+      fechaISO={format(hoy, "yyyy-MM-dd")}
       fechaLabel={fechaLabel}
       tareas={tareas.map((t) => ({
         id:               t.id,
