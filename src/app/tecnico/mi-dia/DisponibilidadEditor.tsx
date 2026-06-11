@@ -5,11 +5,15 @@ import { ChevronDown, Plus, X } from "lucide-react";
 import { guardarDisponibilidad } from "@/lib/actions/disponibilidad";
 import {
   PRESETS,
+  TOTAL_SLOTS,
   disponibilidadDefault,
+  horaASlot,
   normalizarRangos,
   presetActivo,
+  primerHueco,
   rangosAHoras,
   rangosAResumen,
+  slotAHora,
   type Rango,
 } from "@/lib/disponibilidad-utils";
 import { BarraDisponibilidad } from "./BarraDisponibilidad";
@@ -28,10 +32,14 @@ interface Props {
   fechaInicial?: string;
 }
 
-const inputTimeCls =
+const selectHoraCls =
   "bg-industrial-800 border border-industrial-700 rounded-md px-2.5 py-2 text-sm font-mono " +
-  "text-white min-h-[44px] focus:outline-none focus:border-tactical-500 " +
+  "tabular-nums text-white min-h-[44px] focus:outline-none focus:border-tactical-500 " +
   "focus:ring-2 focus:ring-tactical-500/20 transition-colors";
+
+// Opciones de media hora del dominio: 06:00 … 21:30 (desde) / 06:30 … 22:00 (hasta)
+const HORAS_DESDE = Array.from({ length: TOTAL_SLOTS }, (_, i) => slotAHora(i));
+const HORAS_HASTA = Array.from({ length: TOTAL_SLOTS }, (_, i) => slotAHora(i + 1));
 
 /**
  * Editor híbrido de disponibilidad: presets de un tap + franjas Desde–Hasta
@@ -82,25 +90,30 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
     guardar(fechaSel, rangos);
   }
 
-  // onChange actualiza el borrador sin guardar; onBlur normaliza y persiste
+  // Los selects solo producen valores válidos → se guarda directo. Si el
+  // cambio invierte el rango, el otro extremo se corre 30 min para no
+  // perder la franja en la normalización.
   function cambiarFranja(idx: number, campo: "desde" | "hasta", valor: string) {
-    setDisp((prev) => {
-      const rangos = [...(prev[fechaSel] ?? disponibilidadDefault())];
-      rangos[idx] = { ...rangos[idx], [campo]: valor };
-      return { ...prev, [fechaSel]: rangos };
-    });
-  }
-
-  function confirmarFranjas() {
-    const rangos = disp[fechaSel] ?? disponibilidadDefault();
-    // Draft incompleto (campo de hora vacío): no persistir — normalizarlo
-    // descartaría la franja y borraría disponibilidad sin aviso.
-    if (rangos.some((r) => !r.desde || !r.hasta)) return;
+    const rangos = [...rangosDia];
+    const r = { ...rangos[idx], [campo]: valor };
+    if (r.desde >= r.hasta) {
+      if (campo === "desde") {
+        r.hasta = slotAHora(Math.min(TOTAL_SLOTS, horaASlot(valor) + 1));
+      } else {
+        r.desde = slotAHora(Math.max(0, horaASlot(valor) - 1));
+      }
+    }
+    rangos[idx] = r;
     guardar(fechaSel, rangos);
   }
 
+  // Sugerir la franja nueva en el primer hueco libre: si se solapara con
+  // una existente, la normalización la absorbería y el botón "no haría nada".
+  const huecoLibre = primerHueco(rangosDia);
+
   function agregarFranja() {
-    guardar(fechaSel, [...rangosDia, { desde: "08:00", hasta: "12:00" }]);
+    if (!huecoLibre) return;
+    guardar(fechaSel, [...rangosDia, huecoLibre]);
   }
 
   function eliminarFranja(idx: number) {
@@ -217,29 +230,27 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
             )}
             {rangosDia.map((r, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                <input
-                  type="time"
-                  min="06:00"
-                  max="22:00"
-                  step={1800}
+                <select
                   value={r.desde}
                   onChange={(e) => cambiarFranja(idx, "desde", e.target.value)}
-                  onBlur={confirmarFranjas}
                   aria-label={`Franja ${idx + 1}: desde`}
-                  className={inputTimeCls}
-                />
+                  className={selectHoraCls}
+                >
+                  {HORAS_DESDE.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
                 <span className="text-slate-500 text-sm" aria-hidden="true">–</span>
-                <input
-                  type="time"
-                  min="06:00"
-                  max="22:00"
-                  step={1800}
+                <select
                   value={r.hasta}
                   onChange={(e) => cambiarFranja(idx, "hasta", e.target.value)}
-                  onBlur={confirmarFranjas}
                   aria-label={`Franja ${idx + 1}: hasta`}
-                  className={inputTimeCls}
-                />
+                  className={selectHoraCls}
+                >
+                  {HORAS_HASTA.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
                 <button
                   onClick={() => eliminarFranja(idx)}
                   aria-label={`Eliminar franja ${r.desde}–${r.hasta}`}
@@ -249,13 +260,19 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
                 </button>
               </div>
             ))}
-            <button
-              onClick={agregarFranja}
-              className="flex items-center gap-1.5 min-h-[44px] text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-              Agregar franja
-            </button>
+            {huecoLibre ? (
+              <button
+                onClick={agregarFranja}
+                className="flex items-center gap-1.5 min-h-[44px] text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                Agregar franja
+              </button>
+            ) : (
+              <p className="flex items-center min-h-[44px] text-xs text-slate-500 italic">
+                El día ya está cubierto — achicá una franja para hacer lugar.
+              </p>
+            )}
           </div>
 
           {/* Barra visual de lo configurado */}

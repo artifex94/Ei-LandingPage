@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   normalizarRangos,
   presetActivo,
+  primerHueco,
   rangosAResumen,
   rangosAHoras,
 } from "./disponibilidad-utils";
@@ -94,5 +95,40 @@ describe("rangosAHoras", () => {
   it("cuenta horas con paso de media hora", () => {
     expect(rangosAHoras([{ desde: "08:00", hasta: "12:30" }])).toBe(4.5);
     expect(rangosAHoras([])).toBe(0);
+  });
+});
+
+describe("primerHueco", () => {
+  it("día vacío → sugiere desde las 06:00 (máx 4h)", () => {
+    expect(primerHueco([])).toEqual({ desde: "06:00", hasta: "10:00" });
+  });
+
+  it("encuentra el hueco entre dos franjas", () => {
+    expect(
+      primerHueco([
+        { desde: "06:00", hasta: "12:00" },
+        { desde: "18:00", hasta: "22:00" },
+      ])
+    ).toEqual({ desde: "12:00", hasta: "16:00" });
+  });
+
+  it("hueco al final del día", () => {
+    expect(primerHueco([{ desde: "06:00", hasta: "20:00" }])).toEqual({
+      desde: "20:00",
+      hasta: "22:00",
+    });
+  });
+
+  it("día completo → null", () => {
+    expect(primerHueco([{ desde: "06:00", hasta: "22:00" }])).toBeNull();
+  });
+
+  it("ignora huecos más chicos que el mínimo", () => {
+    expect(
+      primerHueco([
+        { desde: "06:00", hasta: "10:00" },
+        { desde: "10:30", hasta: "22:00" },
+      ])
+    ).toBeNull();
   });
 });

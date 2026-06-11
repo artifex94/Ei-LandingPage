@@ -87,3 +87,25 @@ export function rangosAResumen(rangos: Rango[]): string {
 export function rangosAHoras(rangos: Rango[]): number {
   return rangosASlots(rangos).filter(Boolean).length / 2;
 }
+
+/**
+ * Primer hueco libre de al menos `minSlots` bloques de 30 min entre las
+ * franjas dadas, o null si el día está completo. Se usa para sugerir la
+ * franja nueva en "+ Agregar franja" sin que la normalización la absorba.
+ */
+export function primerHueco(rangos: Rango[], minSlots = 2): Rango | null {
+  const slots = rangosASlots(rangos);
+  let i = 0;
+  while (i < slots.length) {
+    if (!slots[i]) {
+      const start = i;
+      while (i < slots.length && !slots[i]) i++;
+      if (i - start >= minSlots) {
+        return { desde: slotAHora(start), hasta: slotAHora(Math.min(i, start + 8)) };
+      }
+    } else {
+      i++;
+    }
+  }
+  return null;
+}
