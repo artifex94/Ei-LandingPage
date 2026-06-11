@@ -237,11 +237,18 @@ visual del usuario** antes de seguir propagando:
   `error.tsx` (con reset + digest) y `not-found.tsx` a nivel segmento — en App Router
   eso cubre todas las rutas hijas; el "~5 de ~62" del feedback original contaba por
   ruta, innecesario. No hay trabajo acá.
-- **RF-B2 PENDIENTE (próximo work-unit)**: `useOptimistic` en acciones frecuentes.
-  OJO análisis previo: solo aporta donde el estado visible vive en un CLIENT component
-  (p. ej. KanbanBoard de mantenimiento); en los detalles RSC (badge de estado de OT)
-  el dato vive en el server component padre y useOptimistic no llega — habría que
-  mover estado a client primero. Evaluar caso por caso antes de tocar.
+- **RF-B2 CERRADO (2026-06-11, aprobado por el usuario) → ÉPICA B COMPLETA**: el
+  tablero de mantenimiento pasó a client con `useOptimistic` — la tarjeta cambia de
+  columna AL INSTANTE; si el server falla, React revierte y el toast avisa. Arquitectura:
+  `kanban-context.ts` (puente, evita ciclo de imports) provee `aplicarOptimista` desde
+  KanbanBoard; los botones de AccionesForm lo disparan DENTRO de su transition antes
+  del await (fuera del Kanban siguen funcionando igual: contexto null). 2 tests de
+  integración. **Gotcha React 19 descubierto**: las async actions están ENTRELAZADAS —
+  en tests, una promesa eterna deja el scope abierto y el revert optimista de OTROS
+  tests nunca ocurre; usar deferred y resolverla al final (ver KanbanBoard.test.tsx).
+  Candidato futuro de optimistic si el usuario lo pide: MiDiaClient del técnico
+  (marcar OT en campo con 4G — alta latencia percibida); los detalles RSC (badge de
+  OT) siguen fuera del alcance del hook sin mover estado a client.
 
 Luego **Épica C** (filtros por URL, bulk actions, command palette), **D** (a11y axe, mobile
 técnico, reduced-motion), **E** (pulido dashboard, estados con personalidad). Ver

@@ -1,8 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
+import { useContext, useTransition } from "react";
 import { iniciarSolicitud, resolverSolicitud, reabrirSolicitud } from "./actions";
 import { useToast } from "@/components/ui/Toast";
+import { KanbanOptimisticContext } from "./kanban-context";
 
 function Spinner() {
   return (
@@ -16,11 +17,13 @@ function Spinner() {
 export function IniciarButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition();
   const toast = useToast();
+  const aplicarOptimista = useContext(KanbanOptimisticContext);
   return (
     <button
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
+          aplicarOptimista?.({ id, estado: "EN_PROCESO" });
           try {
             await iniciarSolicitud(id);
             toast({ title: "Solicitud en proceso" });
@@ -40,6 +43,7 @@ export function IniciarButton({ id }: { id: string }) {
 export function ResolverButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition();
   const toast = useToast();
+  const aplicarOptimista = useContext(KanbanOptimisticContext);
   return (
     <button
       disabled={pending}
@@ -47,6 +51,7 @@ export function ResolverButton({ id }: { id: string }) {
         const fd = new FormData();
         fd.set("id", id);
         startTransition(async () => {
+          aplicarOptimista?.({ id, estado: "RESUELTA" });
           try {
             const res = await resolverSolicitud(null, fd);
             if (res && typeof res === "object" && "error" in res && res.error) {
@@ -70,11 +75,13 @@ export function ResolverButton({ id }: { id: string }) {
 export function ReopenButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition();
   const toast = useToast();
+  const aplicarOptimista = useContext(KanbanOptimisticContext);
   return (
     <button
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
+          aplicarOptimista?.({ id, estado: "PENDIENTE" });
           try {
             await reabrirSolicitud(id);
             toast({ title: "Solicitud reabierta" });

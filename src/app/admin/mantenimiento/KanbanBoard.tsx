@@ -1,5 +1,9 @@
+"use client";
+
+import { useOptimistic } from "react";
 import Link from "next/link";
 import { IniciarButton, ResolverButton, ReopenButton } from "./AccionesForm";
+import { KanbanOptimisticContext, type AccionOptimista } from "./kanban-context";
 
 interface SolicitudKanban {
   id: string;
@@ -48,9 +52,21 @@ const COLUMNS = [
 const MAX_RESUELTA = 8;
 
 export function KanbanBoard({ solicitudes }: { solicitudes: SolicitudKanban[] }) {
-  const pendientes  = solicitudes.filter((s) => s.estado === "PENDIENTE");
-  const enProceso   = solicitudes.filter((s) => s.estado === "EN_PROCESO");
-  const resueltasAll = solicitudes.filter((s) => s.estado === "RESUELTA");
+  // Optimistic UI (RF-B2): la tarjeta cambia de columna al instante; si la
+  // Server Action falla, React revierte al estado real y el toast avisa.
+  const [optimisticas, aplicarOptimista] = useOptimistic(
+    solicitudes,
+    (prev: SolicitudKanban[], a: AccionOptimista) =>
+      prev.map((s) =>
+        s.id === a.id
+          ? { ...s, estado: a.estado, resuelta_en: a.estado === "RESUELTA" ? new Date() : null }
+          : s,
+      ),
+  );
+
+  const pendientes  = optimisticas.filter((s) => s.estado === "PENDIENTE");
+  const enProceso   = optimisticas.filter((s) => s.estado === "EN_PROCESO");
+  const resueltasAll = optimisticas.filter((s) => s.estado === "RESUELTA");
   const resueltas   = resueltasAll.slice(0, MAX_RESUELTA);
 
   const byEstado: Record<string, SolicitudKanban[]> = {
@@ -60,6 +76,7 @@ export function KanbanBoard({ solicitudes }: { solicitudes: SolicitudKanban[] })
   };
 
   return (
+    <KanbanOptimisticContext.Provider value={aplicarOptimista}>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {COLUMNS.map((col) => {
         const items = byEstado[col.key];
@@ -169,5 +186,6 @@ export function KanbanBoard({ solicitudes }: { solicitudes: SolicitudKanban[] })
         );
       })}
     </div>
+    </KanbanOptimisticContext.Provider>
   );
 }
