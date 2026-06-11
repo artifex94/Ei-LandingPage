@@ -95,25 +95,37 @@ export default async function SyncSoftGuardPage() {
 
       <section aria-labelledby="sg-info-heading" className="rounded-lg border border-slate-700 bg-slate-800 p-5 space-y-3">
         <h2 id="sg-info-heading" className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
-          Variables requeridas
+          Configuración (.env.local)
         </h2>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+        <dl className="grid grid-cols-[auto_auto_1fr] gap-x-4 gap-y-1.5 text-sm">
           {[
-            ["SOFTGUARD_API_BASE", "URL de la suite web (http://<host>:8080)"],
-            ["SOFTGUARD_API_USER", "Usuario de la suite (con línea y módulos asignados)"],
-            ["SOFTGUARD_API_PASS", "Clave del usuario"],
-            ["SOFTGUARD_API_CLIENT_ID", "GUID del cliente OAuth (campo oculto del login)"],
-            ["SOFTGUARD_API_TIMEOUT_MS", "Timeout por request (opcional, default 15000)"],
-          ].map(([key, desc]) => (
-            <div key={key} className="contents">
-              <dt>
-                <code className="text-xs bg-slate-700 text-slate-200 px-1.5 py-0.5 rounded">
-                  {key}
-                </code>
-              </dt>
-              <dd className="text-slate-400">{desc}</dd>
-            </div>
-          ))}
+            ["SOFTGUARD_API_BASE", "URL de la suite web (http://<host>:8080)", false],
+            ["SOFTGUARD_API_USER", "Usuario de la suite (con línea y módulos asignados)", false],
+            ["SOFTGUARD_API_PASS", "Clave del usuario", false],
+            ["SOFTGUARD_API_CLIENT_ID", "GUID del cliente OAuth (campo oculto del login)", true],
+            ["SOFTGUARD_API_TIMEOUT_MS", "Timeout por request (default 15000)", true],
+          ].map(([key, desc, opcional]) => {
+            const seteada = Boolean(process.env[key as string]);
+            return (
+              <div key={key as string} className="contents">
+                <dt>
+                  <code className="text-xs bg-slate-700 text-slate-200 px-1.5 py-0.5 rounded">
+                    {key}
+                  </code>
+                </dt>
+                <dd>
+                  {seteada ? (
+                    <span className="text-xs font-semibold text-emerald-400">✓ Configurada</span>
+                  ) : opcional ? (
+                    <span className="text-xs text-slate-500">— Opcional</span>
+                  ) : (
+                    <span className="text-xs font-semibold text-amber-400">✗ Falta</span>
+                  )}
+                </dd>
+                <dd className="text-slate-400">{desc as string}</dd>
+              </div>
+            );
+          })}
         </dl>
         <p className="text-xs text-slate-500 pt-1">
           Ver{" "}
