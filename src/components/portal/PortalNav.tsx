@@ -44,7 +44,6 @@ const NAV_CLIENTE: NavDef[] = [
     label: "Documentos",
     mobileLabel: "Docs",
     icon: FolderOpen,
-    alsoActive: ["/portal/recibos", "/portal/facturas"],
   },
   {
     href: "/portal/perfil",

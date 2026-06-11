@@ -96,7 +96,7 @@ export default async function DashboardPage() {
           {(
             [
               { href: "/portal/pagos",       label: "Mis pagos",         icon: CreditCard },
-              { href: "/portal/facturas",    label: "Facturas",          icon: FileText },
+              { href: "/portal/documentos",  label: "Documentos",        icon: FileText },
               { href: "/portal/eventos",     label: "Eventos",           icon: Zap },
               { href: "/portal/solicitud",   label: "Reportar problema", icon: Wrench },
               { href: "/portal/solicitudes", label: "Mis solicitudes",   icon: ClipboardList },

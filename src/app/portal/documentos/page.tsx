@@ -4,6 +4,8 @@ import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { METODO_LABEL } from "@/lib/constants/payment";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 
 export const metadata: Metadata = { title: "Documentos" };
 
@@ -130,7 +132,7 @@ export default async function DocumentosPage({
           href={`/recibo/${p.id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
+          className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
           aria-label={`Ver recibo de ${MESES_ES[p.mes - 1]} ${anio}`}
         >
           Ver ↗
@@ -173,7 +175,7 @@ export default async function DocumentosPage({
             href={f.pdf_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
+            className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
             aria-label={`Descargar factura de ${new Date(f.periodo_desde).toLocaleDateString("es-AR", { month: "long" })} ${anio}`}
           >
             PDF ↗
@@ -188,35 +190,22 @@ export default async function DocumentosPage({
     <section className="space-y-6" aria-labelledby="docs-heading">
 
       {/* ── Encabezado ─────────────────────────────────────────────────────── */}
-      <div>
-        <h1 id="docs-heading" className="text-2xl font-display font-bold text-white">
-          Documentos
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">
-          Tus comprobantes de pago y facturas emitidas.
-        </p>
-      </div>
+      <PortalPageHeader
+        title="Documentos"
+        titleId="docs-heading"
+        description="Tus comprobantes de pago y facturas emitidas."
+      />
 
       {/* ── Tabs Recibos / Facturas ─────────────────────────────────────────── */}
       <div
         role="tablist"
         aria-label="Tipo de documento"
-        className="flex gap-1 p-1 bg-slate-800 rounded-xl w-full sm:w-fit"
+        className="flex gap-1 p-1 bg-industrial-800 border border-industrial-700 rounded-md w-full sm:w-fit"
       >
-        <TabButton
-          href={tabHref("recibos")}
-          active={tab === "recibos"}
-          activeClass="bg-amber-500/20 text-amber-300"
-          inactiveClass="text-slate-400 hover:text-slate-200"
-        >
+        <TabButton href={tabHref("recibos")} active={tab === "recibos"}>
           Recibos
         </TabButton>
-        <TabButton
-          href={tabHref("facturas")}
-          active={tab === "facturas"}
-          activeClass="bg-teal-500/20 text-teal-300"
-          inactiveClass="text-slate-400 hover:text-slate-200"
-        >
+        <TabButton href={tabHref("facturas")} active={tab === "facturas"}>
           Facturas AFIP
         </TabButton>
       </div>
@@ -232,12 +221,10 @@ export default async function DocumentosPage({
               key={a}
               href={anioHref(a)}
               className={`
-                shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors
+                shrink-0 px-3 py-1.5 rounded-full text-sm font-medium font-mono tabular-nums transition-colors
                 ${a === anio
-                  ? tab === "recibos"
-                    ? "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40"
-                    : "bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40"
-                  : "bg-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-700"
+                  ? "bg-tactical-500/15 text-tactical-300 ring-1 ring-tactical-500/40"
+                  : "bg-industrial-800 text-slate-500 hover:text-slate-300 hover:bg-industrial-700"
                 }
               `}
               aria-current={a === anio ? "true" : undefined}
@@ -258,12 +245,12 @@ export default async function DocumentosPage({
             caption={`Recibos de ${anio}`}
             emptyState={
               <EmptyState
-                mensaje={
+                title={
                   aniosRecibos.length === 0
                     ? "Aún no tenés pagos registrados."
                     : `No hay recibos para ${anio}.`
                 }
-                sugerencia={aniosRecibos.length > 1 ? "Probá seleccionando otro año arriba." : undefined}
+                description={aniosRecibos.length > 1 ? "Probá seleccionando otro año arriba." : undefined}
               />
             }
           />
@@ -280,12 +267,12 @@ export default async function DocumentosPage({
             caption={`Facturas de ${anio}`}
             emptyState={
               <EmptyState
-                mensaje={
+                title={
                   aniosFacturas.length === 0
                     ? "Aún no hay facturas emitidas para tu cuenta."
                     : `No hay facturas para ${anio}.`
                 }
-                sugerencia={aniosFacturas.length > 1 ? "Probá seleccionando otro año arriba." : undefined}
+                description={aniosFacturas.length > 1 ? "Probá seleccionando otro año arriba." : undefined}
               />
             }
           />
@@ -301,14 +288,10 @@ export default async function DocumentosPage({
 function TabButton({
   href,
   active,
-  activeClass,
-  inactiveClass,
   children,
 }: {
   href: string;
   active: boolean;
-  activeClass: string;
-  inactiveClass: string;
   children: React.ReactNode;
 }) {
   return (
@@ -317,27 +300,14 @@ function TabButton({
       role="tab"
       aria-selected={active}
       className={`
-        flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium
+        flex-1 sm:flex-none px-4 py-2 rounded-sm text-sm font-medium
         text-center transition-colors min-h-[44px] flex items-center justify-center
-        ${active ? activeClass : inactiveClass}
+        ${active
+          ? "bg-tactical-500/15 text-tactical-300"
+          : "text-slate-400 hover:text-slate-200"}
       `}
     >
       {children}
     </Link>
-  );
-}
-
-function EmptyState({
-  mensaje,
-  sugerencia,
-}: {
-  mensaje: string;
-  sugerencia?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-10 text-center space-y-1">
-      <p className="text-slate-400">{mensaje}</p>
-      {sugerencia && <p className="text-slate-500 text-sm">{sugerencia}</p>}
-    </div>
   );
 }

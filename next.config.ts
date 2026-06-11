@@ -128,6 +128,17 @@ const nextConfig: NextConfig = {
         destination: "/portal/soporte",
         permanent: true,
       },
+      {
+        // Recibos y facturas consolidados en Documentos (tabs)
+        source: "/portal/recibos",
+        destination: "/portal/documentos?tab=recibos",
+        permanent: true,
+      },
+      {
+        source: "/portal/facturas",
+        destination: "/portal/documentos?tab=facturas",
+        permanent: true,
+      },
     ];
   },
   async headers() {
