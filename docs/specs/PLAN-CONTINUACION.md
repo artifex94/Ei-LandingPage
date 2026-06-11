@@ -144,21 +144,27 @@ visual del usuario** antes de seguir propagando:
   Fix hidratación: classNames multilínea normalizados en `AdminSidebar` y `tecnico/layout`
   (el patrón multilínea en client components causa hydration mismatch; en RSC es inocuo).
 
-## Próximo paso inmediato → `docs/specs/plan-iteracion-fachada.md` (Fase 0, cierre)
+## Próximo paso inmediato → `docs/specs/plan-iteracion-fachada.md` (Fase 2)
 
-> **2026-06-11**: WU-6 quedó COMPLETO y verificado (tsc + lint + 28 tests). Lo que resta
-> de la Fase 0 son los DOS gates del usuario, en este orden:
+> **2026-06-11 (tarde)**: Fase 0 CERRADA (usuario aprobó visual; 7 commits work-unit
+> ejecutados; **ÉPICA A TERMINADA**). Además:
 >
-> 1. **Revisión visual integral** (`npm run dev`): dashboard, cuentas, sync-softguard,
->    tipografía/shell **y los 6 modales recién migrados** (lista de cambios visuales en
->    la sección WU-6 de arriba). Ajustes finos que surjan.
-> 2. Con el OK visual → **ejecutar los commits work-unit** (el plan de 7 commits por
->    dominio quedó propuesto en la sesión del 2026-06-11: ACL / multimonitoreo / sync
->    API web + proyección / salud de módulos / DS shell / WU-6 modales / docs specs).
->    No mezclar dominios en un commit. Regla vigente: no commitear sin OK del usuario.
+> - **Pipeline SQL (1433) RETIRADO** por decisión del usuario: borrados `client.ts`,
+>   `queries.ts`, `schema.ts`, el shim `web-api.ts`, `SoftGuardSyncStatus` + endpoint
+>   ping, seeds SQL y deps `mssql`. Los consumidores importan SIEMPRE de
+>   `@/lib/softguard/api`. Vars `SOFTGUARD_DB_*`/`SOFTGUARD_MOCK` sin efecto (limpiar
+>   de `.env.local`/producción cuando se pueda). Commit `78264ac` (-1968 líneas).
+> - **Fase 1 HECHA**: 36 tests del ACL con fixtures fieles al contrato real
+>   (`src/lib/softguard/api/*.test.ts` + `fixtures.ts`). Suite total: 64/64.
 >
-> Cerrada la Fase 0 (git status limpio + Épica A declarada terminada) → **Fase 1:
-> tests del ACL** (fixtures con filas reales + mapeos + retry de sesión).
+> **Siguiente: Fase 2 — vista de operadores `/admin/monitoreo`** (MultiMonitorLive
+> `limit={50}` pantalla completa, filtros client-side, panel lateral con cruce de
+> datos del portal). Después Fase 3 (detección → SolicitudMantenimiento automática).
+>
+> Deuda menor detectada (no bloquea): el badge "configurado/no configurado" de
+> `ConfiguracionForm` lee `process.env` en un client component → para vars server-only
+> siempre muestra "no configurado" (preexistente; arreglarlo implica pasar el estado
+> desde un server component).
 
 ## Después: ÉPICA B (toasts, optimistic, error boundaries)
 
