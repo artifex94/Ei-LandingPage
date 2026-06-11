@@ -123,9 +123,11 @@ export default async function MiDiaPage({
 
   // Disponibilidad agrupada por día; los días sin registro NO entran en el
   // map (el editor les aplica el default 06-22 al leerlos).
+  // La key se deriva en UTC: Prisma devuelve @db.Date como medianoche UTC y
+  // format() local la correría al día anterior en TZ negativas (dev local).
   const dispPorFecha: Record<string, Rango[]> = {};
   for (const d of disponibilidadHoy) {
-    const iso = format(d.fecha, "yyyy-MM-dd");
+    const iso = d.fecha.toISOString().slice(0, 10);
     (dispPorFecha[iso] ??= []).push({ desde: d.desde, hasta: d.hasta });
   }
 

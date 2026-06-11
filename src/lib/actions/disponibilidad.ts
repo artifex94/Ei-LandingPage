@@ -38,8 +38,10 @@ export async function guardarDisponibilidad(
     return { ok: false, error: "Sin permisos." };
   }
 
+  // "yyyy-MM-dd" parsea como medianoche UTC, que es exactamente lo que la
+  // columna @db.Date persiste. setHours() local acá corría la fecha un día
+  // hacia atrás en TZ negativas (no-op en prod UTC, bug en dev local).
   const fecha = new Date(fechaISO);
-  fecha.setHours(0, 0, 0, 0);
 
   // La coherencia del dominio (06-22, sin solapes) no puede depender solo
   // del cliente: se canoniza también acá antes de persistir.

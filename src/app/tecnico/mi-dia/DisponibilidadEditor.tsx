@@ -92,7 +92,11 @@ export function DisponibilidadEditor({ dias, dispPorFecha, fechaInicial }: Props
   }
 
   function confirmarFranjas() {
-    guardar(fechaSel, disp[fechaSel] ?? disponibilidadDefault());
+    const rangos = disp[fechaSel] ?? disponibilidadDefault();
+    // Draft incompleto (campo de hora vacío): no persistir — normalizarlo
+    // descartaría la franja y borraría disponibilidad sin aviso.
+    if (rangos.some((r) => !r.desde || !r.hasta)) return;
+    guardar(fechaSel, rangos);
   }
 
   function agregarFranja() {
