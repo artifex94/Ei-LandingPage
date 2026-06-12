@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
+import { UUID_RE } from "@/lib/constants/validation";
 
 function validarFirmaTalo(body: string, signature: string): boolean {
   const secret = process.env.TALO_WEBHOOK_SECRET;
@@ -36,23 +37,32 @@ export async function POST(req: Request) {
   }
 
   if (evento.type === "payment.completed") {
-    const externalId = evento.data?.external_id;
-    if (externalId != null && (typeof externalId === "string" || typeof externalId === "number")) {
+    // `external_id` es el pago.id que enviamos a Talo al crear la intención
+    // (crearIntencionTalo → external_id: pago.id). Es la clave de conciliación.
+    // OJO: NO buscar por `ref_externa` — ahí guardamos el ID INTERNO de Talo
+    // (para reconstruir la URL de pago), no el pago.id. La versión anterior
+    // buscaba por ref_externa y NUNCA matcheaba → los pagos por Talo no se
+    // conciliaban solos. Buscar por `id` (la PK) es lo correcto.
+    const externalId = String(evento.data?.external_id ?? "");
+    if (UUID_RE.test(externalId)) {
       const { count } = await prisma.pago.updateMany({
-        where: { ref_externa: String(externalId) },
+        where: { id: externalId, estado: { not: "PAGADO" } },
         data: {
           estado: "PAGADO",
+          metodo: "TALO_CVU",
           acreditado_en: new Date(),
         },
       });
 
       if (count === 0) {
-        // Pago completado en Talo SIN pago local con esa ref_externa:
-        // acreditación sin conciliar. Devolvemos OK pero lo dejamos asentado.
-        console.error(
-          "[conciliacion][talo] payment.completed sin pago local con esa ref_externa",
-          { externalId: String(externalId) }
-        );
+        // Ya pagado (idempotencia) o no existe. Loguear solo si no existe.
+        const existe = await prisma.pago.count({ where: { id: externalId } });
+        if (existe === 0) {
+          console.error(
+            "[conciliacion][talo] payment.completed sin pago local con ese id",
+            { externalId }
+          );
+        }
       } else {
         revalidatePath("/portal/pagos");
         revalidatePath("/admin/pagos");
