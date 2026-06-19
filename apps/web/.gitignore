@@ -1,0 +1,63 @@
+# ─── Dependencias ─────────────────────────────────────────────────────────────
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ─── Next.js ──────────────────────────────────────────────────────────────────
+/.next/
+/out/
+/build
+
+# ─── Variables de entorno ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Prisma generado ──────────────────────────────────────────────────────────
+/src/generated/prisma
+
+# ─── Secretos / certificados ──────────────────────────────────────────────────
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+
+# ─── Deploy ───────────────────────────────────────────────────────────────────
+/deploy
+*.zip
+
+# ─── Testing ──────────────────────────────────────────────────────────────────
+/coverage
+/tests/.auth/
+/playwright-report/
+/test-results/
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# ─── TypeScript ───────────────────────────────────────────────────────────────
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── OS / editores ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+*:Zone.Identifier
+
+# ─── Vercel ───────────────────────────────────────────────────────────────────
+.vercel
+
+# SoftGuard capture (datos sensibles)
+scripts/.sg-capture.json

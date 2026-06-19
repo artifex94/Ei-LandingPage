@@ -1,63 +1,61 @@
-# ─── Dependencias ─────────────────────────────────────────────────────────────
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Dependencias
+node_modules/
+**/node_modules/
 
-# ─── Next.js ──────────────────────────────────────────────────────────────────
-/.next/
-/out/
-/build
+# Builds / cachés
+.next/
+**/.next/
+dist/
+build/
+out/
+.cache/
+*.tsbuildinfo
 
-# ─── Variables de entorno ─────────────────────────────────────────────────────
+# Variables de entorno (sensibles)
 .env
 .env.*
 !.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
-# ─── Prisma generado ──────────────────────────────────────────────────────────
-/src/generated/prisma
+# Tests / artefactos
+playwright-report/
+test-results/
+coverage/
+**/playwright-report/
+**/test-results/
+**/coverage/
 
-# ─── Secretos / certificados ──────────────────────────────────────────────────
-*.pem
-*.key
-*.cert
-*.p12
-*.pfx
-
-# ─── Deploy ───────────────────────────────────────────────────────────────────
-/deploy
-*.zip
-
-# ─── Testing ──────────────────────────────────────────────────────────────────
-/coverage
-/tests/.auth/
-/playwright-report/
-/test-results/
-
-# ─── Logs ─────────────────────────────────────────────────────────────────────
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
-*.log
+pnpm-debug.log*
 
-# ─── TypeScript ───────────────────────────────────────────────────────────────
-*.tsbuildinfo
-next-env.d.ts
-
-# ─── OS / editores ────────────────────────────────────────────────────────────
+# Sistema operativo
 .DS_Store
 Thumbs.db
-.vscode/settings.json
-.idea/
 *:Zone.Identifier
 
-# ─── Vercel ───────────────────────────────────────────────────────────────────
-.vercel
+# IDE / editores
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# SoftGuard capture (datos sensibles)
-scripts/.sg-capture.json
+# Credenciales / secretos del proyecto
+CREDENCIALES.md
+
+# Volcados pesados / binarios de datos
+*.xls
+*.xlsx
+infra/database/exports/
+
+# ZIPs de despliegue (artefactos locales, subir a mano al VPS)
+infra/deploy/**/*.zip
+infra/deploy/**/*.tar.gz
+
+# PDFs grandes de recursos (mantener referencia, no versionar binarios)
+recursos/**/*.pdf
