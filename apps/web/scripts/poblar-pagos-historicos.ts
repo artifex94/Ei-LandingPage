@@ -13,7 +13,7 @@
  *              PAGADO            → actualiza timestamps de acreditación.
  *
  * Ejecutar:
- *   cd frontend/Ei-LandingPage
+ *   cd apps/web
  *   npx dotenv -e .env.local -- npx tsx scripts/poblar-pagos-historicos.ts
  *
  * Dry-run (sin escribir):

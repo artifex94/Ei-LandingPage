@@ -4,9 +4,9 @@ from datetime import datetime
 repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 date_tag = datetime.now().strftime("%Y-%m-%d")
 
-src = os.path.join(repo, "frontend/Ei-LandingPage/.next/standalone")
+src = os.path.join(repo, "apps/web/.next/standalone")
 dst = os.path.join(repo, f"deploy/frontend/ei-landing-{date_tag}.zip")
-env_src = os.path.join(repo, "frontend/Ei-LandingPage/.env.local")
+env_src = os.path.join(repo, "apps/web/.env.local")
 env_dst = os.path.join(src, ".env")
 
 print(f"Source:  {src}")

@@ -6,7 +6,7 @@
  * de prisma.empleado). Idempotente: re-ejecutar no duplica.
  *
  * Ejecutar una vez antes de eliminar /admin/tecnicos:
- *   cd frontend/Ei-LandingPage
+ *   cd apps/web
  *   set -a && source .env.local && set +a && npx tsx scripts/backfill-empleados-tecnicos.ts
  */
 

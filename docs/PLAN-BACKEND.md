@@ -1,7 +1,7 @@
 # Plan de trabajo — Capa Backend / Infraestructura
 ## EscobarInstalaciones — Plataforma de Clientes
 
-> **Nota arquitectónica:** No existe un backend separado. Este documento describe la capa de infraestructura y servidor que vive **dentro del mismo repositorio Next.js** (`frontend/Ei-LandingPage/`). El "backend" es el conjunto de: Supabase (Auth + PostgreSQL), Prisma (ORM), Server Actions de React, API Routes para webhooks, y el middleware de Next.js.
+> **Nota arquitectónica:** No existe un backend separado. Este documento describe la capa de infraestructura y servidor que vive **dentro del mismo repositorio Next.js** (`apps/web/`). El "backend" es el conjunto de: Supabase (Auth + PostgreSQL), Prisma (ORM), Server Actions de React, API Routes para webhooks, y el middleware de Next.js.
 
 ---
 
@@ -1232,7 +1232,7 @@ sequenceDiagram
 ## 15. Dependencias a instalar
 
 ```bash
-cd frontend/Ei-LandingPage
+cd apps/web
 
 # Supabase SSR
 npm install @supabase/supabase-js @supabase/ssr

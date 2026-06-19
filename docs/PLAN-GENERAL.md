@@ -126,7 +126,7 @@ sequenceDiagram
 ## 4. Mapa del repositorio — estructura objetivo
 
 ```
-frontend/Ei-LandingPage/           ← proyecto Next.js principal (único repo)
+apps/web/           ← proyecto Next.js principal (único repo)
 ├── prisma/
 │   └── schema.prisma              ← modelos: Perfil, Cuenta, Sensor, Pago, etc.
 ├── src/

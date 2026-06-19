@@ -3,7 +3,7 @@
  * Si hay franja sin monitor activo → envía WhatsApp a Ramiro.
  *
  * Ejecutar cada 4 horas desde el cron del servidor (o AGENTS.md):
- *   cd frontend/Ei-LandingPage
+ *   cd apps/web
  *   set -a && source .env.local && set +a && npx tsx scripts/verificar-cobertura-turnos.ts
  */
 

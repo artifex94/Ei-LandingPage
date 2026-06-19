@@ -48,7 +48,7 @@ GRANT SELECT ON SCHEMA::dbo TO EI_PORTAL_RO;
 
 Ejecutar el script completo en:
 ```
-frontend/Ei-LandingPage/scripts/seed-vista-cuentas.sql
+apps/web/scripts/seed-vista-cuentas.sql
 ```
 
 > **Antes de ejecutar:** verificar que los nombres de tabla y columna en el script coincidan con el schema real de SoftGuard. Los nombres en el script son estimaciones basadas en los manuales TEC223 y TEC218. Solicitar al soporte de SoftGuard el schema de tablas si es necesario.

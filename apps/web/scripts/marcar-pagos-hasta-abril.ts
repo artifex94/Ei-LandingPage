@@ -3,7 +3,7 @@
  * Idempotente: usa upsert — si el pago ya existe lo actualiza a PAGADO.
  *
  * Ejecutar:
- *   cd frontend/Ei-LandingPage
+ *   cd apps/web
  *   npx dotenv -e .env.local -- npx tsx scripts/marcar-pagos-hasta-abril.ts
  */
 

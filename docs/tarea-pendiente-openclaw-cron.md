@@ -20,7 +20,7 @@ Sin Vercel, sin Next.js corriendo, sin exposición del agente de IA a los client
 
 | Archivo | Descripción |
 |---|---|
-| `frontend/Ei-LandingPage/scripts/cron-mensual.ts` | Script standalone — conecta a Supabase + Twilio directamente |
+| `apps/web/scripts/cron-mensual.ts` | Script standalone — conecta a Supabase + Twilio directamente |
 | `AGENTS.md` (raíz del repo) | Standing Order para OpenClaw — instrucciones de ejecución automática |
 
 ---
@@ -51,7 +51,7 @@ OpenClaw NUNCA ve esa respuesta (dmPolicy: allowlist)
 ### Paso 1 — Probar el script localmente
 
 ```bash
-cd /home/artifex/dev/EscobarInstalaciones/frontend/Ei-LandingPage
+cd /home/artifex/dev/EscobarInstalaciones/apps/web
 set -a && source .env.local && set +a && npx tsx scripts/cron-mensual.ts
 ```
 
@@ -146,7 +146,7 @@ $env:TWILIO_ACCOUNT_SID = "..."
 $env:TWILIO_AUTH_TOKEN = "..."
 $env:TWILIO_PHONE_NUMBER = "+543434451027"
 
-cd "\\wsl.localhost\Ubuntu\home\artifex\dev\EscobarInstalaciones\frontend\Ei-LandingPage"
+cd "\\wsl.localhost\Ubuntu\home\artifex\dev\EscobarInstalaciones\apps\web"
 npx tsx scripts/cron-mensual.ts
 ```
 

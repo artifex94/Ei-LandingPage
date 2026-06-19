@@ -11,7 +11,7 @@
  *                        al R3xx correspondiente (avería sin resolver)
  *
  * Ejecutar:
- *   cd frontend/Ei-LandingPage
+ *   cd apps/web
  *   npx dotenv -e .env.local -- npx tsx scripts/actualizar-estado-sensores.ts
  *
  * Dry-run (sin escribir):

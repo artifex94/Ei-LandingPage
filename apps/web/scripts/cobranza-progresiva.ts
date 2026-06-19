@@ -9,7 +9,7 @@
  *   +30 → Suspender cuenta automáticamente
  *
  * Ejecutar:
- *   cd frontend/Ei-LandingPage
+ *   cd apps/web
  *   set -a && source .env.local && set +a && npx tsx scripts/cobranza-progresiva.ts
  */
 

@@ -6,7 +6,7 @@
  * cierre e imprime el resumen.
  *
  * Ejecutar:
- *   cd frontend/Ei-LandingPage
+ *   cd apps/web
  *   set -a && source .env.local && set +a && npx tsx scripts/cron-mensual.ts
  *
  * OpenClaw lo llama automáticamente el 1° de cada mes.

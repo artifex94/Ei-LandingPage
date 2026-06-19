@@ -9,7 +9,7 @@
 **Tarea:** Ejecutar el script de cron mensual con el siguiente comando exacto:
 
 ```bash
-cd /home/artifex/dev/EscobarInstalaciones/frontend/Ei-LandingPage && set -a && source .env.local && set +a && npx tsx scripts/cron-mensual.ts
+cd /home/artifex/dev/EscobarInstalaciones/apps/web && set -a && source .env.local && set +a && npx tsx scripts/cron-mensual.ts
 ```
 
 **Verificación obligatoria después de ejecutar:**
