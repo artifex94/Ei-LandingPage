@@ -9,6 +9,8 @@ import { NuevaCuentaForm } from "@/components/admin/NuevaCuentaForm";
 import { EliminarClienteForm } from "@/components/admin/EliminarClienteForm";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "@/app/admin/solicitudes-cambio/AccionesForm";
 import { UUID_RE } from "@/lib/constants/validation";
+import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
+import { motivosDeCobranza } from "@/lib/mensajeria-motivos";
 
 const getClientePerfil = cache(async (id: string) => {
   return prisma.perfil.findUnique({
@@ -89,6 +91,32 @@ export default async function ClienteDetallePage({
   const mes = new Date().getMonth() + 1;
   const tarifaEstandar = Number(tarifaActual?.monto ?? 0);
 
+  // Motivos de WhatsApp sobre la deuda COMPLETA del cliente (todas sus cuentas, cualquier
+  // año) + pagos acreditados recientemente — no el subconjunto del año corriente que
+  // muestra la ficha.
+  const hace30dias = new Date();
+  hace30dias.setDate(hace30dias.getDate() - 30);
+  const pagosMotivos = await prisma.pago.findMany({
+    where: {
+      cuenta: { perfil_id: perfil.id },
+      OR: [
+        { estado: { in: ["PENDIENTE", "VENCIDO"] } },
+        { estado: "PAGADO", acreditado_en: { gte: hace30dias } },
+      ],
+    },
+    select: { mes: true, anio: true, importe: true, estado: true, acreditado_en: true },
+  });
+  const motivosWA = motivosDeCobranza(
+    perfil.nombre,
+    pagosMotivos.map((p) => ({
+      mes: p.mes,
+      anio: p.anio,
+      importe: Number(p.importe),
+      estado: p.estado,
+      acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
+    })),
+  );
+
   return (
     <div className="space-y-8">
       {/* Breadcrumb */}
@@ -131,19 +159,16 @@ export default async function ClienteDetallePage({
         </div>
 
         {/* WhatsApp rápido */}
-        {perfil.telefono && (
-          <div className="mb-4">
-            <a
-              href={`https://wa.me/549${perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${perfil.nombre.split(" ")[0]}, te contactamos de Escobar Instalaciones.`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-semibold text-sm px-4 py-2.5 rounded-lg transition-colors"
-            >
-              <span aria-hidden="true">📱</span>
-              WhatsApp — {perfil.telefono}
-            </a>
-          </div>
-        )}
+        <div className="mb-4">
+          <BotonEnviarWhatsApp
+            destinatario={{ nombre: perfil.nombre, telefono: perfil.telefono }}
+            motivos={motivosWA}
+            historial={{ perfilId: perfil.id }}
+            entidad="perfil"
+            entidadId={perfil.id}
+            label={perfil.telefono ? `WhatsApp — ${perfil.telefono}` : "WhatsApp"}
+          />
+        </div>
 
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
           <EditarClienteForm cliente={{
@@ -273,7 +298,7 @@ export default async function ClienteDetallePage({
                 key={s.id}
                 className="bg-amber-900/10 border border-amber-800/40 rounded-xl p-4"
               >
-                <div className="grid sm:grid-cols-3 gap-3 mb-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-sm">
                   <div>
                     <p className="text-xs text-slate-400 mb-0.5">Campo</p>
                     <p className="font-semibold text-white">

@@ -39,7 +39,7 @@ export function ParadaHero({ parada, esAhora, totalParadas }: Props) {
   return (
     <section
       aria-label={esAhora ? "Parada en curso" : "Próxima parada"}
-      className={`rounded-lg border bg-industrial-800/80 p-5 shadow-[0_8px_24px_rgba(0,0,0,0.4)] ${
+      className={`rounded-xl border bg-industrial-800/55 p-4 sm:p-5 ${
         esAhora ? "border-tactical-500/40" : "border-industrial-700"
       }`}
     >
@@ -89,12 +89,10 @@ export function ParadaHero({ parada, esAhora, totalParadas }: Props) {
             href={`https://maps.google.com/?q=${encodeURIComponent(parada.direccion)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex flex-col items-center justify-center gap-1 min-h-[56px] rounded-sm
+            className="flex flex-col items-center justify-center gap-1 min-h-[56px] rounded-lg
                        bg-tactical-500 hover:bg-tactical-400 text-slate-900
-                       border border-tactical-600 border-b-[4px] border-b-tactical-600
-                       active:border-b active:translate-y-[3px]
-                       text-[11px] font-bold uppercase tracking-widest
-                       transition-all duration-150 ease-mech-press"
+                       border border-tactical-600/70 text-xs font-semibold
+                       transition-colors"
           >
             <MapPin className="w-4 h-4" aria-hidden="true" />
             Cómo llegar
@@ -109,12 +107,10 @@ export function ParadaHero({ parada, esAhora, totalParadas }: Props) {
         {telDigits ? (
           <a
             href={`tel:+549${telDigits}`}
-            className="flex flex-col items-center justify-center gap-1 min-h-[56px] rounded-sm
+            className="flex flex-col items-center justify-center gap-1 min-h-[56px] rounded-lg
                        bg-industrial-700 hover:bg-industrial-600 text-slate-200
-                       border border-industrial-600 border-b-[4px] border-b-industrial-950
-                       active:border-b active:translate-y-[3px]
-                       text-[11px] font-bold uppercase tracking-widest
-                       transition-all duration-150 ease-mech-press"
+                       border border-industrial-600 text-xs font-semibold
+                       transition-colors"
           >
             <Phone className="w-4 h-4" aria-hidden="true" />
             Llamar
@@ -128,12 +124,10 @@ export function ParadaHero({ parada, esAhora, totalParadas }: Props) {
 
         <Link
           href={parada.href}
-          className="flex flex-col items-center justify-center gap-1 min-h-[56px] rounded-sm
+          className="flex flex-col items-center justify-center gap-1 min-h-[56px] rounded-lg
                      bg-industrial-700 hover:bg-industrial-600 text-slate-200
-                     border border-industrial-600 border-b-[4px] border-b-industrial-950
-                     active:border-b active:translate-y-[3px]
-                     text-[11px] font-bold uppercase tracking-widest
-                     transition-all duration-150 ease-mech-press"
+                     border border-industrial-600 text-xs font-semibold
+                     transition-colors"
         >
           <ArrowRight className="w-4 h-4" aria-hidden="true" />
           Abrir

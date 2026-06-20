@@ -51,7 +51,7 @@ export function SensorItem({ sensor }: SensorItemProps) {
   const ultimaActiv = tiempoRelativo(sensor.ultima_activacion);
 
   return (
-    <li className="bg-industrial-800/60 rounded-md border border-industrial-700 px-4 py-3">
+    <li className="portal-row px-4 py-3">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="font-medium text-white">{sensor.etiqueta}</p>

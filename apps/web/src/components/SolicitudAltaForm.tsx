@@ -36,9 +36,9 @@ export function SolicitudAltaForm() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center px-4 py-12">
+    <div className="flex-1 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg">
-        <form action={action} className="space-y-6">
+        <form action={action} className="space-y-4">
           {/* Error list */}
           {state.errores && state.errores.length > 0 && (
             <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 space-y-1">
@@ -51,7 +51,7 @@ export function SolicitudAltaForm() {
           )}
 
           {/* Section: Personal data */}
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-4">
+          <div className="rounded-xl border border-slate-700/70 bg-slate-900/70 p-5 space-y-4">
             <h2 className="text-sm font-semibold text-orange-400 uppercase tracking-widest">
               Tus datos
             </h2>
@@ -87,7 +87,7 @@ export function SolicitudAltaForm() {
                   inputMode="numeric"
                   maxLength={10}
                   placeholder="3436575372"
-                  className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                  className="min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-orange-500 transition-colors"
                 />
               </div>
               <p className="mt-1 text-xs text-slate-400">10 dígitos sin 0 ni 15</p>
@@ -140,7 +140,7 @@ export function SolicitudAltaForm() {
           </div>
 
           {/* Section: Billing */}
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-4">
+          <div className="rounded-xl border border-slate-700/70 bg-slate-900/70 p-5 space-y-4">
             <h2 className="text-sm font-semibold text-orange-400 uppercase tracking-widest">
               Facturación
             </h2>
@@ -221,7 +221,7 @@ export function SolicitudAltaForm() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-slate-900 font-semibold py-3 rounded-xl text-sm transition-colors"
+            className="min-h-[48px] w-full rounded-xl border border-orange-600/70 bg-orange-500 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? "Enviando solicitud..." : "Solicitar acceso"}
           </button>

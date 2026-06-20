@@ -79,7 +79,7 @@ export function ActualizarCuentaForm({ cuenta }: { cuenta: Cuenta }) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="categoria" className="block text-sm font-medium text-slate-300 mb-1">
             Categoría
@@ -146,7 +146,7 @@ export function ActualizarCuentaForm({ cuenta }: { cuenta: Cuenta }) {
             className={inputCls}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label htmlFor="localidad" className="block text-sm font-medium text-slate-300 mb-1">
               Localidad

@@ -3,6 +3,7 @@ import {
   Bell,
   Camera,
   CheckCircle,
+  ChevronDown,
   ChevronRight,
   Home,
   Lock,
@@ -43,7 +44,7 @@ const services = [
   },
   {
     title: "Mi Central",
-    desc: "Pagos, solicitudes y estado del servicio desde una portal de gestión simple para cada cliente.",
+    desc: "Pagos, solicitudes y estado del servicio desde un portal de gestión simple para cada cliente.",
     icon: Smartphone,
     features: ["Pagos online", "Pedidos técnicos", "Estado del servicio"],
   },
@@ -54,24 +55,23 @@ export default function ServicesSection() {
     <section
       id="servicios"
       aria-labelledby="services-heading"
-      className="relative overflow-hidden bg-slate-950 py-24 text-white"
+      className="relative overflow-hidden bg-slate-950 py-16 text-white sm:py-20"
     >
       <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-orange-500/8 to-transparent" />
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-14 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="reveal-on-scroll mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.25em] text-orange-400">
               Servicios
             </p>
             <h2
               id="services-heading"
-              className="text-balance text-3xl font-black tracking-tight md:text-5xl"
+              className="text-balance text-3xl font-black tracking-tight md:text-4xl"
             >
-              Un ecosistema completo, no piezas sueltas
+              Qué instalamos y monitoreamos
             </h2>
-            <p className="mt-5 text-lg leading-8 text-slate-400">
-              Cada solución se piensa como parte de una operación: instalación, uso diario, alertas,
-              soporte y mejora continua.
+            <p className="mt-4 text-base leading-7 text-slate-400 sm:text-lg">
+              Cada servicio, instalado y mantenido por el mismo equipo.
             </p>
           </div>
           <a
@@ -83,19 +83,48 @@ export default function ServicesSection() {
           </a>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2 md:hidden">
+          {services.map(({ title, desc, icon: Icon, features }, index) => (
+            <details
+              key={title}
+              className="group rounded-xl border border-white/10 bg-slate-900/60 open:border-orange-400/30 open:bg-slate-900"
+              open={index === 0}
+            >
+              <summary className="flex min-h-[58px] cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-orange-300">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="flex-1 text-left text-sm font-bold text-white">{title}</span>
+                <ChevronDown className="h-4 w-4 text-slate-500 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
+              </summary>
+              <div className="border-t border-white/10 px-4 pb-4 pt-3">
+                <p className="text-sm leading-6 text-slate-400">{desc}</p>
+                <ul className="mt-3 grid gap-2">
+                  {features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+          ))}
+        </div>
+
+        <div className="hidden gap-5 md:grid md:grid-cols-2 lg:grid-cols-3">
           {services.map(({ title, desc, icon: Icon, features }) => (
             <article
               key={title}
-              className="group relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 p-7 shadow-xl transition duration-300 hover:-translate-y-1 hover:border-orange-400/45 hover:shadow-orange-500/10"
+              className="reveal-on-scroll group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65 p-5 transition duration-200 hover:border-orange-400/35 hover:bg-slate-900"
             >
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-orange-400/70 to-transparent opacity-0 transition group-hover:opacity-100" />
-              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-800 text-orange-300 ring-1 ring-white/10 transition group-hover:bg-orange-500 group-hover:text-slate-950">
-                <Icon className="h-7 w-7" />
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-orange-300 ring-1 ring-white/10">
+                <Icon className="h-5 w-5" />
               </div>
-              <h3 className="text-xl font-black">{title}</h3>
-              <p className="mt-3 min-h-[72px] text-sm leading-7 text-slate-400">{desc}</p>
-              <ul className="mt-6 space-y-3 border-t border-white/10 pt-6">
+              <h3 className="text-lg font-bold">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{desc}</p>
+              <ul className="mt-4 space-y-2 border-t border-white/10 pt-4">
                 {features.map((feature) => (
                   <li key={feature} className="flex items-center gap-2 text-sm text-slate-300">
                     <CheckCircle className="h-4 w-4 text-emerald-400" />

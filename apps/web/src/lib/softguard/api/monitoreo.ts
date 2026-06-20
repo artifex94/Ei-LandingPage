@@ -33,7 +33,7 @@ interface RawEventoPendiente {
 interface RawEventoHistorico {
   rec_iid: number | string; rec_iidcuenta: number | string;
   cue_clinea?: string; cue_ncuenta: string; cue_cnombre: string;
-  rec_calarma: string; rec_czona?: string;
+  rec_calarma: string; rec_czona?: string; zon_cdescripcion?: string;
   rec_iPrioridad?: number | string; cod_nprioridad?: number | string;
   rec_isoFechaHora?: string; rec_tfechahora?: string;
   rec_cContenido?: string; rec_cObservaciones?: string;
@@ -104,7 +104,8 @@ export async function fetchEventosHistoricoMM(limit = 50): Promise<WebEvento[]> 
       fecha_evento:  fecha ? new Date(fecha) : new Date(),
       codigo,
       descripcion:   s(r.cod_cdescripcion) || s(r.rec_cContenido) || codigo,
-      zona:          s(r.rec_czona) || null,
+      // Nombre de zona (zon_cdescripcion) si la cuenta la tiene nombrada; si no, el número.
+      zona:          s(r.zon_cdescripcion) || s(r.rec_czona) || null,
       prioridad:     num(r.rec_iPrioridad) ?? num(r.cod_nprioridad),
       operador_id:   r.rec_ioperador != null ? s(r.rec_ioperador) : null,
       observacion:   s(r.rec_cObservaciones) || null,

@@ -59,7 +59,7 @@ export function EditarVehiculoDialog({ vehiculo }: { vehiculo: Vehiculo }) {
             <form action={action} className="space-y-3">
               <input type="hidden" name="id" value={vehiculo.id} />
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="ev-marca" className="block text-xs font-semibold text-slate-400 mb-1.5">Marca <span className="text-red-400">*</span></label>
                   <input id="ev-marca" name="marca" type="text" required autoFocus defaultValue={vehiculo.marca} className={inputCls} />
@@ -70,7 +70,7 @@ export function EditarVehiculoDialog({ vehiculo }: { vehiculo: Vehiculo }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="ev-anio" className="block text-xs font-semibold text-slate-400 mb-1.5">Año <span className="text-red-400">*</span></label>
                   <input id="ev-anio" name="anio" type="number" min="1990" max="2100" required defaultValue={vehiculo.anio} className={inputCls} />
@@ -86,7 +86,7 @@ export function EditarVehiculoDialog({ vehiculo }: { vehiculo: Vehiculo }) {
                 <input id="ev-km-actual" name="km_actual" type="number" min="0" required defaultValue={vehiculo.km_actual} className={inputCls} />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="ev-proximo-service-km" className="block text-xs font-semibold text-slate-400 mb-1.5">Próximo service (km)</label>
                   <input

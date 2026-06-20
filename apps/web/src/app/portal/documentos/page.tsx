@@ -191,6 +191,7 @@ export default async function DocumentosPage({
 
       {/* ── Encabezado ─────────────────────────────────────────────────────── */}
       <PortalPageHeader
+        eyebrow="Mi Central"
         title="Documentos"
         titleId="docs-heading"
         description="Tus comprobantes de pago y facturas emitidas."
@@ -200,7 +201,7 @@ export default async function DocumentosPage({
       <div
         role="tablist"
         aria-label="Tipo de documento"
-        className="flex gap-1 p-1 bg-industrial-800 border border-industrial-700 rounded-md w-full sm:w-fit"
+        className="portal-panel flex w-full gap-1 p-1 sm:w-fit"
       >
         <TabButton href={tabHref("recibos")} active={tab === "recibos"}>
           Recibos
@@ -300,7 +301,7 @@ function TabButton({
       role="tab"
       aria-selected={active}
       className={`
-        flex-1 sm:flex-none px-4 py-2 rounded-sm text-sm font-medium
+        flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium
         text-center transition-colors min-h-[44px] flex items-center justify-center
         ${active
           ? "bg-tactical-500/15 text-tactical-300"

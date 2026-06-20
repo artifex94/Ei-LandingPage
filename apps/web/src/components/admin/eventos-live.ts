@@ -164,3 +164,84 @@ export function filtrarEventos(eventos: EventoLive[], f: FiltrosEventos): Evento
     return true;
   });
 }
+
+// ── Columnas del board de monitoreo en vivo ───────────────────────────────────
+
+export type ColumnaKey = "todos" | "p1" | "p2" | "resto";
+
+export interface ColumnaMonitoreo {
+  key: ColumnaKey;
+  label: string;
+  /** Filtro de prioridad que define la columna (reutiliza `filtrarEventos`). */
+  prioridad: FiltrosEventos["prioridad"];
+  /** Color de acento del header de la columna (Tailwind). */
+  acento: string;
+}
+
+/**
+ * Las cuatro columnas del board: Todos · P1 crítica · P2 · Resto. El orden es también
+ * el de las pestañas en mobile; la pestaña inicial (P1) la fija el componente.
+ */
+export const COLUMNAS_MONITOREO: ColumnaMonitoreo[] = [
+  { key: "todos", label: "Todos", prioridad: "todas", acento: "text-slate-300" },
+  { key: "p1", label: "P1 crítica", prioridad: "1", acento: "text-red-300" },
+  { key: "p2", label: "P2", prioridad: "2", acento: "text-amber-300" },
+  { key: "resto", label: "Resto", prioridad: "otras", acento: "text-slate-400" },
+];
+
+// ── Vida útil de un evento (barra que se descarga) ────────────────────────────
+//
+// SoftGuard no expone un deadline por evento; la "vida útil" es una convención del
+// portal por prioridad: cuánto tarda la barra inferior de la fila en vaciarse. Es solo
+// una noción visual de "hace cuánto se activó y sigue sin procesar" — ajustable acá.
+
+const MIN = 60 * 1000;
+
+/** Ventana de vida útil por prioridad (P1 más corta = más urgente). */
+export const VENTANA_VIDA_UTIL_MS = { p1: 5 * MIN, p2: 15 * MIN, resto: 30 * MIN } as const;
+
+function ventanaVidaUtil(prioridad: number | null): number {
+  if (prioridad === 1) return VENTANA_VIDA_UTIL_MS.p1;
+  if (prioridad === 2) return VENTANA_VIDA_UTIL_MS.p2;
+  return VENTANA_VIDA_UTIL_MS.resto;
+}
+
+/**
+ * Datos para la barra de vida útil: ventana total y tiempo transcurrido (≥ 0) respecto a
+ * `refMs` (el `at` del feed, NO `Date.now()` — así el render es puro). El componente arma
+ * la animación CSS con estos dos valores; el vaciado lo dibuja el navegador.
+ */
+export function vidaUtilEvento(
+  fechaISO: string,
+  refMs: number,
+  prioridad: number | null,
+): { windowMs: number; elapsedMs: number } {
+  const fechaMs = new Date(fechaISO).getTime();
+  const elapsedMs = Number.isNaN(fechaMs) ? 0 : Math.max(0, refMs - fechaMs);
+  return { windowMs: ventanaVidaUtil(prioridad), elapsedMs };
+}
+
+// ── Agrupación de eventos de una misma cuenta ─────────────────────────────────
+
+/** Ventana para considerar que varios eventos de una cuenta son "el mismo aviso". */
+export const VENTANA_AGRUPACION_MS = 10 * 60 * 1000;
+
+/**
+ * Eventos de la misma cuenta que `base`, disparados dentro de ±ventana (incluye al
+ * propio `base`), ordenados del más viejo al más nuevo. Para notificar varias zonas en
+ * un solo mensaje. Agrupa por `softguard_ref` (estable; `iid_cuenta` es 0 en fallback DB).
+ */
+export function eventosAgrupadosCuenta(
+  eventos: EventoLive[],
+  base: EventoLive,
+  ventanaMs: number = VENTANA_AGRUPACION_MS,
+): EventoLive[] {
+  const t0 = new Date(base.fecha).getTime();
+  return eventos
+    .filter(
+      (e) =>
+        e.softguard_ref === base.softguard_ref &&
+        Math.abs(new Date(e.fecha).getTime() - t0) <= ventanaMs,
+    )
+    .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+}

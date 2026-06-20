@@ -121,7 +121,7 @@ function TurnoCell({
                 aria-hidden="true"
               />
               {/* Nombre */}
-              <span className="truncate flex-1 leading-tight">
+              <span className="min-w-0 truncate flex-1 leading-tight">
                 {turno.empleado.perfil.nombre.split(" ").slice(0, 2).join(" ")}
               </span>
               {/* Ícono de estado del turno */}

@@ -52,7 +52,7 @@ export default async function MisTurnosPage() {
 
   return (
     <div className="space-y-7">
-      <PortalPageHeader title="Mis turnos" description="Próximos 30 días" />
+      <PortalPageHeader eyebrow="Mi Central" title="Mis turnos" description="Próximos 30 días." />
 
       {turnos.length === 0 ? (
         <EmptyState
@@ -72,7 +72,7 @@ export default async function MisTurnosPage() {
                 key={t.id}
                 role="listitem"
                 aria-label={`${fechaLabel}, ${FRANJA_LABEL[t.franja] ?? t.franja}, estado: ${estadoLabel}`}
-                className="rounded-md border border-industrial-700 bg-industrial-800/60 px-4 py-3 flex items-center justify-between gap-3"
+                className="portal-row flex items-center justify-between gap-3 px-4 py-3"
               >
                 <div>
                   <p className="text-sm font-semibold text-white capitalize">{fechaLabel}</p>

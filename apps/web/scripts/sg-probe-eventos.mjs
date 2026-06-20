@@ -56,7 +56,16 @@ async function probe(path, params = {}) {
     const j = await res.json();
     const rows = j.rows ?? j.data ?? [];
     console.log(`\n${path} → HTTP ${res.status} success=${j.success} total=${j.total} rows=${rows.length}`);
-    if (rows.length > 0) console.log("  sample:", JSON.stringify(rows[0]).slice(0, 600));
+    if (rows.length > 0) {
+      console.log("  claves:", Object.keys(rows[0]).join(", "));
+      const zonaKeys = Object.keys(rows[0]).filter((k) => /zon|particion|zona/i.test(k));
+      if (zonaKeys.length) {
+        for (const r of rows.slice(0, 6)) {
+          console.log("  zona-fields:", JSON.stringify(Object.fromEntries(zonaKeys.map((k) => [k, r[k]]))));
+        }
+      }
+      console.log("  row[0] completo:", JSON.stringify(rows[0]));
+    }
   } catch (e) {
     console.log(`\n${path} → ERROR ${e.message}`);
   }

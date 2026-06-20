@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
+import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
+import { motivosDeCobranza } from "@/lib/mensajeria-motivos";
 
 export const metadata: Metadata = { title: "Morosidad" };
 
@@ -26,14 +28,6 @@ const TUTORIAL_MOROSIDAD = [
 
 const MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-
-function waLink(telefono: string, nombre: string, deuda: string) {
-  const msg = encodeURIComponent(
-    `Hola ${nombre}, te contactamos de Escobar Instalaciones. Tenés pagos pendientes por $${deuda}. ¿Podemos ayudarte a regularizarlos?`
-  );
-  const num = telefono.replace(/\D/g, "");
-  return `https://wa.me/549${num}?text=${msg}`;
-}
 
 export default async function MorosidadPage() {
   const ahora = new Date();
@@ -123,6 +117,15 @@ export default async function MorosidadPage() {
               (s, c) => s + c.pagos.reduce((ps, p) => ps + Number(p.importe), 0),
               0
             );
+            const motivos = motivosDeCobranza(
+              perfil.nombre,
+              cuentas.flatMap((c) => c.pagos).map((p) => ({
+                mes: p.mes,
+                anio: p.anio,
+                importe: Number(p.importe),
+                estado: p.estado,
+              })),
+            );
 
             return (
               <div
@@ -158,18 +161,14 @@ export default async function MorosidadPage() {
                       </p>
                       <p className="text-orange-400/60 text-xs">Total vencido</p>
                     </div>
-                    {perfil.telefono && (
-                      <a
-                        href={waLink(perfil.telefono, perfil.nombre.split(" ")[0], totalVencido.toLocaleString("es-AR"))}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-green-700 hover:bg-green-600 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 min-h-[44px]"
-                        title="Enviar mensaje por WhatsApp"
-                      >
-                        <span aria-hidden="true">📱</span>
-                        WhatsApp
-                      </a>
-                    )}
+                    <BotonEnviarWhatsApp
+                      destinatario={{ nombre: perfil.nombre, telefono: perfil.telefono }}
+                      motivos={motivos}
+                      historial={{ perfilId: perfil.id }}
+                      entidad="perfil"
+                      entidadId={perfil.id}
+                      subtitulo={`Debe $${totalVencido.toLocaleString("es-AR")}`}
+                    />
                   </div>
                 </div>
 

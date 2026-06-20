@@ -14,8 +14,8 @@ export function ParadaCard({ parada }: { parada: Parada }) {
     <Link
       href={parada.href}
       className={`
-        block rounded-lg border border-industrial-700 border-l-4 px-4 py-3
-        bg-industrial-800/60 hover:bg-industrial-800 transition-colors
+        block rounded-xl border border-industrial-700/70 border-l-2 px-4 py-3
+        bg-industrial-800/45 hover:bg-industrial-800/75 transition-colors
         ${PRIORIDAD_BORDE[parada.prioridad] ?? "border-l-slate-600"}
         ${parada.completada ? "opacity-50" : ""}
         ${parada.activa ? "ring-1 ring-tactical-500/40" : ""}

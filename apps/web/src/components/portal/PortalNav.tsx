@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/components/ui/LogoutButton";
+import { BrandLockup } from "@/components/layout/BrandLockup";
 
 // ── Definición de ítems ───────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ interface NavDef {
 const NAV_CLIENTE: NavDef[] = [
   {
     href: "/portal/dashboard",
-    label: "Mis servicios",
+    label: "Inicio",
     mobileLabel: "Inicio",
     icon: ShieldCheck,
   },
@@ -34,8 +35,8 @@ const NAV_CLIENTE: NavDef[] = [
   },
   {
     href: "/portal/soporte",
-    label: "Soporte",
-    mobileLabel: "Soporte",
+    label: "Asistencia",
+    mobileLabel: "Ayuda",
     icon: Headphones,
     alsoActive: ["/portal/solicitudes", "/portal/solicitud"],
   },
@@ -55,8 +56,8 @@ const NAV_CLIENTE: NavDef[] = [
 
 const ITEM_EVENTOS: NavDef = {
   href: "/portal/eventos",
-  label: "Eventos",
-  mobileLabel: "Eventos",
+  label: "Actividad",
+  mobileLabel: "Actividad",
   icon: Bell,
 };
 
@@ -67,7 +68,7 @@ const NAV_CLIENTE_MOBILE: NavDef[] = NAV_CLIENTE.map((nav) =>
 );
 
 const NAV_EMPLEADO_MOBILE: NavDef[] = [
-  { href: "/portal/dashboard",   label: "Mis servicios", mobileLabel: "Inicio",  icon: ShieldCheck },
+  { href: "/portal/dashboard",   label: "Inicio",        mobileLabel: "Inicio",  icon: ShieldCheck },
   { href: "/portal/mis-turnos",  label: "Mis turnos",    mobileLabel: "Turnos",  icon: CalendarDays },
   { href: "/portal/turno-actual",label: "Turno actual",  mobileLabel: "Ahora",   icon: Clock },
   { href: "/portal/pagos",       label: "Pagos",         mobileLabel: "Pagos",   icon: CreditCard },
@@ -100,20 +101,20 @@ function DesktopLink({ nav, pathname }: { nav: NavDef; pathname: string }) {
       href={nav.href}
       aria-current={active ? "page" : undefined}
       className={`
-        relative flex items-center gap-1.5 py-1 px-0.5 text-sm font-medium
-        min-h-[44px] transition-colors duration-150 group
-        ${active ? "text-tactical-500" : "text-slate-500 hover:text-slate-300"}
+        relative flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold
+        transition-colors duration-150 group
+        ${active ? "bg-white/[0.07] text-white" : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"}
       `}
     >
       <Icon
         className={`w-3.5 h-3.5 flex-shrink-0 transition-colors
-          ${active ? "text-tactical-500" : "text-slate-500 group-hover:text-slate-300"}`}
+          ${active ? "text-tactical-400" : "text-slate-500 group-hover:text-slate-300"}`}
         strokeWidth={active ? 2.2 : 1.8}
       />
       <span>{nav.label}</span>
       {active && (
         <span
-          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-tactical-500"
+          className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-tactical-500"
           aria-hidden="true"
         />
       )}
@@ -131,12 +132,13 @@ function BottomNavItem({ nav, pathname }: { nav: NavDef; pathname: string }) {
       aria-current={active ? "page" : undefined}
       className={`
         flex-1 min-w-0 flex flex-col items-center justify-center gap-1
-        min-h-[56px] py-2 rounded-sm transition-colors duration-150
-        ${active ? "bg-tactical-500/10 text-tactical-500" : "text-slate-400 hover:text-slate-200"}
+        relative min-h-[60px] py-2 transition-colors duration-150
+        ${active ? "text-tactical-400" : "text-slate-500 hover:text-slate-200"}
       `}
     >
       <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-      <span className={`max-w-full truncate text-xs leading-none font-mono tracking-wide ${active ? "font-semibold" : "font-medium"}`}>
+      {active && <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-tactical-500" aria-hidden="true" />}
+      <span className={`max-w-full truncate text-[11px] leading-none ${active ? "font-semibold" : "font-medium"}`}>
         {nav.mobileLabel}
       </span>
     </Link>
@@ -158,22 +160,13 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
   return (
     <>
       {/* ── Header desktop ─────────────────────────────────────────────────── */}
-      <header className="hidden lg:block bg-industrial-800 border-b border-industrial-700">
-        <div className="max-w-4xl mx-auto px-4 flex items-center justify-between gap-6">
-          <Link href="/portal/dashboard" className="flex items-center gap-2.5 py-3 group flex-shrink-0">
-            <div
-              aria-hidden="true"
-              className="h-8 w-8 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-display font-bold text-xs shadow-[0_0_12px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px] group-hover:shadow-[0_0_16px_rgba(241,119,32,0.35)] transition-shadow"
-            >
-              EI
-            </div>
-            <div>
-              <span className="text-sm font-display font-semibold text-white block leading-tight">Escobar Instalaciones</span>
-              <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">Mi Central</span>
-            </div>
+      <header className="hidden border-b border-white/10 bg-industrial-950/90 backdrop-blur-xl lg:block">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between gap-6">
+          <Link href="/portal/dashboard" className="py-3 flex-shrink-0">
+            <BrandLockup context="Mi Central" compact />
           </Link>
 
-          <nav aria-label="Navegación principal de Mi Central" className="flex items-center gap-5">
+          <nav aria-label="Navegación principal de Mi Central" className="flex items-center gap-1">
             {desktopItems.map((nav) => (
               <DesktopLink key={nav.href} nav={nav} pathname={pathname} />
             ))}
@@ -184,15 +177,9 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
       </header>
 
       {/* ── Topbar mobile ──────────────────────────────────────────────────── */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-industrial-900/98 backdrop-blur-sm border-b border-industrial-700 px-4 h-14 flex items-center justify-between">
-        <Link href="/portal/dashboard" className="flex items-center gap-2 group">
-          <div
-            aria-hidden="true"
-            className="h-7 w-7 bg-tactical-500 rounded-sm flex items-center justify-center text-white font-display font-bold text-xs shadow-[0_0_8px_rgba(241,119,32,0.2)] border border-tactical-600 border-b-[2px]"
-          >
-            EI
-          </div>
-          <span className="text-sm font-display font-semibold text-white">Escobar Inst.</span>
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-industrial-950/95 backdrop-blur-xl border-b border-white/10 px-4 h-14 flex items-center justify-between">
+        <Link href="/portal/dashboard">
+          <BrandLockup context="Mi Central" compact />
         </Link>
         <LogoutButton />
       </header>
@@ -200,7 +187,7 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
       {/* ── Bottom nav mobile ──────────────────────────────────────────────── */}
       <nav
         aria-label="Navegación principal"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-industrial-900/98 backdrop-blur-sm border-t border-industrial-700 px-3 py-1 flex gap-1"
+        className="fixed bottom-0 left-0 right-0 z-30 flex gap-1 border-t border-white/10 bg-industrial-950/95 px-2 py-0 backdrop-blur-xl lg:hidden"
         style={{ paddingBottom: "calc(0.25rem + env(safe-area-inset-bottom))" }}
       >
         {mobileItems.map((nav) => (

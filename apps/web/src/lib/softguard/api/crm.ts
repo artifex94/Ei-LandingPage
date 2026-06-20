@@ -2,15 +2,14 @@
  * Adaptador del módulo CRM (SgWebCrm) — gestión de cuentas de la central.
  *
  * Funcionalidades cubiertas (solo lectura):
- *   - fetchCuentasDealer → cuentas visibles con estado de comunicación del panel
- *   - fetchCuentasCount  → total visible (chequeo de permisos: 0 = problema)
- *
- * Pendiente de explorar: detalle de cuenta (contactos, zonas, usuarios, notas) —
- * esos endpoints cargan al abrir una cuenta en la UI del CRM; capturar con
- * `node --env-file=.env.local scripts/sg-capture.mjs CRM` navegando un detalle.
+ *   - fetchCuentasDealer   → cuentas visibles con estado de comunicación del panel
+ *   - fetchCuentasCount    → total visible (chequeo de permisos: 0 = problema)
+ *   - fetchContactosCuenta → teléfonos/contactos de una cuenta (GET /Rest/Search/Telefonos,
+ *                            filtro tel_iidcuenta) — la lista de "llamados" de la central.
  */
 
-import { readConfig, restGet, s, refCuenta, fecha } from "./core";
+import { readConfig, restGet, s, num, refCuenta, fecha } from "./core";
+import { normalizarTelefono } from "@/lib/whatsapp";
 
 interface RawCuentaDealer {
   cue_clinea?: string; cue_ncuenta: string; cue_cnombre: string;
@@ -78,4 +77,50 @@ export async function fetchCuentasDealer(limit = 1000): Promise<WebCuenta[]> {
     ultimo_evento:   [s(r.sta_cultimaalarma), s(r.cod_cdescripcion)].filter(Boolean).join(" — ") || null,
     ultimo_evento_at: fecha(r.sta_dfechautimaalarma),
   }));
+}
+
+// ── Contactos de una cuenta = lista de teléfonos/llamados de la central ───────────
+// Fuente: la misma "llamadas post-procesado" del MultiMonitor. Shape verificado contra
+// la API real (GET /Rest/Search/Telefonos filtrando por tel_iidcuenta).
+
+interface RawTelefono {
+  tel_iidcuenta?: number | string;
+  tel_cnombre?: string;      // nombre del CONTACTO (NO el de la cuenta `cue_cnombre`)
+  tel_ctelefono?: string;    // número
+  tel_cpredigito?: string;   // prefijo de área (se antepone al número)
+  tel_cobservacion?: string; // rol/nota del contacto (ej. "Encargado")
+  tel_norden?: number | string;
+  lis_cdescripcion?: string; // lista a la que pertenece (ej. "Alarma General")
+}
+
+export interface WebContactoCuenta {
+  nombre: string;
+  telefono: string | null; // 10 dígitos normalizados, o null si ilegible/ausente
+  rol: string | null;       // observación/lista del contacto
+  orden: number | null;     // prioridad de contacto (para ordenar la lista)
+}
+
+/**
+ * Contactos de una cuenta (los teléfonos cargados en la central para notificar).
+ * SOLO LECTURA. GET /Rest/Search/Telefonos filtrando por `tel_iidcuenta` (filtro ExtJS).
+ * Devuelve la lista ordenada por `orden` (los sin orden quedan al final).
+ */
+export async function fetchContactosCuenta(iidCuenta: number, limit = 50): Promise<WebContactoCuenta[]> {
+  const c = readConfig();
+  const res = await restGet<RawTelefono>(c, "/Rest/Search/Telefonos", {
+    page: 1,
+    start: 0,
+    limit,
+    filter: JSON.stringify([{ property: "tel_iidcuenta", value: iidCuenta }]),
+  });
+  return res.rows
+    .map((r) => ({
+      // El nombre del destinatario sale del CONTACTO (tel_cnombre), nunca de la cuenta.
+      nombre:   s(r.tel_cnombre),
+      // El número viene partido en prefijo de área + número.
+      telefono: normalizarTelefono(`${s(r.tel_cpredigito)}${s(r.tel_ctelefono)}`),
+      rol:      s(r.tel_cobservacion) || s(r.lis_cdescripcion) || null,
+      orden:    num(r.tel_norden),
+    }))
+    .sort((a, b) => (a.orden ?? Infinity) - (b.orden ?? Infinity));
 }

@@ -26,6 +26,7 @@ export function TablaFacturasBorradores({ facturas }: { facturas: FacturaConRela
     {
       id: "cuit",
       header: "CUIT",
+      className: "hidden sm:table-cell",
       cell: (f) => (
         <span className="text-slate-400 font-mono text-xs">
           {f.cuit_receptor ? formatCuit(f.cuit_receptor) : <span className="text-amber-400">Sin CUIT</span>}
@@ -44,6 +45,7 @@ export function TablaFacturasBorradores({ facturas }: { facturas: FacturaConRela
     {
       id: "cuentas",
       header: "Cuentas",
+      className: "hidden sm:table-cell",
       cell: (f) => (
         <span className="text-slate-400 text-xs">
           {f.items.length} {f.items.length === 1 ? "cuenta" : "cuentas"}

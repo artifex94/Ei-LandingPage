@@ -62,8 +62,10 @@ export default async function PagosPage({
     <section aria-labelledby="pagos-heading">
       <div className="mb-6">
         <PortalPageHeader
-          title="Historial de pagos"
+          eyebrow="Mi Central"
+          title="Mis pagos"
           titleId="pagos-heading"
+          description="Consultá vencimientos, comprobantes y pagos anteriores."
           action={
             aniosDisponibles.length > 1 ? (
               <form method="GET">
@@ -83,7 +85,7 @@ export default async function PagosPage({
                   </div>
                   <button
                     type="submit"
-                    className="bg-industrial-700 hover:bg-industrial-600 border border-industrial-600 border-b-[3px] border-b-industrial-950 active:border-b active:translate-y-[2px] text-slate-300 hover:text-slate-200 px-5 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest min-h-[48px] transition-all duration-150 ease-mech-press"
+                    className="portal-action"
                   >
                     Ver
                   </button>
@@ -104,15 +106,15 @@ export default async function PagosPage({
       {cuentas.length === 0 ? (
         <p className="text-slate-400 text-lg">No tenés servicios activos.</p>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-8">
           {cuentas.map((cuenta) => (
             <div key={cuenta.id}>
               <div className="flex items-baseline gap-3 mb-4">
                 <h2 className="text-lg font-semibold text-white">
                   {cuenta.descripcion}
                 </h2>
-                <span className="text-xs text-slate-500 font-mono hidden sm:inline">
-                  Estado de pagos · {anio}
+                <span className="hidden text-xs text-slate-500 sm:inline">
+                  {anio}
                 </span>
               </div>
               <CalendarioPagos

@@ -4,7 +4,7 @@ export default function DashboardLoading() {
       <div className="h-8 w-48 bg-slate-700 rounded-lg animate-pulse mb-2" />
       <div className="h-4 w-64 bg-slate-700/60 rounded animate-pulse mb-8" />
 
-      <ul className="grid gap-4 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
           <li key={i} className="bg-industrial-800 border border-industrial-700 rounded-lg p-5 space-y-3 animate-pulse">
             <div className="flex items-center justify-between">

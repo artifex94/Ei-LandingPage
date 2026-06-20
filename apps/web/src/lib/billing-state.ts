@@ -59,8 +59,10 @@ export function calcularEstadoFinanciero(
 /**
  * Days Past Due: días transcurridos desde el vencimiento del pago más antiguo impago.
  * Vencimiento = último día del mes indicado en el pago.
+ *
+ * Exportada para reutilizar la regla de vencimiento en `billing-deuda.ts` (no duplicar).
  */
-function calcDPD(pagos: PagoParaEstado[]): number {
+export function calcDPD(pagos: PagoParaEstado[]): number {
   const impagos = pagos.filter(
     (p) => p.estado === "VENCIDO" || p.estado === "PENDIENTE"
   );

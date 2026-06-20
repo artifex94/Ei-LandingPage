@@ -53,7 +53,7 @@ export function Modal({
           className={cn(
             "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
             "bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl",
-            "w-full p-6 max-h-[90vh] overflow-y-auto",
+            "w-[calc(100%-2rem)] p-4 sm:w-full sm:p-6 max-h-[90vh] overflow-y-auto",
             SIZE_CLASS[size],
             className,
           )}

@@ -38,13 +38,14 @@ export default async function SolicitudesPage() {
   return (
     <section className="space-y-7" aria-labelledby="solicitudes-heading">
       <PortalPageHeader
+        eyebrow="Asistencia"
         title="Mis solicitudes"
         titleId="solicitudes-heading"
         description="Historial de asistencia técnica solicitada."
         action={
           <Link
             href="/portal/solicitud"
-            className="shrink-0 bg-tactical-500 hover:bg-tactical-400 border border-tactical-600 border-b-[3px] border-b-tactical-600 active:border-b active:translate-y-[2px] text-slate-900 font-bold uppercase tracking-widest px-5 py-2.5 rounded-sm min-h-[48px] text-xs flex items-center gap-2 transition-all duration-150 ease-mech-press"
+            className="portal-action portal-action-primary shrink-0"
           >
             + Nueva solicitud
           </Link>
@@ -103,7 +104,7 @@ function SolicitudCard({
   const prioridad = PRIORIDAD_CONFIG[s.prioridad] ?? { label: s.prioridad, cls: "text-slate-400" };
 
   return (
-    <div className="rounded-md border border-industrial-700 bg-industrial-800/60 hover:bg-industrial-800 transition-colors px-4 py-3">
+    <div className="portal-row px-4 py-3">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <Link

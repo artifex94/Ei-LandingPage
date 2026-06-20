@@ -112,10 +112,11 @@ export default async function EventosPortalPage({
     <div className="space-y-7">
       {/* ── Header ── */}
       <PortalPageHeader
-        title="Mis eventos"
-        description="Actividad de tu sistema de alarma, día por día."
+        eyebrow="Mi Central"
+        title="Actividad"
+        description="Lo que registró tu sistema, ordenado por fecha."
         action={
-          <form method="GET" className="flex items-center gap-2">
+          <form method="GET" className="flex flex-wrap items-center gap-2">
             {cuentas.length > 1 && (
               <div className="w-44">
                 <label htmlFor="cuenta-select" className="sr-only">Filtrar por cuenta</label>
@@ -140,7 +141,7 @@ export default async function EventosPortalPage({
             {(cuentas.length > 1 || aniosDisponibles.length > 1) && (
               <button
                 type="submit"
-                className="bg-industrial-700 hover:bg-industrial-600 border border-industrial-600 border-b-[3px] border-b-industrial-950 active:border-b active:translate-y-[2px] text-slate-300 hover:text-slate-200 px-5 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest min-h-[48px] transition-all duration-150 ease-mech-press"
+                className="portal-action"
               >
                 Ver
               </button>
@@ -185,7 +186,7 @@ export default async function EventosPortalPage({
               return (
                 <div
                   key={ev.id}
-                  className={`rounded-md border bg-industrial-800/60 hover:bg-industrial-800 transition-colors px-4 py-3 ${
+                  className={`rounded-xl border bg-industrial-800/45 hover:bg-industrial-800/75 transition-colors px-4 py-3 ${
                     esAlerta ? "border-red-500/40" : "border-industrial-700"
                   }`}
                 >

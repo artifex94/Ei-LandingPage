@@ -110,7 +110,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="font-sans text-slate-800 bg-slate-900 min-h-screen selection:bg-orange-500 selection:text-white">
+      <div className="font-sans text-slate-800 bg-slate-900 min-h-screen overflow-x-hidden selection:bg-orange-500 selection:text-white">
         <Navbar />
         <main>
           <HeroSection />

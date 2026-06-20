@@ -121,13 +121,14 @@ export default async function PerfilPage() {
   return (
     <div className="space-y-7">
       <PortalPageHeader
+        eyebrow="Mi Central"
         title="Mi perfil"
-        description="Tu información personal registrada con Escobar Instalaciones."
+        description="Tus datos de contacto e instalaciones."
       />
 
       {/* ── Datos de contacto ─────────────────────────────────────────────── */}
       <PortalSection title="Datos de contacto" titleId="contacto-heading">
-        <div className="rounded-lg border border-industrial-700 bg-industrial-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.4)] divide-y divide-industrial-700/60">
+        <div className="portal-panel divide-y divide-industrial-700/60">
           {/* DNI — solo lectura */}
           <div className="flex items-center justify-between gap-4 px-5 py-4">
             <div>
@@ -187,7 +188,7 @@ export default async function PerfilPage() {
               return (
                 <div
                   key={cuenta.id}
-                  className="rounded-md border border-industrial-700 bg-industrial-800/60 px-4 py-3"
+                  className="portal-row px-4 py-3"
                 >
                   <div className="mb-3">
                     <p className="font-semibold text-white">{cuenta.descripcion}</p>

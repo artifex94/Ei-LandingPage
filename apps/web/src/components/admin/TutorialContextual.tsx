@@ -22,8 +22,13 @@ export function TutorialContextual({ section, titulo, steps }: Props) {
   const storageKey = `admin_tutorial_seen_${section}`;
 
   useEffect(() => {
-    setMounted(true);
-    setVisto(!!localStorage.getItem(storageKey));
+    // Diferimos la lectura del storage para conservar el primer render estable
+    // entre servidor y cliente sin encadenar renders dentro del efecto.
+    const timer = window.setTimeout(() => {
+      setMounted(true);
+      setVisto(!!localStorage.getItem(storageKey));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [storageKey]);
 
   function abrir() {

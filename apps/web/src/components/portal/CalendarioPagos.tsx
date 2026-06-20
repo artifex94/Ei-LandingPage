@@ -81,7 +81,7 @@ export function CalendarioPagos({ pagos, anio, cuentaId }: Props) {
               key={numMes}
               role="listitem"
               aria-label={ariaCard}
-              className="rounded-lg border border-industrial-700 bg-industrial-800/80 overflow-hidden flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
+              className="portal-panel flex flex-col overflow-hidden"
             >
               <div className="flex items-center justify-between px-3 pt-2.5 pb-1 gap-1">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
@@ -109,7 +109,7 @@ export function CalendarioPagos({ pagos, anio, cuentaId }: Props) {
               {cfg.esAccionable && pago && (
                 <button
                   onClick={() => setPagoSeleccionado({ mes: numMes, pago })}
-                  className="w-full text-center bg-tactical-500 hover:bg-tactical-400 border-b-[3px] border-tactical-600 active:border-b-0 active:translate-y-[3px] transition-all duration-100 ease-mech-press py-2.5 text-xs font-bold text-slate-900 uppercase tracking-widest mt-auto"
+                  className="mt-auto w-full border-t border-tactical-600/60 bg-tactical-500 py-2.5 text-center text-sm font-semibold text-slate-950 transition-colors hover:bg-tactical-400"
                   aria-label={`Pagar ${nombreMes} — ${importeStr}`}
                 >
                   Pagar

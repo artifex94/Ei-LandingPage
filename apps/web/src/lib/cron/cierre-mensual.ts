@@ -166,12 +166,14 @@ export async function ejecutarCierreMensual(
     },
   });
 
-  // Clientes que YA recibieron el aviso este mes (solo ENVIADA; los FALLIDA se reintentan).
+  // Clientes que YA recibieron el aviso AUTOMÁTICO este mes (solo ENVIADA; los FALLIDA se
+  // reintentan). Filtra por canal "whatsapp" (Twilio) para NO confundirse con los avisos
+  // manuales del hub de mensajería (canal "WHATSAPP_WALINK"), que no deben suprimir el cron.
   const inicioMes = new Date(anio, mes - 1, 1);
   const yaNotificados = new Set(
     (
       await prisma.notificacionCliente.findMany({
-        where: { origen: "COBRANZA", estado: "ENVIADA", fecha_envio: { gte: inicioMes } },
+        where: { origen: "COBRANZA", canal: "whatsapp", estado: "ENVIADA", fecha_envio: { gte: inicioMes } },
         select: { perfil_id: true },
       })
     ).map((n) => n.perfil_id),

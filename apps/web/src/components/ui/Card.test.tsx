@@ -18,6 +18,6 @@ describe("Card", () => {
 
   it("aplica fondo atenuado con muted", () => {
     const { container } = render(<Card muted>contenido</Card>);
-    expect(container.firstElementChild?.className).toContain("bg-slate-800/50");
+    expect(container.firstElementChild?.className).toContain("bg-slate-800/40");
   });
 });

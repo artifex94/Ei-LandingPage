@@ -18,10 +18,10 @@ export interface PortalSectionProps {
 export function PortalSection({ title, titleId, ledClass, meta, children }: PortalSectionProps) {
   return (
     <section aria-labelledby={titleId}>
-      <div className="flex items-baseline justify-between gap-3 mb-3">
+      <div className="mb-3 flex items-center justify-between gap-3 px-1">
         <h2
           id={titleId}
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400"
+          className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-slate-400"
         >
           {ledClass && (
             <span
@@ -31,7 +31,7 @@ export function PortalSection({ title, titleId, ledClass, meta, children }: Port
           )}
           {title}
         </h2>
-        {meta && <span className="text-xs text-slate-500 font-mono tabular-nums">{meta}</span>}
+        {meta && <span className="rounded-full bg-industrial-800 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-400">{meta}</span>}
       </div>
       {children}
     </section>

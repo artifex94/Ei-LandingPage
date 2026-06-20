@@ -80,11 +80,11 @@ export function AreaContextBar() {
 
   return (
     <div
-      className="flex items-center gap-2.5 mb-5 pl-3 py-0.5"
+      className="mb-4 flex items-center gap-2 pl-2.5 py-0.5"
       style={{ borderLeft: `2px solid ${area.border}` }}
     >
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${area.dot}`} aria-hidden="true" />
-      <span className={`text-[10px] font-bold uppercase tracking-widest ${area.text}`}>
+      <span className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${area.text}`}>
         {area.label}
       </span>
     </div>

@@ -165,7 +165,7 @@ export function EditarEmpleadoForm({ empleado, esEscobarAdmin = false }: Props) 
           Estado y visual
         </legend>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="emp-e-activo" className="block text-sm font-medium text-slate-300 mb-1">
               Estado

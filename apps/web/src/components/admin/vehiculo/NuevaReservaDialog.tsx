@@ -113,7 +113,7 @@ export function NuevaReservaDialog({
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="desde" className="block text-sm font-medium text-slate-300 mb-1">
                 Desde <span aria-hidden="true" className="text-red-400">*</span>

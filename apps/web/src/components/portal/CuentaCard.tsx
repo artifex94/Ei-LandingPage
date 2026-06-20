@@ -118,18 +118,16 @@ export function CuentaCard({ cuenta }: CuentaCardProps) {
   return (
     <Link
       href={`/portal/cuentas/${cuenta.id}`}
-      className="block bg-industrial-800 rounded-lg border border-industrial-700
-                 shadow-[0_8px_24px_rgba(0,0,0,0.4)]
-                 hover:border-tactical-500/40
-                 hover:shadow-[0_0_0_1px_rgba(241,119,32,0.15),0_8px_28px_rgba(0,0,0,0.5)]
-                 transition-all duration-200 ease-mech-press overflow-hidden group"
+      className="block overflow-hidden rounded-xl border border-white/10 bg-slate-950/65
+                 shadow-[0_14px_30px_rgba(2,6,23,.14)] transition-all duration-200
+                 hover:-translate-y-0.5 hover:border-tactical-500/35 hover:bg-slate-950/85 group"
       aria-label={`Ver detalle de ${cuenta.descripcion} — ${badgeLabel}`}
     >
       {/* Barra de estado superior — indicador cromático */}
       <div className={`h-[2px] w-full ${led.bar}`} aria-hidden="true" />
 
       {/* Cabecera — alineación F-pattern */}
-      <div className="px-4 py-4 border-b border-industrial-700/50 flex items-center gap-3">
+      <div className="px-4 py-4 border-b border-white/8 flex items-center gap-3">
 
         {/* LED diodo — estado de hardware */}
         <div
@@ -148,15 +146,14 @@ export function CuentaCard({ cuenta }: CuentaCardProps) {
           <h2 className="font-semibold text-slate-200 text-base leading-tight truncate group-hover:text-white transition-colors">
             {cuenta.descripcion}
           </h2>
-          <span className="font-mono text-xs text-slate-500 tracking-widest uppercase">
+          <span className="text-xs text-slate-500">
             {CATEGORIA_LABELS[cuenta.categoria] ?? cuenta.categoria}
           </span>
         </div>
 
         {/* Badge de estado */}
         <span
-          className={`shrink-0 font-mono text-xs font-bold px-2 py-1 rounded-sm border
-                      tracking-widest uppercase ${led.badgeBg} ${led.badgeText} ${led.badgeBorder}`}
+          className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-md border ${led.badgeBg} ${led.badgeText} ${led.badgeBorder}`}
         >
           {badgeLabel}
         </span>
@@ -166,13 +163,13 @@ export function CuentaCard({ cuenta }: CuentaCardProps) {
       {(estadoFinanciero.tipo === "SUSPENDED" || tieneAlerta || estadoFinanciero.tipo === "GRACE_PERIOD") && (
         <div className="px-4 py-3 flex flex-wrap gap-1.5">
           {estadoFinanciero.tipo === "SUSPENDED" && (
-            <span className="flex items-center gap-1 text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-sm font-mono uppercase tracking-wider">
-              ▲ Pagar para reactivar
+            <span className="flex items-center gap-1 rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-400">
+              Reactivar servicio
             </span>
           )}
           {tieneAlerta && (
-            <span className="flex items-center gap-1 text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-sm font-mono uppercase tracking-wider">
-              ● Mantenimiento pendiente
+            <span className="flex items-center gap-1 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-400">
+              Mantenimiento pendiente
             </span>
           )}
         </div>

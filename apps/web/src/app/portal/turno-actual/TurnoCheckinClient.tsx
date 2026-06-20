@@ -47,7 +47,7 @@ export function TurnoCheckinClient({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-industrial-700 bg-industrial-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.4)] p-5 space-y-3">
+      <div className="portal-panel space-y-3 p-5">
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Turno asignado</p>
         <p className="text-lg font-bold text-white">{franja}</p>
 
@@ -75,7 +75,7 @@ export function TurnoCheckinClient({
         <button
           onClick={handleCheckin}
           disabled={pending}
-          className="w-full py-4 rounded-sm bg-tactical-500 hover:bg-tactical-400 border border-tactical-600 border-b-[4px] border-b-tactical-600 active:border-b active:translate-y-[3px] text-slate-900 font-bold uppercase tracking-widest text-sm disabled:opacity-50 transition-all duration-150 ease-mech-press"
+          className="portal-action portal-action-primary w-full py-4 disabled:opacity-50"
         >
           Iniciar turno
         </button>
@@ -85,7 +85,7 @@ export function TurnoCheckinClient({
         <button
           onClick={handleCheckout}
           disabled={pending}
-          className="w-full py-4 rounded-sm bg-emerald-600 hover:bg-emerald-500 border border-emerald-700 border-b-[4px] border-b-emerald-900 active:border-b active:translate-y-[3px] text-white font-bold uppercase tracking-widest text-sm disabled:opacity-50 transition-all duration-150 ease-mech-press"
+          className="portal-action w-full border-emerald-700 bg-emerald-600 py-4 text-white hover:border-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
         >
           Cerrar turno
         </button>

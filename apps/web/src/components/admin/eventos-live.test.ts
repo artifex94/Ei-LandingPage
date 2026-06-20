@@ -1,10 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { filtrarEventos, FILTROS_INICIALES, horaConDia } from "./eventos-live";
+import {
+  filtrarEventos,
+  FILTROS_INICIALES,
+  horaConDia,
+  eventosAgrupadosCuenta,
+  COLUMNAS_MONITOREO,
+  vidaUtilEvento,
+  VENTANA_VIDA_UTIL_MS,
+} from "./eventos-live";
 import type { EventoLive } from "@/app/api/admin/eventos-live/route";
 
 function ev(over: Partial<EventoLive>): EventoLive {
   return {
     id: "1",
+    iid_cuenta: 0,
     softguard_ref: "ESI-0175",
     titular: "CLIENTE DEMO SRL",
     codigo: "COF",
@@ -59,6 +68,25 @@ describe("filtrarEventos", () => {
   });
 });
 
+describe("COLUMNAS_MONITOREO (board)", () => {
+  it("define las cuatro columnas en orden Todos · P1 · P2 · Resto", () => {
+    expect(COLUMNAS_MONITOREO.map((c) => c.key)).toEqual(["todos", "p1", "p2", "resto"]);
+  });
+
+  it("cada columna parte el feed por su prioridad (sin solaparse, salvo Todos)", () => {
+    const porColumna = Object.fromEntries(
+      COLUMNAS_MONITOREO.map((c) => [
+        c.key,
+        filtrarEventos(EVENTOS, { q: "", prioridad: c.prioridad, soloPendientes: false }).map((e) => e.id),
+      ]),
+    );
+    expect(porColumna.todos).toEqual(["a", "b", "c", "d"]);
+    expect(porColumna.p1).toEqual(["a"]);
+    expect(porColumna.p2).toEqual(["b"]);
+    expect(porColumna.resto).toEqual(["c", "d"]);
+  });
+});
+
 describe("horaConDia", () => {
   it("para un evento de hoy muestra solo la hora", () => {
     const hoy = new Date();
@@ -71,5 +99,59 @@ describe("horaConDia", () => {
     ayer.setDate(ayer.getDate() - 1);
     ayer.setHours(9, 15, 0, 0);
     expect(horaConDia(ayer.toISOString())).toMatch(/^\d{2}\/\d{2} 09:15:00$/);
+  });
+});
+
+describe("vidaUtilEvento (barra que se descarga)", () => {
+  const fecha = "2026-06-19T22:00:00.000Z";
+  const fechaMs = Date.parse(fecha);
+
+  it("ventana por prioridad: P1 < P2 < Resto", () => {
+    expect(vidaUtilEvento(fecha, fechaMs, 1).windowMs).toBe(VENTANA_VIDA_UTIL_MS.p1);
+    expect(vidaUtilEvento(fecha, fechaMs, 2).windowMs).toBe(VENTANA_VIDA_UTIL_MS.p2);
+    expect(vidaUtilEvento(fecha, fechaMs, 3).windowMs).toBe(VENTANA_VIDA_UTIL_MS.resto);
+    expect(vidaUtilEvento(fecha, fechaMs, null).windowMs).toBe(VENTANA_VIDA_UTIL_MS.resto);
+  });
+
+  it("elapsedMs = refMs - fecha", () => {
+    expect(vidaUtilEvento(fecha, fechaMs + 3 * 60_000, 1).elapsedMs).toBe(3 * 60_000);
+  });
+
+  it("clampa a 0 si la fecha es futura (clock skew)", () => {
+    expect(vidaUtilEvento(fecha, fechaMs - 60_000, 1).elapsedMs).toBe(0);
+  });
+
+  it("una antigüedad mayor que la ventana sigue devolviendo la ventana (el vaciado lo hace el CSS)", () => {
+    const { windowMs, elapsedMs } = vidaUtilEvento(fecha, fechaMs + 99 * 60_000, 1);
+    expect(windowMs).toBe(VENTANA_VIDA_UTIL_MS.p1);
+    expect(elapsedMs).toBe(99 * 60_000);
+  });
+
+  it("fecha inválida → elapsedMs 0 (no rompe)", () => {
+    expect(vidaUtilEvento("no-es-fecha", fechaMs, 1).elapsedMs).toBe(0);
+  });
+});
+
+describe("eventosAgrupadosCuenta", () => {
+  const base = ev({ id: "base", softguard_ref: "ESI-0175", fecha: "2026-06-19T22:00:00.000Z" });
+  const lista: EventoLive[] = [
+    base,
+    ev({ id: "cerca", softguard_ref: "ESI-0175", fecha: "2026-06-19T22:05:00.000Z" }), // +5min, misma cuenta
+    ev({ id: "lejos", softguard_ref: "ESI-0175", fecha: "2026-06-19T22:30:00.000Z" }), // +30min, fuera de ventana
+    ev({ id: "otra", softguard_ref: "ESI-0042", fecha: "2026-06-19T22:03:00.000Z" }), // otra cuenta
+  ];
+
+  it("agrupa la misma cuenta dentro de la ventana, incluye el base, ordenado por fecha", () => {
+    expect(eventosAgrupadosCuenta(lista, base).map((e) => e.id)).toEqual(["base", "cerca"]);
+  });
+
+  it("excluye otra cuenta y los disparados fuera de la ventana", () => {
+    const ids = eventosAgrupadosCuenta(lista, base).map((e) => e.id);
+    expect(ids).not.toContain("otra");
+    expect(ids).not.toContain("lejos");
+  });
+
+  it("un solo evento → grupo de uno", () => {
+    expect(eventosAgrupadosCuenta([base], base).map((e) => e.id)).toEqual(["base"]);
   });
 });

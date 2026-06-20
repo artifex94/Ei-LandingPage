@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Wrench } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
@@ -85,11 +86,31 @@ export default async function SoportePage() {
 
       {/* ── Encabezado ─────────────────────────────────────────────────────── */}
       <PortalPageHeader
-        title="Soporte"
+        eyebrow="Mi Central"
+        title="Asistencia"
         titleId="soporte-heading"
-        description="Tus solicitudes de asistencia y visitas técnicas."
+        description="Pedí ayuda y seguí cada visita técnica."
         action={<SolicitarOTButton cuentas={cuentas} perfil_id={userId} />}
       />
+
+      <aside className="portal-panel grid grid-cols-1 min-h-[150px] overflow-hidden sm:grid-cols-[1fr_240px]" aria-label="Atención local">
+        <div className="flex flex-col justify-center p-5 sm:p-6">
+          <p className="text-base font-semibold text-white">Atención local, seguimiento claro.</p>
+          <p className="mt-1 max-w-md text-sm leading-6 text-slate-400">
+            Si ya pediste asistencia, su avance aparece acá.
+          </p>
+        </div>
+        <div className="relative min-h-[150px] border-t border-industrial-700/60 sm:border-l sm:border-t-0">
+          <Image
+            src="/images/monitoreo-local.webp"
+            alt="Operadora de la central brindando asistencia"
+            fill
+            sizes="(max-width: 640px) 100vw, 240px"
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-industrial-900/25 to-transparent" aria-hidden="true" />
+        </div>
+      </aside>
 
       {/* ── Sin actividad ──────────────────────────────────────────────────── */}
       {!hayActividad && ots.length === 0 && solicitudesRaw.length === 0 && (
@@ -161,10 +182,10 @@ function OTCard({ ot, destacada }: { ot: OT; destacada: boolean }) {
 
   return (
     <div
-      className={`rounded-md border px-4 py-3 transition-colors ${
+      className={`rounded-xl border px-4 py-3 transition-colors ${
         destacada
           ? "bg-sky-950/40 border-sky-800/60"
-          : "bg-industrial-800/60 border-industrial-700 hover:bg-industrial-800"
+          : "bg-industrial-800/45 border-industrial-700/70 hover:bg-industrial-800/75"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -216,7 +237,7 @@ function SolicitudCard({ s }: { s: Solicitud }) {
   const prioColor = SOL_PRIORIDAD[s.prioridad] ?? "text-slate-400";
 
   return (
-    <div className="rounded-md border border-industrial-700 bg-industrial-800/60 hover:bg-industrial-800 transition-colors px-4 py-3">
+    <div className="portal-row px-4 py-3">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <Link

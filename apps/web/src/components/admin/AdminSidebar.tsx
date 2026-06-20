@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BrandLockup } from "@/components/layout/BrandLockup";
 import {
   Menu, X, ChevronDown,
   LayoutDashboard,
@@ -10,14 +11,14 @@ import {
   ClipboardList, CalendarDays, Truck, CalendarCheck,
   Receipt, Bell, Briefcase,
   FileUp, Database, ScrollText, Radio, Settings, UmbrellaOff,
-  UserPlus, Activity,
+  UserPlus, Activity, MessageCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/components/ui/LogoutButton";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
-type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes" | "altasUsuarioPendientes" | "eventosSinProcesar";
+type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes" | "altasUsuarioPendientes" | "eventosSinProcesar" | "morososSinContactar";
 
 interface NavItem {
   href: string;
@@ -70,6 +71,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/clientes",    label: "Clientes",    icon: Users },
       { href: "/admin/cuentas",     label: "Cuentas",     icon: ShieldCheck },
       { href: "/admin/morosidad",   label: "Morosidad",   icon: AlertTriangle, badge: "cuentasEnMora" },
+      { href: "/admin/mensajeria",  label: "Mensajería",  icon: MessageCircle, badge: "morososSinContactar" },
       { href: "/admin/pagos",       label: "Pagos",       icon: CreditCard },
       { href: "/admin/facturacion", label: "Facturación", icon: Receipt },
     ],
@@ -97,81 +99,6 @@ const NAV_SECTIONS: NavSection[] = [
 
 // ── Estilos por sección ───────────────────────────────────────────────────────
 
-const SECTION_STYLE = {
-  general: {
-    labelColor:      "text-slate-500",
-    dot:             "bg-slate-500",
-    activeBg:        "bg-slate-700/60",
-    activeText:      "text-white",
-    activeBorder:    "border-l-2 border-slate-400",
-    activeIconColor: "text-slate-300",
-    inactiveIcon:    "text-slate-500",
-    hoverBg:         "hover:bg-slate-800",
-    chevron:         "text-slate-600",
-    toggleHover:     "hover:bg-slate-800/40",
-  },
-  pendientes: {
-    labelColor:      "text-rose-400",
-    dot:             "bg-rose-500",
-    activeBg:        "bg-rose-500/10",
-    activeText:      "text-rose-100",
-    activeBorder:    "border-l-2 border-rose-500",
-    activeIconColor: "text-rose-400",
-    inactiveIcon:    "text-slate-500",
-    hoverBg:         "hover:bg-rose-500/5",
-    chevron:         "text-rose-700",
-    toggleHover:     "hover:bg-rose-500/5",
-  },
-  operacion: {
-    labelColor:      "text-indigo-400",
-    dot:             "bg-indigo-500",
-    activeBg:        "bg-indigo-500/10",
-    activeText:      "text-indigo-100",
-    activeBorder:    "border-l-2 border-indigo-500",
-    activeIconColor: "text-indigo-400",
-    inactiveIcon:    "text-slate-500",
-    hoverBg:         "hover:bg-indigo-500/5",
-    chevron:         "text-indigo-600",
-    toggleHover:     "hover:bg-indigo-500/5",
-  },
-  clientes: {
-    labelColor:      "text-blue-400",
-    dot:             "bg-blue-500",
-    activeBg:        "bg-blue-500/10",
-    activeText:      "text-blue-100",
-    activeBorder:    "border-l-2 border-blue-500",
-    activeIconColor: "text-blue-400",
-    inactiveIcon:    "text-slate-500",
-    hoverBg:         "hover:bg-blue-500/5",
-    chevron:         "text-blue-600",
-    toggleHover:     "hover:bg-blue-500/5",
-  },
-  equipo: {
-    labelColor:      "text-amber-400",
-    dot:             "bg-amber-500",
-    activeBg:        "bg-amber-500/10",
-    activeText:      "text-amber-100",
-    activeBorder:    "border-l-2 border-amber-500",
-    activeIconColor: "text-amber-400",
-    inactiveIcon:    "text-slate-500",
-    hoverBg:         "hover:bg-amber-500/5",
-    chevron:         "text-amber-600",
-    toggleHover:     "hover:bg-amber-500/5",
-  },
-  sistema: {
-    labelColor:      "text-slate-500",
-    dot:             "bg-slate-600",
-    activeBg:        "bg-slate-700/40",
-    activeText:      "text-slate-300",
-    activeBorder:    "border-l-2 border-slate-600",
-    activeIconColor: "text-slate-400",
-    inactiveIcon:    "text-slate-600",
-    hoverBg:         "hover:bg-slate-800/60",
-    chevron:         "text-slate-700",
-    toggleHover:     "hover:bg-slate-800/40",
-  },
-} satisfies Record<NavSection["id"], object>;
-
 const BADGE_COLOR: Record<BadgeKey, string> = {
   pendingSolicitudes:      "bg-orange-500",
   pendingMantenimiento:    "bg-sky-500",
@@ -179,6 +106,7 @@ const BADGE_COLOR: Record<BadgeKey, string> = {
   otsPendientes:           "bg-amber-500",
   altasUsuarioPendientes:  "bg-orange-500",
   eventosSinProcesar:      "bg-red-600",
+  morososSinContactar:     "bg-green-500",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -200,18 +128,15 @@ function sectionHasBadge(section: NavSection, badges: Record<BadgeKey, number>):
 
 function NavLink({
   item,
-  sectionId,
   badges,
   onClick,
 }: {
   item: NavItem;
-  sectionId: NavSection["id"];
   badges: Record<BadgeKey, number>;
   onClick?: () => void;
 }) {
   const pathname = usePathname();
   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-  const s = SECTION_STYLE[sectionId];
   const Icon = item.icon;
   const badgeCount = item.badge ? badges[item.badge] : 0;
 
@@ -221,15 +146,15 @@ function NavLink({
       onClick={onClick}
       className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm min-h-[44px] lg:min-h-[40px] transition-colors duration-150 ${
         isActive
-          ? `${s.activeBg} ${s.activeText} ${s.activeBorder}`
-          : `text-slate-400 ${s.hoverBg} hover:text-slate-200`
+          ? "border-l-2 border-tactical-500 bg-tactical-500/10 text-tactical-400"
+          : "border-l-2 border-transparent text-slate-400 hover:bg-slate-800/55 hover:text-slate-200"
       }`}
     >
       <Icon
-        className={`w-4 h-4 flex-shrink-0 ${isActive ? s.activeIconColor : s.inactiveIcon}`}
+        className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-tactical-400" : "text-slate-500"}`}
         strokeWidth={isActive ? 2.2 : 1.8}
       />
-      <span className="flex-1 truncate leading-tight">{item.label}</span>
+      <span className="min-w-0 flex-1 truncate leading-tight">{item.label}</span>
       {badgeCount > 0 && (
         <span className={`${BADGE_COLOR[item.badge!]} text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none flex-shrink-0`}>
           {badgeCount > 99 ? "99+" : badgeCount}
@@ -254,7 +179,6 @@ function CollapsibleSection({
   onToggle: () => void;
   onLinkClick?: () => void;
 }) {
-  const s = SECTION_STYLE[section.id];
   const hasBadge = sectionHasBadge(section, badges);
 
   return (
@@ -264,10 +188,10 @@ function CollapsibleSection({
         onClick={onToggle}
         aria-expanded={isOpen}
         aria-controls={`nav-section-${section.id}`}
-        className={`w-full flex items-center gap-2 px-3 pt-3.5 pb-1.5 rounded-md transition-colors duration-150 ${s.toggleHover}`}
+        className="w-full flex items-center gap-2 px-3 pt-3.5 pb-1.5 rounded-md text-slate-500 transition-colors hover:text-slate-300"
       >
-        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
-        <span className={`text-xs font-bold uppercase tracking-widest flex-1 text-left ${s.labelColor}`}>
+        <span className="w-1 h-1 rounded-full flex-shrink-0 bg-slate-600" />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] flex-1 text-left">
           {section.label}
         </span>
         {/* Punto de alerta cuando la sección está cerrada y tiene badges */}
@@ -275,7 +199,7 @@ function CollapsibleSection({
           <span className="w-1.5 h-1.5 bg-amber-500 rounded-full flex-shrink-0" />
         )}
         <ChevronDown
-          className={`w-3 h-3 flex-shrink-0 ${s.chevron} transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          className={`w-3 h-3 flex-shrink-0 text-slate-600 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
@@ -289,7 +213,6 @@ function CollapsibleSection({
             <li key={item.href}>
               <NavLink
                 item={item}
-                sectionId={section.id}
                 badges={badges}
                 onClick={onLinkClick}
               />
@@ -325,8 +248,7 @@ function NavContent({
                 <li key={item.href}>
                   <NavLink
                     item={item}
-                    sectionId={section.id}
-                    badges={badges}
+                        badges={badges}
                     onClick={onLinkClick}
                   />
                 </li>
@@ -352,23 +274,8 @@ function NavContent({
 
 function BrandBlock({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="/admin/dashboard" className="flex items-center gap-2.5 group">
-      <div
-        aria-hidden="true"
-        className={`${compact ? "h-7 w-7" : "h-8 w-8"} bg-tactical-500 rounded-sm flex items-center justify-center text-white font-display font-bold text-xs border border-tactical-600 border-b-[2px] shadow-[0_0_8px_rgba(241,119,32,0.2)] group-hover:shadow-[0_0_14px_rgba(241,119,32,0.35)] transition-shadow`}
-      >
-        EI
-      </div>
-      {compact ? (
-        <span className="text-sm font-display font-semibold text-white">Escobar · Admin</span>
-      ) : (
-        <div>
-          <span className="text-sm font-display font-semibold text-white block leading-tight">
-            Escobar Instalaciones
-          </span>
-          <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">Admin</span>
-        </div>
-      )}
+    <Link href="/admin/dashboard">
+      <BrandLockup context="Administración" compact={compact} />
     </Link>
   );
 }
@@ -405,6 +312,7 @@ export function AdminSidebar({
   otsPendientes = 0,
   altasUsuarioPendientes = 0,
   eventosSinProcesar = 0,
+  morososSinContactar = 0,
 }: {
   nombreAdmin: string;
   pendingSolicitudes?: number;
@@ -413,6 +321,7 @@ export function AdminSidebar({
   otsPendientes?: number;
   altasUsuarioPendientes?: number;
   eventosSinProcesar?: number;
+  morososSinContactar?: number;
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -459,9 +368,10 @@ export function AdminSidebar({
     otsPendientes,
     altasUsuarioPendientes,
     eventosSinProcesar,
+    morososSinContactar,
   };
 
-  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes + altasUsuarioPendientes + eventosSinProcesar;
+  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes + altasUsuarioPendientes + eventosSinProcesar + morososSinContactar;
 
   return (
     <>

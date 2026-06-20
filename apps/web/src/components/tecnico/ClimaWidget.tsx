@@ -36,7 +36,7 @@ export function ClimaWidget({ dias, hoyIso }: ClimaWidgetProps) {
       <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
         Clima · Victoria, ER
       </p>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
         {dias.map((dia) => {
           const fecha = new Date(dia.fecha + "T12:00:00");
           const esHoy = dia.fecha === hoyStr;
@@ -57,7 +57,7 @@ export function ClimaWidget({ dias, hoyIso }: ClimaWidgetProps) {
               >
                 {diaNombre}
               </span>
-              <span className="text-xl leading-none" title={label}>
+              <span className="text-base leading-none sm:text-xl" title={label}>
                 {emoji}
               </span>
               <span className="text-xs font-bold text-white">

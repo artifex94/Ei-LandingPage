@@ -125,7 +125,8 @@ export const FILA_HISTORICO_MM = {
   cue_ncuenta: "0175      ",
   cue_cnombre: "CLIENTE DEMO SRL          ",
   rec_calarma: "A11",
-  rec_czona: "",
+  rec_czona: "002",
+  zon_cdescripcion: "Cocina", // zona nombrada en la central → gana sobre el número
   rec_iPrioridad: "2",
   rec_isoFechaHora: "2026-06-10T18:21:33",
   rec_tfechahora: "6/10/2026 6:21:33 PM",
@@ -177,6 +178,17 @@ export const FILA_CUENTA_DEALER = {
   sta_cultimaalarma: "V21",
   sta_dfechautimaalarma: "1/1/1900 12:00:00 AM",
   cod_cdescripcion: "Falla 220v",
+};
+
+/** Teléfono/contacto de cuenta — shape REAL de /Rest/Search/Telefonos (verificado). */
+export const FILA_TELEFONO = {
+  tel_iidcuenta: "16",
+  tel_cnombre: "Carlos Adrián Muñoz",
+  tel_ctelefono: "414325",
+  tel_cpredigito: "3436", // el número viene partido: predigito + telefono
+  tel_cobservacion: "Encargado",
+  tel_norden: "7",
+  lis_cdescripcion: "Alarma General",
 };
 
 /**

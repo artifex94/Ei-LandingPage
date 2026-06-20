@@ -46,6 +46,7 @@ export default async function TurnoActualPage() {
   return (
     <div className="space-y-7">
       <PortalPageHeader
+        eyebrow="Mi Central"
         title="Turno actual"
         description={new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
       />

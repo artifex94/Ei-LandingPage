@@ -69,8 +69,8 @@ const WhatsAppForm: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="grid md:grid-cols-2 gap-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
         {/* Campo: Nombre */}
         <div className="space-y-2">
           <label htmlFor="nombre" className="text-sm font-bold text-slate-200">Nombre y apellido</label>
@@ -121,7 +121,7 @@ const WhatsAppForm: React.FC = () => {
         <Textarea
           id="mensaje"
           placeholder="Cuéntanos más sobre lo que necesitas..."
-          className="h-32"
+          className="h-24"
           error={errors.mensaje?.message}
           {...register('mensaje')}
         />

@@ -22,6 +22,7 @@ import {
   useEventosLive,
   hora,
   prioridadStyle,
+  vidaUtilEvento,
   type EstadoCentral,
 } from "./eventos-live";
 
@@ -78,7 +79,7 @@ export function MultiMonitorLive({ limit = 15 }: { limit?: number }) {
       {data && data.eventos.length > 0 && (
         <ul className="divide-y divide-slate-800/60">
           {data.eventos.map((e) => (
-            <FilaEvento key={e.id} evento={e} flash={flashIds.has(e.id)} />
+            <FilaEvento key={e.id} evento={e} flash={flashIds.has(e.id)} refMs={Date.parse(data.at)} />
           ))}
         </ul>
       )}
@@ -116,6 +117,27 @@ export function EstadoConexion({ estado }: { estado: EstadoCentral }) {
   return null;
 }
 
+/**
+ * Barra fina de "vida útil" al fondo de la fila: se descarga (scaleX 1→0) a lo largo de la
+ * ventana del evento según su antigüedad. La drena el CSS (`barra-vida` + animation-delay
+ * negativo); `refMs` viene del `at` del feed para que el render sea puro. La fila debe ser `relative`.
+ */
+export function BarraVidaUtil({ evento, refMs }: { evento: EventoLive; refMs: number }) {
+  const { windowMs, elapsedMs } = vidaUtilEvento(evento.fecha, refMs, evento.prioridad);
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] overflow-hidden">
+      <span
+        className="block h-full barra-vida"
+        style={{
+          animationDuration: `${windowMs}ms`,
+          animationDelay: `-${elapsedMs}ms`,
+          backgroundColor: prioridadStyle(evento.prioridad).borde,
+        }}
+      />
+    </span>
+  );
+}
+
 export function EstadoEvento({ procesado }: { procesado: boolean }) {
   if (procesado) {
     return (
@@ -132,11 +154,11 @@ export function EstadoEvento({ procesado }: { procesado: boolean }) {
   );
 }
 
-function FilaEvento({ evento, flash }: { evento: EventoLive; flash: boolean }) {
+function FilaEvento({ evento, flash, refMs }: { evento: EventoLive; flash: boolean; refMs: number }) {
   const p = prioridadStyle(evento.prioridad);
   return (
     <li
-      className={`flex items-baseline gap-3 px-2 py-2 transition-colors duration-1000 ${
+      className={`relative flex items-baseline gap-3 px-2 py-2 transition-colors duration-1000 ${
         flash ? "bg-orange-500/10" : "bg-transparent"
       }`}
       style={{ borderLeft: `2px solid ${p.borde}` }}
@@ -162,6 +184,7 @@ function FilaEvento({ evento, flash }: { evento: EventoLive; flash: boolean }) {
         </p>
       </div>
       <EstadoEvento procesado={evento.procesado} />
+      <BarraVidaUtil evento={evento} refMs={refMs} />
     </li>
   );
 }

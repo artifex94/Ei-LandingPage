@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { invalidateWebApiSession } from "./core";
-import { fetchCuentasDealer, fetchCuentasCount } from "./crm";
+import { fetchCuentasDealer, fetchCuentasCount, fetchContactosCuenta } from "./crm";
 import {
   restList,
   mockSoftguardFetch,
   stubSoftguardEnv,
   FILA_CUENTA_DEALER,
+  FILA_TELEFONO,
 } from "./fixtures";
 
 describe("adaptador crm", () => {
@@ -74,5 +75,39 @@ describe("adaptador crm", () => {
     });
 
     expect(await fetchCuentasCount()).toBe(203);
+  });
+
+  it("fetchContactosCuenta mapea los teléfonos de la cuenta y ordena por orden", async () => {
+    mockSoftguardFetch({
+      "/Rest/Search/Telefonos": () =>
+        restList([
+          { tel_cnombre: "Ana López", tel_cpredigito: "343", tel_ctelefono: "4112233", tel_cobservacion: "Vecino", tel_norden: "2" },
+          FILA_TELEFONO, // Carlos, orden 7
+        ]),
+    });
+
+    const contactos = await fetchContactosCuenta(16);
+
+    expect(contactos).toHaveLength(2);
+    // ordenado por `orden` ascendente: Ana (2) antes que Carlos (7)
+    expect(contactos.map((c) => c.nombre)).toEqual(["Ana López", "Carlos Adrián Muñoz"]);
+    expect(contactos[0].telefono).toBe("3434112233"); // predigito + telefono
+    // el nombre sale del CONTACTO (tel_cnombre), el número de predigito+telefono normalizado
+    expect(contactos[1].telefono).toBe("3436414325");
+    expect(contactos[1].rol).toBe("Encargado");
+    expect(contactos[1].orden).toBe(7);
+  });
+
+  it("teléfono ilegible queda en null y el rol cae a la lista", async () => {
+    mockSoftguardFetch({
+      "/Rest/Search/Telefonos": () =>
+        restList([{ tel_cnombre: "Sin Tel", tel_ctelefono: "n/d", lis_cdescripcion: "Emergencia" }]),
+    });
+
+    const [c] = await fetchContactosCuenta(1);
+
+    expect(c.telefono).toBeNull();
+    expect(c.rol).toBe("Emergencia"); // sin observación → cae a la lista
+    expect(c.orden).toBeNull();
   });
 });

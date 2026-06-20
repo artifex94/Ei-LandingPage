@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 /**
  * Tarjeta "Estado de tu sistema" del dashboard del cliente (Fase 4 — capa
@@ -54,33 +55,46 @@ export function EstadoSistemaCard({ cuentas }: { cuentas: CuentaEstadoSistema[] 
   return (
     <section
       aria-labelledby="estado-sistema-heading"
-      className={`mb-6 rounded-lg border ${led.borde} bg-industrial-800/80 p-5 shadow-[0_8px_24px_rgba(0,0,0,0.4)]`}
+      className={`relative overflow-hidden rounded-xl border ${led.borde} bg-slate-950/65 p-5 shadow-[0_14px_36px_rgba(2,6,23,.18)] sm:p-6`}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
         <span
           className={`inline-block h-1.5 w-1.5 rounded-full ${led.color} ${led.anim} flex-shrink-0`}
           aria-hidden="true"
         />
         <h2
           id="estado-sistema-heading"
-          className="text-xs text-slate-400 font-mono tracking-widest uppercase"
+          className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400"
         >
-          Estado de tu sistema
+          Estado actual
         </h2>
+        </div>
+        {todasOk ? (
+          <CheckCircle2 className="h-7 w-7 text-emerald-300" aria-hidden="true" />
+        ) : (
+          <AlertTriangle className={`h-7 w-7 ${hayCorteAc ? "text-red-300" : "text-amber-300"}`} aria-hidden="true" />
+        )}
       </div>
 
       {todasOk ? (
         <div>
-          <p className="text-emerald-400 font-semibold text-sm">
-            ✓ {conDatos.length === 1
-              ? "Tu sistema está reportando con normalidad a la central."
-              : `Tus ${conDatos.length} sistemas están reportando con normalidad a la central.`}
+          <p className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+            Protegido
+          </p>
+          <p className="mt-1.5 text-sm text-emerald-300">
+            {conDatos.length === 1
+              ? "Tu sistema reporta con normalidad a la central."
+              : `Tus ${conDatos.length} sistemas reportan con normalidad a la central.`}
           </p>
           {ultimoTest && (
-            <p className="text-xs text-slate-500 mt-1.5">
+            <p className="mt-3 text-xs text-slate-500">
               Último test recibido: {fechaCorta(ultimoTest)}
             </p>
           )}
+          <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
+            <div className="h-full w-full rounded-full bg-gradient-to-r from-emerald-400 to-tactical-400" />
+          </div>
         </div>
       ) : (
         <ul className="space-y-4">
@@ -122,11 +136,7 @@ export function EstadoSistemaCard({ cuentas }: { cuentas: CuentaEstadoSistema[] 
                 ) : (
                   <Link
                     href="/portal/solicitud"
-                    className="inline-flex items-center gap-2 bg-tactical-500 hover:bg-tactical-400
-                               text-slate-900 px-4 py-2 rounded-sm font-bold uppercase text-xs tracking-widest
-                               border border-tactical-600 border-b-[3px] border-b-tactical-600
-                               transition-all duration-150 ease-mech-press
-                               active:border-b-[1px] active:translate-y-[2px] min-h-[40px]"
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-lg border border-tactical-600/70 bg-tactical-500 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-tactical-400"
                   >
                     Solicitar visita técnica
                   </Link>

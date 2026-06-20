@@ -1,14 +1,15 @@
 import React from "react";
-import { Mail, MapPin, Phone, Shield } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { siteConfig } from "@/config/site";
+import { BrandLockup } from "./BrandLockup";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-slate-950 py-12 text-slate-400">
+    <footer className="border-t border-white/10 bg-slate-950 py-9 text-slate-400">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-[1.4fr_.8fr_.8fr]">
           <div>
-            <div className="mb-4 flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500 text-slate-950"><Shield className="h-5 w-5" /></span><span className="text-lg font-black text-white">ESCOBAR INSTALACIONES</span></div>
+            <BrandLockup context="Victoria · Entre Ríos" className="mb-4" />
             <p className="max-w-md text-sm leading-7">Soluciones de seguridad electrónica para familias y empresas: instalación profesional, monitoreo y soporte local.</p>
           </div>
           <div>

@@ -3,197 +3,280 @@
 /**
  * Vista extensa de monitoreo para operadores (/admin/monitoreo).
  *
- * El mismo feed en vivo del dashboard (`useEventosLive`, poll 10 s) a pantalla
- * completa con 50 eventos, filtros client-side (prioridad, solo pendientes,
- * búsqueda por cuenta/titular) y el diferenciador frente a la suite: al
- * seleccionar un evento, un panel lateral cruza la cuenta con los datos del
- * PORTAL (cliente, teléfono, estado del panel, OTs y solicitudes abiertas).
+ * Board de cuatro columnas en vivo sobre el mismo feed (`useEventosLive`, poll 10 s):
+ * Todos · P1 crítica · P2 · Resto. En desktop (xl) se ven las cuatro a la vez (P1 nunca
+ * queda oculta); en mobile colapsan a pestañas (arrancan en P1). El buscador y "Solo
+ * pendientes" filtran las cuatro a la vez.
  *
- * SOLO LECTURA contra SoftGuard: procesar eventos sigue siendo manual en la
- * suite. Acá se mira y se decide; la acción vive en el portal (OTs, cuentas).
+ * Al tocar un evento (de cualquier columna) se abre un drawer con el contexto del cliente
+ * en el PORTAL (teléfono, estado del panel, OTs y solicitudes abiertas) y la acción de
+ * notificar por WhatsApp — disponible para cualquier criticidad, con el texto acorde.
+ *
+ * SOLO LECTURA contra SoftGuard: procesar eventos sigue siendo manual en la suite.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Phone, RefreshCw, Search, X } from "lucide-react";
+import { ExternalLink, MessageCircle, Phone, RefreshCw, Search, X } from "lucide-react";
 import type { EventoLive } from "@/app/api/admin/eventos-live/route";
 import type { CuentaContextoResponse } from "@/app/api/admin/cuenta-contexto/route";
-import { EstadoConexion, EstadoEvento } from "./MultiMonitorLive";
+import { BarraVidaUtil, EstadoConexion, EstadoEvento } from "./MultiMonitorLive";
+import { NotificarWhatsAppModal } from "./NotificarWhatsAppModal";
 import {
   useEventosLive,
   filtrarEventos,
+  eventosAgrupadosCuenta,
   hora,
   horaConDia,
   prioridadStyle,
-  FILTROS_INICIALES,
-  type FiltrosEventos,
+  COLUMNAS_MONITOREO,
+  type ColumnaKey,
+  type ColumnaMonitoreo,
+  type EstadoCentral,
 } from "./eventos-live";
 
-const LIMIT_OPERADORES = 50;
+const LIMIT_OPERADORES = 80;
 
 export function MonitorOperadores() {
   const { data, estado, reconectando, flashIds, poll } = useEventosLive(LIMIT_OPERADORES);
-  const [filtros, setFiltros] = useState<FiltrosEventos>(FILTROS_INICIALES);
+  const [q, setQ] = useState("");
+  const [soloPendientes, setSoloPendientes] = useState(false);
+  const [tabActiva, setTabActiva] = useState<ColumnaKey>("p1");
   const [seleccionado, setSeleccionado] = useState<EventoLive | null>(null);
 
-  const eventos = useMemo(
-    () => filtrarEventos(data?.eventos ?? [], filtros),
-    [data, filtros],
-  );
+  const base = useMemo(() => data?.eventos ?? [], [data]);
+  // Referencia de tiempo para la barra de vida útil: el `at` del feed (render puro, sin Date.now()).
+  const refMs = data ? Date.parse(data.at) : 0;
 
-  const hayFiltros =
-    filtros.q.trim() !== "" || filtros.prioridad !== "todas" || filtros.soloPendientes;
+  // Una request, cuatro listas: cada columna es el mismo feed con su filtro de prioridad,
+  // compartiendo `q` y `soloPendientes`.
+  const porColumna = useMemo(() => {
+    const out = {} as Record<ColumnaKey, EventoLive[]>;
+    for (const col of COLUMNAS_MONITOREO) {
+      out[col.key] = filtrarEventos(base, { q, prioridad: col.prioridad, soloPendientes });
+    }
+    return out;
+  }, [base, q, soloPendientes]);
+
+  // En móvil el contexto aparece como drawer superpuesto; Escape lo cierra.
+  useEffect(() => {
+    if (!seleccionado) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSeleccionado(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [seleccionado]);
+
+  const seleccionar = (e: EventoLive) =>
+    setSeleccionado((prev) => (prev?.id === e.id ? null : e));
 
   return (
-    <div className="grid gap-4 items-start xl:grid-cols-[minmax(0,1fr)_360px]">
-      {/* ── Columna principal: estado + filtros + lista ── */}
-      <section className="rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-800/60 to-slate-900/40">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-slate-700/50">
-          <div className="flex items-center gap-3">
-            <EstadoConexion estado={estado} />
-            {data && (
-              <span className="text-[10px] text-slate-600 tabular-nums">
-                actualizado {hora(data.at)}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] text-slate-500 tabular-nums">
-              {eventos.length} de {data?.eventos.length ?? 0} eventos
-            </span>
-            <button
-              type="button"
-              onClick={() => void poll({ relogin: true })}
-              disabled={reconectando}
-              title="Reconectar con la central (login nuevo)"
-              className="p-1.5 -m-1 text-slate-500 hover:text-orange-400 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${reconectando ? "animate-spin" : ""}`} aria-hidden="true" />
-              <span className="sr-only">Reconectar con la central</span>
-            </button>
-          </div>
+    <div className="space-y-3">
+      <Toolbar
+        estado={estado}
+        actualizado={data?.at ?? null}
+        reconectando={reconectando}
+        onReconectar={() => void poll({ relogin: true })}
+        q={q}
+        onQ={setQ}
+        soloPendientes={soloPendientes}
+        onSoloPendientes={setSoloPendientes}
+      />
+
+      {estado === "caido" && (
+        <p className="text-[11px] text-red-400/80 px-1">
+          Sin conexión con la central{base.length > 0 ? " — mostrando lo último sincronizado." : "."}{" "}
+          Se reintenta solo; el botón ↻ fuerza un login nuevo.
+        </p>
+      )}
+
+      {estado === "cargando" ? (
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-4" aria-hidden="true">
+          {COLUMNAS_MONITOREO.map((col) => (
+            <div key={col.key} className={`${tabActiva === col.key ? "block" : "hidden"} xl:block`}>
+              <div className="h-64 rounded-xl bg-slate-800/40 animate-pulse" />
+            </div>
+          ))}
         </div>
-
-        <Filtros filtros={filtros} onChange={setFiltros} />
-
-        {estado === "caido" && (
-          <p className="text-[11px] text-red-400/80 px-4 py-2">
-            Sin conexión con la central{data && data.eventos.length > 0 ? " — mostrando lo último sincronizado." : "."}{" "}
-            Se reintenta solo; el botón ↻ fuerza un login nuevo.
-          </p>
-        )}
-
-        {estado === "cargando" && (
-          <div className="space-y-2 p-4" aria-hidden="true">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-10 rounded bg-slate-800/60 animate-pulse" />
+      ) : (
+        <>
+          {/* Pestañas — solo mobile/tablet (< xl). */}
+          <div role="tablist" aria-label="Columnas de eventos" className="flex gap-1 xl:hidden">
+            {COLUMNAS_MONITOREO.map((col) => (
+              <button
+                key={col.key}
+                type="button"
+                role="tab"
+                aria-selected={tabActiva === col.key}
+                onClick={() => setTabActiva(col.key)}
+                className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors min-h-[34px] ${
+                  tabActiva === col.key
+                    ? "bg-orange-500/20 text-orange-300 border border-orange-700/60"
+                    : "text-slate-400 hover:text-white border border-transparent"
+                }`}
+              >
+                {col.label}
+                <span className="ml-1 text-slate-500 tabular-nums">{porColumna[col.key].length}</span>
+              </button>
             ))}
           </div>
-        )}
 
-        {data && eventos.length === 0 && estado !== "cargando" && (
-          <p className="text-sm text-slate-500 px-4 py-8 text-center">
-            {hayFiltros
-              ? "Ningún evento coincide con los filtros."
-              : estado === "vivo"
-                ? "Sin eventos recientes en la central."
-                : "Sin eventos sincronizados."}
-          </p>
-        )}
-
-        {eventos.length > 0 && (
-          <ul className="divide-y divide-slate-800/60" aria-label="Eventos de la central">
-            {eventos.map((e) => (
-              <FilaOperador
-                key={e.id}
-                evento={e}
-                flash={flashIds.has(e.id)}
-                seleccionado={seleccionado?.id === e.id}
-                onSelect={() => setSeleccionado(seleccionado?.id === e.id ? null : e)}
-              />
+          {/* Board — cuatro columnas en xl; una (la pestaña activa) en mobile. */}
+          <div className="grid grid-cols-1 gap-3 items-start xl:grid-cols-4">
+            {COLUMNAS_MONITOREO.map((col) => (
+              <div key={col.key} className={`${tabActiva === col.key ? "block" : "hidden"} xl:block min-w-0`}>
+                <ColumnaEventos
+                  col={col}
+                  eventos={porColumna[col.key]}
+                  flashIds={flashIds}
+                  seleccionadoId={seleccionado?.id ?? null}
+                  onSelect={seleccionar}
+                  estado={estado}
+                  refMs={refMs}
+                />
+              </div>
             ))}
-          </ul>
-        )}
-      </section>
-
-      {/* ── Panel lateral: contexto del portal ── */}
-      <aside className="xl:sticky xl:top-6">
-        {seleccionado ? (
-          <PanelContexto evento={seleccionado} onCerrar={() => setSeleccionado(null)} />
-        ) : (
-          <div className="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-6 text-center">
-            <p className="text-sm text-slate-500">
-              Seleccioná un evento para ver el contexto del cliente en el portal:
-              teléfono, estado del panel, OTs y solicitudes abiertas.
-            </p>
           </div>
-        )}
-      </aside>
+        </>
+      )}
+
+      {/* Drawer de contexto + acción (overlay; no ocupa ancho del board). */}
+      {seleccionado && (
+        <>
+          <div
+            className="fixed inset-0 z-30 bg-black/50"
+            onClick={() => setSeleccionado(null)}
+            aria-hidden="true"
+          />
+          <aside className="fixed inset-x-0 bottom-0 z-40 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-slate-700 bg-industrial-900 p-3 shadow-2xl xl:inset-y-0 xl:left-auto xl:right-0 xl:bottom-auto xl:w-[400px] xl:max-h-none xl:rounded-none xl:rounded-l-2xl xl:border-t-0 xl:border-l xl:p-4">
+            <PanelContexto evento={seleccionado} eventos={base} onCerrar={() => setSeleccionado(null)} />
+          </aside>
+        </>
+      )}
     </div>
   );
 }
 
-// ── Filtros ───────────────────────────────────────────────────────────────────
+// ── Toolbar ───────────────────────────────────────────────────────────────────
 
-const PRIORIDADES: { value: FiltrosEventos["prioridad"]; label: string }[] = [
-  { value: "todas", label: "Todas" },
-  { value: "1", label: "P1 — crítica" },
-  { value: "2", label: "P2" },
-  { value: "otras", label: "Resto" },
-];
-
-function Filtros({
-  filtros,
-  onChange,
+function Toolbar({
+  estado,
+  actualizado,
+  reconectando,
+  onReconectar,
+  q,
+  onQ,
+  soloPendientes,
+  onSoloPendientes,
 }: {
-  filtros: FiltrosEventos;
-  onChange: (f: FiltrosEventos) => void;
+  estado: EstadoCentral;
+  actualizado: string | null;
+  reconectando: boolean;
+  onReconectar: () => void;
+  q: string;
+  onQ: (v: string) => void;
+  soloPendientes: boolean;
+  onSoloPendientes: (v: boolean) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-slate-800/60">
-      <div className="relative flex-1 min-w-[180px] max-w-xs">
-        <Search
-          className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          value={filtros.q}
-          onChange={(e) => onChange({ ...filtros, q: e.target.value })}
-          placeholder="Cuenta o titular…"
-          aria-label="Buscar por cuenta o titular"
-          className="w-full rounded-lg border border-slate-700 bg-slate-900/60 text-white pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
-        />
+    <section className="flex flex-col gap-3 rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-800/60 to-slate-900/40 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="flex items-center gap-3">
+        <EstadoConexion estado={estado} />
+        {actualizado && (
+          <span className="text-[10px] text-slate-600 tabular-nums">actualizado {hora(actualizado)}</span>
+        )}
       </div>
 
-      <div className="flex items-center gap-1" role="group" aria-label="Filtrar por prioridad">
-        {PRIORIDADES.map((p) => (
-          <button
-            key={p.value}
-            type="button"
-            onClick={() => onChange({ ...filtros, prioridad: p.value })}
-            aria-pressed={filtros.prioridad === p.value}
-            className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors min-h-[28px] ${
-              filtros.prioridad === p.value
-                ? "bg-orange-500/20 text-orange-300 border border-orange-700/60"
-                : "text-slate-400 hover:text-white border border-transparent"
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      <div className="flex items-center gap-3 sm:flex-1 sm:justify-end">
+        <div className="relative flex-1 sm:flex-none sm:min-w-[180px] sm:max-w-xs">
+          <Search
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => onQ(e.target.value)}
+            placeholder="Cuenta o titular…"
+            aria-label="Buscar por cuenta o titular"
+            className="w-full rounded-lg border border-slate-700 bg-slate-900/60 text-white pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
 
-      <label className="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={filtros.soloPendientes}
-          onChange={(e) => onChange({ ...filtros, soloPendientes: e.target.checked })}
-          className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-slate-900"
-        />
-        Solo pendientes
-      </label>
-    </div>
+        <label className="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer select-none whitespace-nowrap">
+          <input
+            type="checkbox"
+            checked={soloPendientes}
+            onChange={(e) => onSoloPendientes(e.target.checked)}
+            className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-700 text-orange-500 focus:ring-orange-500 focus:ring-offset-slate-900"
+          />
+          Solo pendientes
+        </label>
+
+        <button
+          type="button"
+          onClick={onReconectar}
+          disabled={reconectando}
+          title="Reconectar con la central (login nuevo)"
+          className="p-1.5 -m-1 text-slate-500 hover:text-orange-400 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${reconectando ? "animate-spin" : ""}`} aria-hidden="true" />
+          <span className="sr-only">Reconectar con la central</span>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+// ── Columna del board ─────────────────────────────────────────────────────────
+
+function ColumnaEventos({
+  col,
+  eventos,
+  flashIds,
+  seleccionadoId,
+  onSelect,
+  estado,
+  refMs,
+}: {
+  col: ColumnaMonitoreo;
+  eventos: EventoLive[];
+  flashIds: Set<string>;
+  seleccionadoId: string | null;
+  onSelect: (e: EventoLive) => void;
+  estado: EstadoCentral;
+  refMs: number;
+}) {
+  return (
+    <section
+      aria-label={`Columna ${col.label}`}
+      className="rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-800/50 to-slate-900/40"
+    >
+      <header className="flex items-center justify-between gap-2 px-3 py-2 border-b border-slate-700/50">
+        <span className={`text-[11px] font-bold uppercase tracking-widest ${col.acento}`}>{col.label}</span>
+        <span className="text-[10px] text-slate-500 tabular-nums">{eventos.length}</span>
+      </header>
+
+      {eventos.length === 0 ? (
+        <p className="text-[11px] text-slate-600 px-3 py-8 text-center">
+          {estado === "caido" ? "Sin datos." : "Sin eventos."}
+        </p>
+      ) : (
+        <ul className="divide-y divide-slate-800/60 max-h-[70vh] overflow-y-auto" aria-label={`Eventos ${col.label}`}>
+          {eventos.map((e) => (
+            <FilaOperador
+              key={e.id}
+              evento={e}
+              flash={flashIds.has(e.id)}
+              seleccionado={seleccionadoId === e.id}
+              onSelect={() => onSelect(e)}
+              refMs={refMs}
+            />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -204,11 +287,13 @@ function FilaOperador({
   flash,
   seleccionado,
   onSelect,
+  refMs,
 }: {
   evento: EventoLive;
   flash: boolean;
   seleccionado: boolean;
   onSelect: () => void;
+  refMs: number;
 }) {
   const p = prioridadStyle(evento.prioridad);
   return (
@@ -217,7 +302,7 @@ function FilaOperador({
         type="button"
         onClick={onSelect}
         aria-pressed={seleccionado}
-        className={`w-full text-left flex items-baseline gap-3 px-3 py-2.5 transition-colors duration-700 ${
+        className={`relative w-full text-left flex items-baseline gap-2 px-3 py-2.5 transition-colors duration-700 ${
           seleccionado
             ? "bg-orange-500/10 ring-1 ring-inset ring-orange-700/50"
             : flash
@@ -228,7 +313,7 @@ function FilaOperador({
       >
         <time
           dateTime={evento.fecha}
-          className="font-mono text-[11px] text-slate-500 tabular-nums shrink-0 w-[88px]"
+          className="font-mono text-[11px] text-slate-500 tabular-nums shrink-0"
         >
           {horaConDia(evento.fecha)}
         </time>
@@ -246,7 +331,8 @@ function FilaOperador({
             {evento.zona && <span className="text-slate-600"> · {evento.zona}</span>}
           </p>
         </div>
-        <EstadoEvento procesado={evento.procesado} />
+        {!evento.procesado && <EstadoEvento procesado={false} />}
+        <BarraVidaUtil evento={evento} refMs={refMs} />
       </button>
     </li>
   );
@@ -259,8 +345,9 @@ type EstadoContexto =
   | { tipo: "error" }
   | { tipo: "ok"; data: CuentaContextoResponse };
 
-function PanelContexto({ evento, onCerrar }: { evento: EventoLive; onCerrar: () => void }) {
+function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; eventos: EventoLive[]; onCerrar: () => void }) {
   const [ctx, setCtx] = useState<EstadoContexto>({ tipo: "cargando" });
+  const [notificando, setNotificando] = useState(false);
   const cacheRef = useRef(new Map<string, CuentaContextoResponse>());
 
   useEffect(() => {
@@ -321,6 +408,16 @@ function PanelContexto({ evento, onCerrar }: { evento: EventoLive; onCerrar: () 
         </button>
       </div>
 
+      {/* Acción de notificación — disponible para cualquier criticidad. */}
+      <button
+        type="button"
+        onClick={() => setNotificando(true)}
+        className="w-full flex items-center justify-center gap-2 rounded-lg border border-emerald-700/60 bg-emerald-950/40 hover:bg-emerald-900/40 text-emerald-200 text-sm font-semibold px-3 py-2.5 transition-colors"
+      >
+        <MessageCircle className="w-4 h-4" aria-hidden="true" />
+        Notificar por WhatsApp
+      </button>
+
       <div className="border-t border-slate-700/50 pt-3">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
           Cuenta #{evento.softguard_ref} en el portal
@@ -351,6 +448,14 @@ function PanelContexto({ evento, onCerrar }: { evento: EventoLive; onCerrar: () 
           <ContenidoContexto cuenta={ctx.data.cuenta} titular={evento.titular} />
         )}
       </div>
+
+      {notificando && (
+        <NotificarWhatsAppModal
+          evento={evento}
+          eventosGrupo={eventosAgrupadosCuenta(eventos, evento)}
+          onClose={() => setNotificando(false)}
+        />
+      )}
     </section>
   );
 }

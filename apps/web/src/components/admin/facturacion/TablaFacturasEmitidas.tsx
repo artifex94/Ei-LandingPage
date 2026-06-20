@@ -32,6 +32,7 @@ export function TablaFacturasEmitidas({ facturas }: { facturas: FacturaConRelaci
     {
       id: "emision",
       header: "Fecha emisión",
+      className: "hidden sm:table-cell",
       cell: (f) => (
         <span className="text-slate-400 text-xs">
           {f.fecha_emision ? new Date(f.fecha_emision).toLocaleDateString("es-AR") : "—"}

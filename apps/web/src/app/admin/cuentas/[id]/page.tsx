@@ -9,6 +9,8 @@ import { NuevaSolicitudForm } from "@/components/admin/NuevaSolicitudForm";
 import { OverrideSuspensionForm } from "@/components/admin/OverrideSuspensionForm";
 import { UUID_RE } from "@/lib/constants/validation";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
+import { motivosDeCobranza } from "@/lib/mensajeria-motivos";
 
 const getCuenta = cache(async (id: string) => {
   return prisma.cuenta.findUnique({
@@ -98,6 +100,32 @@ export default async function CuentaAdminPage({
   const cuenta = await getCuenta(id);
   if (!cuenta) notFound();
 
+  // Motivos de WhatsApp sobre la deuda COMPLETA de la cuenta (no los 12 pagos paginados
+  // de la tabla) + pagos acreditados recientemente, para que el recordatorio y la
+  // confirmación usen montos/fechas correctos.
+  const hace30dias = new Date();
+  hace30dias.setDate(hace30dias.getDate() - 30);
+  const pagosMotivos = await prisma.pago.findMany({
+    where: {
+      cuenta_id: cuenta.id,
+      OR: [
+        { estado: { in: ["PENDIENTE", "VENCIDO"] } },
+        { estado: "PAGADO", acreditado_en: { gte: hace30dias } },
+      ],
+    },
+    select: { mes: true, anio: true, importe: true, estado: true, acreditado_en: true },
+  });
+  const motivosWA = motivosDeCobranza(
+    cuenta.perfil.nombre,
+    pagosMotivos.map((p) => ({
+      mes: p.mes,
+      anio: p.anio,
+      importe: Number(p.importe),
+      estado: p.estado,
+      acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
+    })),
+  );
+
   return (
     <div className="space-y-8 max-w-3xl">
       <nav aria-label="Ruta de navegación">
@@ -125,17 +153,13 @@ export default async function CuentaAdminPage({
             </Link>
             {" · "}Ref: <span className="font-mono">{cuenta.softguard_ref}</span>
           </p>
-          {cuenta.perfil.telefono && (
-            <a
-              href={`https://wa.me/549${cuenta.perfil.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${cuenta.perfil.nombre.split(" ")[0]}, te contactamos por el servicio "${cuenta.descripcion}" de Escobar Instalaciones.`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 bg-green-700 hover:bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <span aria-hidden="true">📱</span>
-              WhatsApp
-            </a>
-          )}
+          <BotonEnviarWhatsApp
+            destinatario={{ nombre: cuenta.perfil.nombre, telefono: cuenta.perfil.telefono }}
+            motivos={motivosWA}
+            historial={{ perfilId: cuenta.perfil.id, cuentaId: cuenta.id }}
+            entidad="cuenta"
+            entidadId={cuenta.id}
+          />
           <Link
             href={`/admin/vista-cliente/${cuenta.perfil.id}?tab=cuenta&cuentaId=${cuenta.id}`}
             className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-600 transition-colors"

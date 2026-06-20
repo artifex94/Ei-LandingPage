@@ -23,22 +23,22 @@ export function PortalPageHeader({
   titleId,
 }: PortalPageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
         {eyebrow && (
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
+          <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-tactical-400">
             {eyebrow}
           </p>
         )}
         <h1
           id={titleId}
-          className="text-2xl font-display font-bold tracking-tight text-white"
+          className="text-3xl font-display font-black tracking-tight text-white sm:text-4xl"
         >
           {title}
         </h1>
-        {description && <p className="text-sm text-slate-400 mt-1">{description}</p>}
+        {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">{description}</p>}
       </div>
-      {action}
-    </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </header>
   );
 }

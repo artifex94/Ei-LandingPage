@@ -48,9 +48,9 @@ export function SolicitarOTButton({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-medium transition-colors"
+        className="portal-action portal-action-primary"
       >
-        <span aria-hidden="true">+</span> Solicitar servicio
+        <span aria-hidden="true">+</span> Pedir asistencia
       </button>
 
       <Modal
@@ -105,7 +105,7 @@ export function SolicitarOTButton({
                 Cancelar
               </button>
               <button type="submit" disabled={pending}
-                className="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-900 text-sm font-medium transition-colors disabled:opacity-50">
+                className="portal-action portal-action-primary disabled:opacity-50">
                 {pending ? "Enviando…" : "Enviar solicitud"}
               </button>
             </div>

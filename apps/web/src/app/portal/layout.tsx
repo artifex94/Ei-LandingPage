@@ -80,7 +80,7 @@ export default async function PortalLayout({
         <PagoRequeridoGuard deudaTotal={deudaTotal} />
       )}
 
-      <div className="min-h-screen bg-industrial-900 flex flex-col">
+      <div className="portal-shell min-h-screen bg-industrial-900 flex flex-col">
         <PortalNav isEmpleado={!!empleado} />
 
         {/* Banner mora — naranja táctico */}
@@ -115,8 +115,8 @@ export default async function PortalLayout({
         <main
           id="main-content"
           tabIndex={-1}
-          className="portal-main flex-1 max-w-4xl mx-auto w-full px-4 py-8
-                     pt-[calc(3.5rem+2rem)] lg:pt-8
+          className="portal-main flex-1 max-w-6xl mx-auto w-full px-4 py-6 sm:px-6
+                     pt-[calc(3.5rem+1.5rem)] lg:pt-7
                      pb-[calc(4.5rem+env(safe-area-inset-bottom)+1rem)] lg:pb-8"
         >
           {children}

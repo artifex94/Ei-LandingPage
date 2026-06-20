@@ -11,29 +11,27 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const base = `
       relative inline-flex w-full items-center justify-center gap-2
       font-bold tracking-widest uppercase text-sm select-none
-      rounded-sm px-8 py-4 min-h-[52px]
+      rounded-xl px-6 py-3 min-h-[48px]
       transition-all duration-150 ease-mech-press
       disabled:opacity-50 disabled:cursor-not-allowed
-      disabled:border-b-[5px] disabled:translate-y-0
+      disabled:translate-y-0
     `;
 
     const variants = {
       primary: `
         bg-tactical-500 text-slate-900
-        border border-tactical-600
-        border-b-[5px] border-b-tactical-600
+        border border-tactical-600/70
         shadow-[0_1px_0_rgba(255,255,255,0.06)_inset]
         hover:bg-tactical-400
-        active:border-b-[1px] active:translate-y-[4px]
+        active:translate-y-px
         active:bg-tactical-600
       `,
       secondary: `
         bg-industrial-700 text-slate-300
         border border-industrial-600
-        border-b-[5px] border-b-industrial-950
         shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]
         hover:bg-industrial-600 hover:text-slate-200
-        active:border-b-[1px] active:translate-y-[4px]
+        active:translate-y-px
       `,
     };
 

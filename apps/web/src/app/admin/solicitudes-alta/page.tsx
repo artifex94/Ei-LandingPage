@@ -89,6 +89,40 @@ const TUTORIAL_ALTAS = [
   },
 ];
 
+const renderAltaCard = (s: AltaUsuario) => (
+  <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-2">
+    <div className="flex items-start justify-between gap-2">
+      <span className="text-white font-medium">{s.nombre}</span>
+      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${ESTADO_BADGE[s.estado] ?? ""}`}>
+        {ESTADO_LABEL[s.estado] ?? s.estado}
+      </span>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-slate-500">Teléfono:</span>
+      {s.telefono ? (
+        <a href={`tel:${s.telefono.replace(/\D/g, "")}`} className="text-sm text-blue-400">{s.telefono}</a>
+      ) : (
+        <span className="text-sm text-slate-600">—</span>
+      )}
+    </div>
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-slate-500">DNI:</span>
+      <span className="text-sm text-white">{s.dni ?? "—"}</span>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-slate-500">Fecha:</span>
+      <span className="text-sm text-slate-300">
+        {new Intl.DateTimeFormat("es-AR", {
+          day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
+        }).format(new Date(s.created_at))}
+      </span>
+    </div>
+    <div className="pt-1 border-t border-slate-700">
+      <AltaAcciones solicitud={s} />
+    </div>
+  </div>
+);
+
 export default async function SolicitudesAltaPage() {
   const solicitudes = await prisma.altaUsuario.findMany({
     orderBy: { created_at: "desc" },
@@ -109,6 +143,7 @@ export default async function SolicitudesAltaPage() {
         rows={solicitudes}
         keyExtractor={(s) => s.id}
         caption="Solicitudes de alta de usuario"
+        renderCard={renderAltaCard}
         emptyState={
           <EmptyStateSuccess
             titulo="Sin solicitudes pendientes"

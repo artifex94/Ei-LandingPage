@@ -83,7 +83,7 @@ export function NuevaOTButton() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="ot-tipo" className="block text-sm font-medium text-slate-300 mb-1">
                   Tipo <span className="text-red-400" aria-hidden="true">*</span>

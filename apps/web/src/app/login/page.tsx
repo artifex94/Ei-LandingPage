@@ -1,5 +1,6 @@
 import { LoginTabs } from "./LoginTabs";
 import { siteConfig } from "@/config/site";
+import { BrandLockup } from "@/components/layout/BrandLockup";
 
 export const metadata = {
   title: "Ingresar a Mi Central",
@@ -38,29 +39,19 @@ export default function LoginPage() {
         <div className="scanline pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-emerald-300/10 to-transparent" aria-hidden="true" />
 
         <section className="relative z-10 w-full max-w-[420px] rounded-[2rem] border border-white/10 bg-slate-900/86 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8" aria-label="Acceso a Mi Central">
-          <div className="mb-7 flex justify-center">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500 font-display text-lg font-bold text-slate-950 shadow-[0_0_28px_rgba(241,119,32,0.25)]" aria-hidden>
-                EI
-              </span>
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-300">Escobar</p>
-                <p className="font-display text-lg font-bold leading-tight text-white">Instalaciones</p>
-              </div>
-            </div>
-          </div>
+          <BrandLockup context="Acceso de clientes" className="mb-7 justify-center" />
 
           <LoginTabs />
 
-          <p className="mt-6 text-center text-xs text-slate-400">
-            Ayuda{" "}
+          <p className="mt-5 text-center text-xs text-slate-500">
+            ¿Necesitás ayuda?{" "}
             <a
               href={siteConfig.contact.whatsappLink}
               className="font-bold text-orange-300 underline-offset-4 transition hover:text-orange-200 hover:underline"
               target="_blank"
               rel="noopener noreferrer"
             >
-              WhatsApp
+              Escribinos por WhatsApp
             </a>
           </p>
         </section>

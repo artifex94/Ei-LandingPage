@@ -93,10 +93,10 @@ export function LoginTabs() {
   const isPassword = metodo === "password";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="text-center">
-        <h1 className="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl">Mi Central</h1>
-        <p className="mt-2 text-sm font-bold uppercase tracking-[0.24em] text-orange-300">Ingresá</p>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">Mi Central</h1>
+        <p className="mt-2 text-sm text-slate-400">Ingresá para gestionar tus servicios.</p>
       </div>
 
       {metodo === "password" && <FormPassword />}
@@ -106,11 +106,11 @@ export function LoginTabs() {
       {isPassword && (
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-white/10 pt-4 text-sm">
           <button type="button" onClick={() => setMetodo("whatsapp")} className="min-h-[44px] font-bold text-slate-300 transition hover:text-white">
-            WhatsApp
+            Recibir acceso por WhatsApp
           </button>
           <span className="text-slate-700" aria-hidden>·</span>
           <button type="button" onClick={() => setMetodo("magic")} className="min-h-[44px] font-bold text-slate-300 transition hover:text-white">
-            Link por email
+            Recibir acceso por email
           </button>
         </div>
       )}

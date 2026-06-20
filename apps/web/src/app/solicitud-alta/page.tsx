@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { ShieldCheck } from "lucide-react";
 import { SolicitudAltaForm } from "@/components/SolicitudAltaForm";
+import { BrandLockup } from "@/components/layout/BrandLockup";
+import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
   title: "Alta de usuario — Escobar Instalaciones",
@@ -12,24 +13,14 @@ export default function SolicitudAltaPage() {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
       {/* Header */}
-      <header className="border-b border-slate-800 px-6 py-4">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
-            <ShieldCheck className="w-4 h-4 text-white" strokeWidth={2.5} />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              Escobar Instalaciones
-            </p>
-            <p className="text-xs text-slate-400 uppercase tracking-wider">
-              Victoria · Entre Ríos
-            </p>
-          </div>
+      <header className="border-b border-slate-800/80 px-6 py-4">
+        <div className="max-w-lg mx-auto">
+          <BrandLockup context="Solicitud de acceso" compact />
         </div>
       </header>
 
       {/* Hero */}
-      <div className="max-w-lg mx-auto w-full px-6 pt-10 pb-4 text-center">
+      <div className="max-w-lg mx-auto w-full px-6 pt-8 pb-0 text-center">
         <h1 className="text-2xl font-bold text-white">
           Solicitá acceso a tu portal
         </h1>
@@ -49,12 +40,12 @@ export default function SolicitudAltaPage() {
         <p className="text-xs text-slate-400">
           ¿Tenés dudas? Escribinos al{" "}
           <a
-            href="https://wa.me/5493436575372"
+            href={siteConfig.contact.whatsappLink}
             className="text-orange-500 hover:text-orange-400 transition-colors"
             target="_blank"
             rel="noopener noreferrer"
           >
-            +54 9 3436 575372
+            {siteConfig.contact.phoneDisplay}
           </a>
         </p>
       </footer>

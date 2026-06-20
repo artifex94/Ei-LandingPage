@@ -1,7 +1,7 @@
 @layer base {
   /* Font base 18px — WCAG 1.4.4 */
   .portal-main {
-    font-size: 1.125rem;
+    font-size: 1rem;
     line-height: 1.6;
     letter-spacing: 0.015em;
     color: #cbd5e1; /* slate-300 */
@@ -12,5 +12,119 @@
   .portal-login :focus-visible {
     outline: 3px solid #F17720;
     outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .portal-shell {
+    position: relative;
+    isolation: isolate;
+    background:
+      radial-gradient(circle at 78% 0%, rgb(241 119 32 / 0.08), transparent 28rem),
+      linear-gradient(145deg, #020617 0%, #0f172a 54%, #111827 100%);
+  }
+
+  .portal-shell::before {
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    content: "";
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: linear-gradient(rgb(255 255 255 / .16) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .16) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  .portal-panel {
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 1rem;
+    background: rgb(15 23 42 / 0.72);
+    box-shadow: 0 18px 44px rgb(2 6 23 / 0.2);
+  }
+
+  .portal-welcome-panel {
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 1rem;
+    background: rgb(2 6 23 / 0.72);
+    box-shadow: 0 22px 60px rgb(2 6 23 / 0.3);
+  }
+
+  .portal-quick-action {
+    display: flex;
+    min-height: 4.5rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 0.75rem;
+    background: rgb(30 41 59 / 0.55);
+    color: rgb(226 232 240);
+    font-size: 0.78rem;
+    font-weight: 700;
+    transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+  }
+
+  .portal-quick-action svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: rgb(253 186 116);
+  }
+
+  .portal-quick-action:hover {
+    transform: translateY(-1px);
+    border-color: rgb(241 119 32 / 0.45);
+    background: rgb(30 41 59 / 0.9);
+  }
+
+  .portal-quick-action-primary {
+    border-color: rgb(241 119 32 / 0.28);
+    background: rgb(241 119 32 / 0.1);
+  }
+
+  .portal-row {
+    border: 1px solid rgb(51 65 85 / 0.65);
+    border-radius: 0.75rem;
+    background: rgb(30 41 59 / 0.42);
+    transition: border-color 160ms ease, background-color 160ms ease;
+  }
+
+  .portal-row:hover {
+    border-color: rgb(71 85 105 / 0.85);
+    background: rgb(30 41 59 / 0.72);
+  }
+
+  .portal-action {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid rgb(71 85 105 / 0.8);
+    border-radius: 0.75rem;
+    padding: 0.625rem 1rem;
+    color: rgb(226 232 240);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+  }
+
+  .portal-action:hover {
+    border-color: rgb(100 116 139);
+    background: rgb(51 65 85 / 0.55);
+    color: white;
+  }
+
+  .portal-action-primary {
+    border-color: rgb(199 95 13 / 0.7);
+    background: rgb(241 119 32);
+    color: rgb(2 6 23);
+  }
+
+  .portal-action-primary:hover {
+    border-color: rgb(247 145 58);
+    background: rgb(247 145 58);
+    color: rgb(2 6 23);
   }
 }

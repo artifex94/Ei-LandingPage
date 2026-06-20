@@ -200,7 +200,7 @@ export default async function AdminDashboardPage() {
     "Atención";
 
   return (
-    <section className="space-y-7">
+    <section className="space-y-6">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
@@ -216,7 +216,7 @@ export default async function AdminDashboardPage() {
 
         {/* Ops Score */}
         <div className="text-right shrink-0">
-          <p className={`text-3xl font-display font-bold tabular-nums leading-none ${scoreColor}`}>{opsScore}</p>
+          <p className={`text-2xl font-display font-bold tabular-nums leading-none ${scoreColor}`}>{opsScore}</p>
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mt-0.5">{scoreLabel}</p>
         </div>
       </div>
@@ -258,15 +258,15 @@ export default async function AdminDashboardPage() {
       )}
 
       {/* ── Tres métricas ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
 
         {/* ── Cobros ── */}
         <Link
           href="/admin/pagos"
-          className={`group relative rounded-xl border overflow-hidden p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl active:translate-y-0 ${
+          className={`group relative rounded-xl border overflow-hidden p-4 transition-colors hover:border-slate-500/70 ${
             pctCobros === 100
-              ? "border-emerald-700/50 bg-gradient-to-br from-emerald-950/40 to-slate-900/80"
-              : "border-slate-700/60 bg-gradient-to-br from-slate-800/80 to-slate-900/60 hover:border-slate-600"
+              ? "border-emerald-700/50 bg-emerald-950/20"
+              : "border-slate-700/60 bg-slate-900/55 hover:border-slate-600"
           }`}
         >
           {/* Accent line */}
@@ -283,7 +283,7 @@ export default async function AdminDashboardPage() {
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Cobros — {MESES[mes]}
           </p>
-          <p className="text-4xl font-black text-white tabular-nums mt-2 leading-none tracking-tight">
+          <p className="text-3xl font-bold text-white tabular-nums mt-2 leading-none tracking-tight">
             {formatArs(cobradoEsteMes)}
           </p>
 
@@ -323,7 +323,7 @@ export default async function AdminDashboardPage() {
         {/* ── Cuentas ── */}
         <Link
           href="/admin/cuentas"
-          className="group relative rounded-xl border border-slate-700/60 overflow-hidden bg-gradient-to-br from-slate-800/80 to-slate-900/60 p-5 transition-all duration-200 hover:border-slate-600 hover:-translate-y-1 hover:shadow-2xl active:translate-y-0"
+          className="group relative rounded-xl border border-slate-700/60 overflow-hidden bg-slate-900/55 p-4 transition-colors hover:border-slate-600 hover:border-slate-500/70"
         >
           <div
             className="absolute top-0 inset-x-0 h-px"
@@ -334,7 +334,7 @@ export default async function AdminDashboardPage() {
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Cuentas activas
           </p>
-          <p className="text-4xl font-black text-white tabular-nums mt-2 leading-none tracking-tight">
+          <p className="text-3xl font-bold text-white tabular-nums mt-2 leading-none tracking-tight">
             {totalActivas}
           </p>
 
@@ -369,10 +369,10 @@ export default async function AdminDashboardPage() {
         {/* ── Por resolver ── */}
         <Link
           href={totalPendientes > 0 ? "/admin/mantenimiento" : "/admin/clientes"}
-          className={`group relative rounded-xl border overflow-hidden p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl active:translate-y-0 ${
+          className={`group relative rounded-xl border overflow-hidden p-4 transition-colors hover:border-slate-500/70 ${
             totalPendientes > 0
-              ? "border-amber-700/50 bg-gradient-to-br from-amber-950/30 to-slate-900/70 hover:border-amber-600/60"
-              : "border-emerald-800/40 bg-gradient-to-br from-emerald-950/20 to-slate-900/60 hover:border-emerald-700/50"
+              ? "border-amber-700/50 bg-amber-950/15 hover:border-amber-600/60"
+              : "border-emerald-800/40 bg-emerald-950/15 hover:border-emerald-700/50"
           }`}
         >
           <div
@@ -388,7 +388,7 @@ export default async function AdminDashboardPage() {
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Por resolver
           </p>
-          <p className={`text-4xl font-black tabular-nums mt-2 leading-none tracking-tight ${
+          <p className={`text-3xl font-bold tabular-nums mt-2 leading-none tracking-tight ${
             totalPendientes > 0 ? "text-amber-300" : "text-emerald-400"
           }`}>
             {totalPendientes}
@@ -416,7 +416,7 @@ export default async function AdminDashboardPage() {
         <MultiMonitorLive limit={8} />
 
         {/* Central de monitoreo */}
-        <section className="rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-800/60 to-slate-900/40 p-5">
+        <section className="rounded-xl border border-slate-700/60 bg-slate-900/45 p-4 sm:p-5">
           <SectionHeader
             title="Central de monitoreo"
             href="/admin/eventos"
@@ -490,7 +490,7 @@ export default async function AdminDashboardPage() {
               <div className="space-y-1.5">
                 {eventosPorOperador.map((op) => (
                   <div key={op.operador} className="flex items-center gap-3 text-xs">
-                    <span className="text-slate-500 flex-1 truncate">{op.operador}</span>
+                    <span className="text-slate-500 min-w-0 flex-1 truncate">{op.operador}</span>
                     <div className="flex items-center gap-2">
                       <div
                         className="h-1 rounded-full bg-orange-500/50"
@@ -508,7 +508,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* ── Técnicos en campo ──────────────────────────────────────────── */}
-      <section className="rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-800/60 to-slate-900/40 p-5">
+      <section className="rounded-xl border border-slate-700/60 bg-slate-900/45 p-4 sm:p-5">
           <SectionHeader
             title="Técnicos en campo"
             href="/admin/ot"

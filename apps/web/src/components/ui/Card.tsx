@@ -14,8 +14,8 @@ export function Card({ muted = false, className, children, ...props }: CardProps
   return (
     <div
       className={cn(
-        "rounded-lg border border-slate-700",
-        muted ? "bg-slate-800/50" : "bg-slate-900",
+        "rounded-xl border border-slate-700/70",
+        muted ? "bg-slate-800/40" : "bg-slate-900/70",
         className,
       )}
       {...props}
@@ -33,7 +33,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "px-4 py-3 border-b border-slate-700 bg-slate-800/60",
+        "px-4 py-3 border-b border-slate-700/60 bg-slate-800/40",
         className,
       )}
       {...props}
@@ -63,7 +63,7 @@ export function CardFooter({
   return (
     <div
       className={cn(
-        "px-4 py-3 border-t border-slate-700 bg-slate-800/40",
+        "px-4 py-3 border-t border-slate-700/60 bg-slate-800/25",
         className,
       )}
       {...props}

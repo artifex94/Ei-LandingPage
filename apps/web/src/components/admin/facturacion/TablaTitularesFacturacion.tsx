@@ -39,6 +39,7 @@ export function TablaTitularesFacturacion({
     {
       id: "cuit",
       header: "CUIT",
+      className: "hidden sm:table-cell",
       cell: (t) => (
         <span className="font-mono text-xs text-slate-300">
           {t.cuit ?? (
@@ -52,6 +53,7 @@ export function TablaTitularesFacturacion({
     {
       id: "razon",
       header: "Razón social",
+      className: "hidden sm:table-cell",
       cell: (t) => (
         <span className="text-slate-400 text-xs">
           {t.razon_social ?? <span className="text-slate-500">—</span>}

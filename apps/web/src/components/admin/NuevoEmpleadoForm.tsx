@@ -54,7 +54,7 @@ export function NuevoEmpleadoForm({ esEscobarAdmin = false }: { esEscobarAdmin?:
           <p className="text-xs text-slate-500 mt-1">Se usará para iniciar sesión. Se envía enlace de confirmación.</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label htmlFor="emp-dni" className="block text-sm font-medium text-slate-300 mb-1">
               DNI <span className="text-slate-500 font-normal text-xs">(opcional)</span>

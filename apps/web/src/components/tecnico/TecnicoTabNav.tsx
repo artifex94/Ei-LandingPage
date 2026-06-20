@@ -10,9 +10,9 @@ const TABS = [
     label:      "Dashboard",
     mobileLabel:"Dashboard",
     icon:       LayoutDashboard,
-    color:      "text-slate-200",
-    bg:         "bg-slate-500/15",
-    bar:        "bg-slate-300",
+    color:      "text-tactical-400",
+    bg:         "bg-tactical-500/10",
+    bar:        "bg-tactical-500",
     alsoActive: [],
   },
   {
@@ -20,27 +20,27 @@ const TABS = [
     label:      "Mi día",
     mobileLabel:"Inicio",
     icon:       House,
-    color:      "text-amber-400",
-    bg:         "bg-amber-500/15",
-    bar:        "bg-amber-400",
+    color:      "text-tactical-400",
+    bg:         "bg-tactical-500/10",
+    bar:        "bg-tactical-500",
     alsoActive: [],
   },
   {
     href:       "/tecnico/mi-semana",
     label:      "Mi semana",
     icon:       CalendarRange,
-    color:      "text-indigo-400",
-    bg:         "bg-indigo-500/15",
-    bar:        "bg-indigo-400",
+    color:      "text-tactical-400",
+    bg:         "bg-tactical-500/10",
+    bar:        "bg-tactical-500",
     alsoActive: [],
   },
   {
     href:       "/tecnico/ots",
     label:      "OTs",
     icon:       ClipboardList,
-    color:      "text-sky-400",
-    bg:         "bg-sky-500/15",
-    bar:        "bg-sky-400",
+    color:      "text-tactical-400",
+    bg:         "bg-tactical-500/10",
+    bar:        "bg-tactical-500",
     alsoActive: ["/tecnico/ot", "/tecnico/tareas"],
   },
 ] as const;
@@ -62,7 +62,7 @@ export function TecnicoTabNav({ mobile = false }: Props) {
     return (
       <nav
         aria-label="Secciones técnico"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800 px-4 py-1 flex gap-1"
+        className="fixed bottom-0 left-0 right-0 z-30 flex gap-1 border-t border-industrial-700 bg-industrial-900/95 px-3 py-1 backdrop-blur-sm lg:hidden"
         style={{ paddingBottom: "calc(0.25rem + env(safe-area-inset-bottom))" }}
       >
         {TABS.map((tab) => {
@@ -72,7 +72,7 @@ export function TecnicoTabNav({ mobile = false }: Props) {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 min-h-[56px] py-2 rounded-xl transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 min-h-[56px] py-2 rounded-lg transition-colors ${
                 active ? `${tab.bg} ${tab.color}` : "text-slate-500"
               }`}
             >

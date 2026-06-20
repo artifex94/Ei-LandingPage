@@ -115,6 +115,40 @@ export default async function AuditoriaPage({
     },
   ];
 
+  const renderCard = (log: LogRow) => {
+    const cfg = ACCION_LABELS[log.accion] ?? { label: log.accion, color: "text-slate-400 bg-slate-700" };
+    let detalleTexto: string | null = null;
+    try {
+      detalleTexto = log.detalle ? JSON.stringify(JSON.parse(log.detalle), null, 2) : null;
+    } catch {
+      detalleTexto = log.detalle ?? null;
+    }
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-slate-400 text-xs whitespace-nowrap">
+            {new Date(log.created_at).toLocaleString("es-AR", {
+              day: "2-digit", month: "2-digit", year: "numeric",
+              hour: "2-digit", minute: "2-digit",
+            })}
+          </span>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.color}`}>{cfg.label}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-slate-500">Admin:</span>
+          <span className="text-sm text-white">{log.admin_nombre ?? "—"}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-slate-500">Entidad:</span>
+          <span className="text-sm font-mono text-slate-300">{log.entidad}</span>
+        </div>
+        {detalleTexto && (
+          <p className="text-xs text-slate-400 line-clamp-2">{detalleTexto}</p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -155,6 +189,7 @@ export default async function AuditoriaPage({
         keyExtractor={(log) => log.id}
         caption="Registro de auditoría de acciones"
         emptyState={<p className="text-slate-400 text-sm">Sin registros todavía.</p>}
+        renderCard={renderCard}
       />
 
       {totalPaginas > 1 && (

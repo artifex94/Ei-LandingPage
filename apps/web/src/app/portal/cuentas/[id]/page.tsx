@@ -7,6 +7,7 @@ import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { SensorItem } from "@/components/portal/SensorItem";
 import { PortalSection } from "@/components/portal/PortalSection";
+import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { UUID_RE } from "@/lib/constants/validation";
 
@@ -88,7 +89,7 @@ function PanelEstado({
   }
 
   return (
-    <div className={`rounded-lg border px-5 py-4 ${estadoCls}`}>
+    <div className={`rounded-xl border px-5 py-4 ${estadoCls}`}>
       <div className="flex items-center justify-between gap-3 mb-3">
         <p className="font-semibold text-sm">
           {estadoIcon} {estadoLabel}
@@ -154,7 +155,7 @@ export default async function CuentaPage({
         <ol className="flex items-center gap-2 text-sm text-slate-400">
           <li>
             <Link href="/portal/dashboard" className="hover:text-white min-h-[44px] inline-flex items-center transition-colors">
-              Mis servicios
+              Inicio
             </Link>
           </li>
           <li aria-hidden="true">/</li>
@@ -164,28 +165,20 @@ export default async function CuentaPage({
         </ol>
       </nav>
 
-      {/* Encabezado */}
-      <section aria-labelledby="cuenta-heading">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 id="cuenta-heading" className="text-2xl font-display font-bold text-white">
-              {cuenta.descripcion}
-            </h1>
-            <p className="text-slate-400 mt-1">
-              Ref. Softguard: {cuenta.softguard_ref ?? "—"}
-            </p>
-          </div>
-
-          {pagoPendiente && (
+      <PortalPageHeader
+        eyebrow="Mi instalación"
+        title={cuenta.descripcion}
+        titleId="cuenta-heading"
+        description={`Referencia ${cuenta.softguard_ref ?? "—"}`}
+        action={pagoPendiente ? (
             <Link
               href="/portal/pagos"
-              className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 border border-red-700 border-b-[3px] border-b-red-900 active:border-b active:translate-y-[2px] text-white px-5 py-2.5 rounded-sm font-bold uppercase tracking-widest min-h-[48px] text-xs transition-all duration-150 ease-mech-press"
+              className="portal-action border-red-700/70 bg-red-600 text-white hover:border-red-600 hover:bg-red-500"
             >
-              ⚠ Pagar ahora — ${Number(pagoPendiente.importe).toLocaleString("es-AR")}
+              Pagar ${Number(pagoPendiente.importe).toLocaleString("es-AR")}
             </Link>
-          )}
-        </div>
-      </section>
+        ) : undefined}
+      />
 
       {/* Panel de estado del sistema */}
       {cuenta.sensores.length > 0 && (
@@ -199,7 +192,7 @@ export default async function CuentaPage({
             {cuenta.solicitudes.map((s) => (
               <div
                 key={s.id}
-                className="rounded-md border border-industrial-700 bg-industrial-800/60 px-4 py-3 flex items-center justify-between gap-3"
+                className="portal-row flex items-center justify-between gap-3 px-4 py-3"
               >
                 <p className="text-slate-300 text-sm truncate">{s.descripcion}</p>
                 <Badge variant={s.estado === "EN_PROCESO" ? "info" : "warning"} className="shrink-0">
@@ -235,13 +228,13 @@ export default async function CuentaPage({
         <div className="flex flex-wrap gap-3">
           <Link
             href={`/portal/solicitud?cuenta=${cuenta.id}`}
-            className="inline-flex items-center gap-2 bg-industrial-700 hover:bg-industrial-600 border border-industrial-600 border-b-[3px] border-b-industrial-950 active:border-b active:translate-y-[2px] text-slate-200 px-6 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest min-h-[48px] transition-all duration-150 ease-mech-press"
+            className="portal-action portal-action-primary"
           >
             Solicitar asistencia técnica
           </Link>
           <Link
             href="/portal/solicitudes"
-            className="inline-flex items-center gap-2 text-slate-300 hover:text-white px-6 py-2.5 rounded-sm font-medium min-h-[48px] border border-industrial-700 hover:border-industrial-600 transition-colors text-sm"
+            className="portal-action"
           >
             Ver mis solicitudes
           </Link>

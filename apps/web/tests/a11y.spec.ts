@@ -52,22 +52,21 @@ test.describe("Login — usabilidad y a11y", () => {
     await page.goto("/login");
     // El selector muestra opciones — hace clic en "Email" para abrir el formulario
     await page.getByRole("button", { name: /email/i }).click();
-    const emailInput = page.getByLabel(/^email$/i);
+    const emailInput = page.getByLabel(/email para link de acceso/i);
     await expect(emailInput).toBeVisible();
   });
 
   test("formulario DNI tiene labels accesibles", async ({ page }) => {
     await page.goto("/login");
-    // Hace clic en "Ingresar con DNI y contraseña" para abrir el formulario
-    await page.getByRole("button", { name: /dni/i }).click();
-    await expect(page.getByLabel(/dni/i)).toBeVisible();
+    // El acceso simplificado acepta email o DNI en un único campo.
+    await expect(page.getByLabel(/email o dni/i)).toBeVisible();
     await expect(page.getByLabel(/contraseña/i)).toBeVisible();
   });
 
   test("botón de envío en formulario email tiene texto accesible", async ({ page }) => {
     await page.goto("/login");
     await page.getByRole("button", { name: /email/i }).click();
-    const btn = page.getByRole("button", { name: /enviarme link/i });
+    const btn = page.getByRole("button", { name: /^enviar link$/i });
     await expect(btn).toBeVisible();
   });
 

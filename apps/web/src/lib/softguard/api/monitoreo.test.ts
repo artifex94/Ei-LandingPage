@@ -51,11 +51,21 @@ describe("adaptador monitoreo", () => {
     expect(ev.codigo).toBe("A11");
     // la descripción legible viene en la misma fila (sin catálogo)
     expect(ev.descripcion).toBe("APERTURA");
-    expect(ev.zona).toBeNull(); // rec_czona vacía → null
+    expect(ev.zona).toBe("Cocina"); // zon_cdescripcion (nombre) gana sobre el número
     expect(ev.prioridad).toBe(2); // rec_iPrioridad como string "2"
     expect(ev.operador_id).toBe("4");
     expect(ev.observacion).toBeNull();
     expect(ev.estado_raw).toBe("0");
+  });
+
+  it("fetchEventosHistoricoMM cae al número de zona si no hay nombre", async () => {
+    mockSoftguardFetch({
+      "/Rest/Search/ReporteHistoricoMM": () =>
+        restList([{ ...FILA_HISTORICO_MM, zon_cdescripcion: "", rec_czona: "303" }]),
+    });
+
+    const [ev] = await fetchEventosHistoricoMM(10);
+    expect(ev.zona).toBe("303");
   });
 
   it("fetchEventosPendientes usa el catálogo para la descripción y prefiere zon_cdescripcion", async () => {

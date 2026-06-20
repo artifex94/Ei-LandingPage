@@ -35,6 +35,7 @@ export const dynamic = "force-dynamic";
 
 export interface EventoLive {
   id: string;
+  iid_cuenta: number; // id interno de cuenta en la central (0 si proviene del fallback DB)
   softguard_ref: string;
   titular: string;
   codigo: string;
@@ -66,6 +67,7 @@ async function eventosDesdeDb(limit: number): Promise<EventoLive[]> {
   });
   return rows.map((e) => ({
     id: e.id,
+    iid_cuenta: 0, // EventoAlarma no guarda el iid de la central → el wizard cae a fallback por ref
     softguard_ref: e.softguard_ref,
     titular: e.cuenta?.descripcion ?? e.softguard_ref,
     codigo: e.codigo,
@@ -97,15 +99,20 @@ export async function GET(req: NextRequest) {
         fetchEventosPendientes(undefined, 200),
       ]);
       const sinAtender = new Set(pendientes.map((e) => e.id_evento));
+      // El histórico (ReporteHistoricoMM) solo trae el NÚMERO de zona; la cola de
+      // pendientes trae el NOMBRE (zon_cdescripcion). Para los eventos sin atender —
+      // los que se notifican — tomamos el nombre cruzando por id de evento.
+      const zonaPorId = new Map(pendientes.filter((p) => p.zona).map((p) => [p.id_evento, p.zona]));
       const eventos: EventoLive[] = recientes
         .sort((a, b) => b.fecha_evento.getTime() - a.fecha_evento.getTime())
         .map((e) => ({
           id: e.id_evento,
+          iid_cuenta: e.iid_cuenta,
           softguard_ref: e.softguard_ref,
           titular: e.titular,
           codigo: e.codigo,
           descripcion: e.descripcion,
-          zona: e.zona,
+          zona: zonaPorId.get(e.id_evento) ?? e.zona,
           prioridad: e.prioridad,
           fecha: e.fecha_evento.toISOString(),
           procesado: !sinAtender.has(e.id_evento),

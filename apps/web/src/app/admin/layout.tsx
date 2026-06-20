@@ -24,8 +24,26 @@ export default async function AdminLayout({
   const hace3dias = new Date();
   hace3dias.setDate(hace3dias.getDate() - 3);
 
-  const [pendingSolicitudes, pendingMantenimiento, cuentasEnMora, otsPendientes, altasUsuarioPendientes, eventosSinProcesar] =
-    await Promise.all([
+  const ahora = new Date();
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+  const mesActual = ahora.getMonth() + 1;
+  const anioActual = ahora.getFullYear();
+  // Mismo criterio de mora que /admin/morosidad y /admin/mensajeria (VENCIDO o PENDIENTE
+  // de un mes anterior), para que el badge no subestime respecto del hub.
+  const filtroPagoVencido = {
+    OR: [
+      { estado: "VENCIDO" as const },
+      {
+        estado: "PENDIENTE" as const,
+        OR: [{ anio: { lt: anioActual } }, { anio: anioActual, mes: { lt: mesActual } }],
+      },
+    ],
+  };
+
+  const [
+    pendingSolicitudes, pendingMantenimiento, cuentasEnMora, otsPendientes,
+    altasUsuarioPendientes, eventosSinProcesar, perfilesEnMora, contactadosMes,
+  ] = await Promise.all([
       prisma.solicitudCambioInfo.count({ where: { estado: "PENDIENTE" } }),
       prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
       prisma.cuenta.count({ where: { pagos: { some: { estado: "VENCIDO" } } } }),
@@ -40,7 +58,21 @@ export default async function AdminLayout({
       }),
       prisma.altaUsuario.count({ where: { estado: "PENDIENTE" } }),
       prisma.eventoAlarma.count({ where: { estado: "NUEVO" } }),
+      prisma.cuenta.findMany({
+        where: { estado: { not: "BAJA_DEFINITIVA" }, pagos: { some: filtroPagoVencido } },
+        select: { perfil_id: true },
+      }),
+      prisma.notificacionCliente.findMany({
+        where: { origen: "COBRANZA", canal: "WHATSAPP_WALINK", fecha_envio: { gte: inicioMes } },
+        select: { perfil_id: true },
+      }),
     ]);
+
+  // Morosos que todavía no fueron contactados por WhatsApp manual este mes.
+  const contactadosSet = new Set(contactadosMes.map((c) => c.perfil_id));
+  const morososSinContactar = new Set(
+    perfilesEnMora.map((c) => c.perfil_id).filter((id) => !contactadosSet.has(id)),
+  ).size;
 
   return (
     <>
@@ -60,24 +92,27 @@ export default async function AdminLayout({
           otsPendientes={otsPendientes}
           altasUsuarioPendientes={altasUsuarioPendientes}
           eventosSinProcesar={eventosSinProcesar}
+          morososSinContactar={morososSinContactar}
         />
 
         <main
           id="main-content"
           tabIndex={-1}
-          className="relative flex-1 p-4 sm:p-6 lg:p-8 overflow-auto pt-16 lg:pt-8"
+          className="relative flex-1 overflow-auto bg-[radial-gradient(circle_at_80%_0%,rgba(241,119,32,0.035),transparent_28%)] p-4 pt-16 sm:p-6 sm:pt-16 lg:p-7"
         >
-          <EstadoSistemaBar
-            eventosSinProcesar={eventosSinProcesar}
-            pendingMantenimiento={pendingMantenimiento}
-            altasUsuarioPendientes={altasUsuarioPendientes}
-            pendingSolicitudes={pendingSolicitudes}
-            cuentasEnMora={cuentasEnMora}
-            otsPendientes={otsPendientes}
-          />
-          <RefreshButton />
-          <AreaContextBar />
-          {children}
+          <div className="mx-auto w-full max-w-[1500px]">
+            <EstadoSistemaBar
+              eventosSinProcesar={eventosSinProcesar}
+              pendingMantenimiento={pendingMantenimiento}
+              altasUsuarioPendientes={altasUsuarioPendientes}
+              pendingSolicitudes={pendingSolicitudes}
+              cuentasEnMora={cuentasEnMora}
+              otsPendientes={otsPendientes}
+            />
+            <RefreshButton />
+            <AreaContextBar />
+            {children}
+          </div>
         </main>
       </div>
     </>

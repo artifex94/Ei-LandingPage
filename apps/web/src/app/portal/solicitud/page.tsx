@@ -34,12 +34,13 @@ export default async function SolicitudPage({
   return (
     <section aria-labelledby="solicitud-heading" className="space-y-7">
       <PortalPageHeader
-        title="Solicitar asistencia técnica"
+        eyebrow="Asistencia"
+        title="Contanos qué pasó"
         titleId="solicitud-heading"
-        description="Describí el problema y nos comunicamos a la brevedad."
+        description="Elegí la instalación y describí el problema."
       />
 
-      <div className="rounded-lg border border-industrial-700 bg-industrial-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.4)] p-6 max-w-xl">
+      <div className="portal-panel max-w-xl p-5 sm:p-6">
         <SolicitudForm cuentas={cuentas} cuentaPreId={cuentaPreId} />
       </div>
     </section>

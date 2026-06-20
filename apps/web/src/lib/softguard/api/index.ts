@@ -33,7 +33,13 @@ export {
   fetchEventosPendientes,
   type WebEvento,
 } from "./monitoreo";
-export { fetchCuentasCount, fetchCuentasDealer, type WebCuenta } from "./crm";
+export {
+  fetchCuentasCount,
+  fetchCuentasDealer,
+  fetchContactosCuenta,
+  type WebCuenta,
+  type WebContactoCuenta,
+} from "./crm";
 export {
   fetchOrdenesServicio,
   fetchOrdenesServicioCount,

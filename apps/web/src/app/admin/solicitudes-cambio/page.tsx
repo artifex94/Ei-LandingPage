@@ -88,7 +88,7 @@ export default async function SolicitudesCambioPage() {
               </div>
 
               {/* Detalle del cambio */}
-              <div className="grid sm:grid-cols-3 gap-4 mb-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
                 <div className="bg-slate-900/50 rounded-lg p-3">
                   <p className="text-xs text-slate-500 mb-1">Campo</p>
                   <p className="font-semibold text-slate-200">

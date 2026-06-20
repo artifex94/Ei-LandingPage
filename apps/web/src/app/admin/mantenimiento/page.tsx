@@ -93,7 +93,6 @@ export default async function MantenimientoPage({
     }),
   ]);
 
-  const cuentaAbiertas = countPendiente + countEnProceso;
 
   const PIPELINE_STAGES = [
     {

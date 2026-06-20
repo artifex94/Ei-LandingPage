@@ -91,7 +91,7 @@ export function EventosHeatmap({ eventos, anio }: Props) {
   const hayEventos = eventos.length > 0;
 
   return (
-    <div className="rounded-lg border border-industrial-700 bg-industrial-800/80 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
+    <div className="portal-panel p-4">
       <div
         className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6"
         role="list"

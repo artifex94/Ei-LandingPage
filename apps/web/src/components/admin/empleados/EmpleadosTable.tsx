@@ -147,12 +147,68 @@ export function EmpleadosTable({
     },
   ];
 
+  const renderCard = (emp: EmpleadoConPerfil) => (
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-3 h-3 rounded-full flex-shrink-0"
+            style={{ backgroundColor: emp.color_calendario ?? "#64748b" }}
+            aria-hidden="true"
+          />
+          <p className="font-medium text-white">{emp.perfil.nombre}</p>
+        </div>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${ROL_BADGE[emp.rol_empleado] ?? "bg-slate-700 text-slate-300 border-slate-600"}`}>
+          {ROL_LABEL[emp.rol_empleado] ?? emp.rol_empleado}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-slate-500">Email:</span>
+        <span className="text-sm text-white">{emp.perfil.email ?? "—"}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-slate-500">Teléfono:</span>
+        <span className="text-sm text-white">{emp.perfil.telefono ?? "—"}</span>
+      </div>
+      <div className="flex gap-1.5 flex-wrap">
+        {emp.puede_monitorear && <Cap label="Monitoreo" />}
+        {emp.puede_instalar && <Cap label="Instalación" />}
+        {emp.puede_facturar && <Cap label="Facturación" />}
+        {!emp.puede_monitorear && !emp.puede_instalar && !emp.puede_facturar && (
+          <span className="text-slate-500 text-xs">—</span>
+        )}
+      </div>
+      <span className={`inline-flex items-center gap-1 text-xs font-medium ${emp.activo ? "text-emerald-400" : "text-slate-500"}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${emp.activo ? "bg-emerald-400" : "bg-slate-500"}`} aria-hidden="true" />
+        {emp.activo ? "Activo" : "Inactivo"}
+      </span>
+      <div className="pt-1 border-t border-slate-700 flex gap-2">
+        <Link
+          href={`${basePath}/${emp.perfil_id}`}
+          aria-label={`Editar a ${emp.perfil.nombre}`}
+          className="text-xs text-orange-400 hover:text-orange-300 transition-colors font-medium"
+        >
+          Editar
+        </Link>
+        <button
+          onClick={() => handleToggle(emp.id, emp.activo)}
+          disabled={pending && togglingId === emp.id}
+          className="text-xs text-slate-400 hover:text-white transition-colors disabled:opacity-50 min-h-[44px] flex items-center"
+          aria-label={emp.activo ? `Desactivar a ${emp.perfil.nombre}` : `Activar a ${emp.perfil.nombre}`}
+        >
+          {emp.activo ? "Desactivar" : "Activar"}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <DataTable
       columns={columns}
       rows={empleados}
       keyExtractor={(emp) => emp.id}
       caption="Listado de empleados"
+      renderCard={renderCard}
       emptyState={
         <EmptyState
           icon={Users}
