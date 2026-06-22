@@ -1,0 +1,17 @@
+{
+  "//": "tsconfig SOLO para `next build` (deploy build-on-server). Excluye los",
+  "//2": "archivos de test/fixtures que importan dev-dependencies (vitest, etc.),",
+  "//3": "omitidas en producción (npm ci --omit=dev). CI sigue usando tsconfig.json",
+  "//4": "(que incluye todo) vía `tsc --noEmit`, así no se pierde cobertura de tipos.",
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "vitest.config.ts",
+    "vitest.setup.ts",
+    "playwright.config.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/lib/softguard/api/fixtures.ts",
+    "tests"
+  ]
+}

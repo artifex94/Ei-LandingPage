@@ -165,28 +165,21 @@ npm run dev        # http://localhost:3000
 
 ## Build y deploy (VPS Hostinger)
 
+Deploy **build-on-server**: se sube el código fuente y Hostinger compila. Guía completa
+en [`docs/DEPLOY-HOSTINGER.md`](../../docs/DEPLOY-HOSTINGER.md).
+
 ```bash
-# 1. Build standalone
-npm run build
+# 1. Generar el zip de fuente (git archive de apps/web)
+python3 scripts/make_source_zip.py   # → infra/deploy/frontend/ei-source-<fecha>.zip
 
-# 2. Copiar assets al bundle
-cp -r public .next/standalone/
-cp -r .next/static .next/standalone/.next/
-
-# 3. Empaquetar
-cd .next/standalone && zip -rq /tmp/deploy.zip .
-
-# 4. Subir y desplegar en el servidor (puerto SSH 65002)
-scp -P 65002 /tmp/deploy.zip usuario@147.93.14.237:/tmp/
-ssh -p 65002 usuario@147.93.14.237 << 'EOF'
-  cp ~/domains/instalacionescob.ar/nodejs/.env /tmp/ei_env_bak
-  cd ~/domains/instalacionescob.ar/nodejs
-  rm -rf .next node_modules public server.js package.json
-  unzip -o /tmp/deploy.zip -d .
-  cp /tmp/ei_env_bak .env
-  touch tmp/restart.txt
-EOF
+# 2. Subir a Hostinger, descomprimir como raíz de la app Node y configurar:
+#    Build:  npm install && npm run build
+#    Start:  npm start
+#    Env:    cargar las variables (ver .env.example) ANTES del build
 ```
+
+Variables de entorno: ver [`.env.example`](.env.example). Las `NEXT_PUBLIC_*` se hornean en
+el build; `DATABASE_URL` y demás secretos se leen en runtime (no van en el zip).
 
 ---
 
