@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { motivosDeCobranza } from "./mensajeria-motivos";
+import { motivosDeCobranza, motivosGenerales } from "./mensajeria-motivos";
 
 const motivos = (...args: Parameters<typeof motivosDeCobranza>) =>
   motivosDeCobranza(...args).map((m) => m.motivo);
@@ -48,5 +48,49 @@ describe("motivosDeCobranza", () => {
     expect(
       motivos("Ana", [{ mes: 3, anio: 2026, importe: 15000, estado: "PAGADO", acreditadoEnISO: viejo }]),
     ).not.toContain("CONFIRMACION_PAGO");
+  });
+
+  it("ofrece MORA_SUSPENSION (además del recordatorio) con 3+ períodos impagos", () => {
+    vi.useFakeTimers().setSystemTime(new Date(2026, 5, 20));
+    const ms = motivos("Juan", [
+      { mes: 3, anio: 2026, importe: 15000, estado: "VENCIDO" },
+      { mes: 4, anio: 2026, importe: 15000, estado: "VENCIDO" },
+      { mes: 5, anio: 2026, importe: 15000, estado: "VENCIDO" },
+    ]);
+    expect(ms).toContain("RECORDATORIO_PAGO");
+    expect(ms).toContain("MORA_SUSPENSION");
+  });
+
+  it("NO ofrece MORA_SUSPENSION con menos de 3 períodos impagos", () => {
+    vi.useFakeTimers().setSystemTime(new Date(2026, 5, 20));
+    const ms = motivos("Juan", [
+      { mes: 4, anio: 2026, importe: 15000, estado: "VENCIDO" },
+      { mes: 5, anio: 2026, importe: 15000, estado: "VENCIDO" },
+    ]);
+    expect(ms).toContain("RECORDATORIO_PAGO");
+    expect(ms).not.toContain("MORA_SUSPENSION");
+  });
+});
+
+describe("motivosGenerales (catálogo manual, no dependiente del pago)", () => {
+  it("expone los mensajes de operación/relación con texto y etiqueta", () => {
+    const ms = motivosGenerales("Juan");
+    expect(ms.map((m) => m.motivo)).toEqual([
+      "BIENVENIDA",
+      "VISITA_TECNICA",
+      "PRUEBA_ALARMA",
+      "SIN_COMUNICACION",
+      "CAMBIO_TARIFA",
+      "REACTIVACION_SERVICIO",
+      "ACTUALIZAR_DATOS",
+      "AVISO_GENERAL",
+    ]);
+    expect(ms.every((m) => m.mensaje.length > 0 && m.label.length > 0)).toBe(true);
+  });
+
+  it("NO incluye motivos de cobranza ni LIBRE", () => {
+    const keys = motivosGenerales("Juan").map((m) => m.motivo);
+    expect(keys).not.toContain("RECORDATORIO_PAGO");
+    expect(keys).not.toContain("LIBRE");
   });
 });

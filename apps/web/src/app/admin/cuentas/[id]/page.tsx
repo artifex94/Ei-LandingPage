@@ -10,7 +10,7 @@ import { OverrideSuspensionForm } from "@/components/admin/OverrideSuspensionFor
 import { UUID_RE } from "@/lib/constants/validation";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, motivosGenerales } from "@/lib/mensajeria-motivos";
 
 const getCuenta = cache(async (id: string) => {
   return prisma.cuenta.findUnique({
@@ -115,16 +115,19 @@ export default async function CuentaAdminPage({
     },
     select: { mes: true, anio: true, importe: true, estado: true, acreditado_en: true },
   });
-  const motivosWA = motivosDeCobranza(
-    cuenta.perfil.nombre,
-    pagosMotivos.map((p) => ({
-      mes: p.mes,
-      anio: p.anio,
-      importe: Number(p.importe),
-      estado: p.estado,
-      acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
-    })),
-  );
+  const motivosWA = [
+    ...motivosDeCobranza(
+      cuenta.perfil.nombre,
+      pagosMotivos.map((p) => ({
+        mes: p.mes,
+        anio: p.anio,
+        importe: Number(p.importe),
+        estado: p.estado,
+        acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
+      })),
+    ),
+    ...motivosGenerales(cuenta.perfil.nombre),
+  ];
 
   return (
     <div className="space-y-8 max-w-3xl">

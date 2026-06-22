@@ -10,7 +10,7 @@ import { EliminarClienteForm } from "@/components/admin/EliminarClienteForm";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "@/app/admin/solicitudes-cambio/AccionesForm";
 import { UUID_RE } from "@/lib/constants/validation";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, motivosGenerales } from "@/lib/mensajeria-motivos";
 
 const getClientePerfil = cache(async (id: string) => {
   return prisma.perfil.findUnique({
@@ -106,16 +106,19 @@ export default async function ClienteDetallePage({
     },
     select: { mes: true, anio: true, importe: true, estado: true, acreditado_en: true },
   });
-  const motivosWA = motivosDeCobranza(
-    perfil.nombre,
-    pagosMotivos.map((p) => ({
-      mes: p.mes,
-      anio: p.anio,
-      importe: Number(p.importe),
-      estado: p.estado,
-      acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
-    })),
-  );
+  const motivosWA = [
+    ...motivosDeCobranza(
+      perfil.nombre,
+      pagosMotivos.map((p) => ({
+        mes: p.mes,
+        anio: p.anio,
+        importe: Number(p.importe),
+        estado: p.estado,
+        acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
+      })),
+    ),
+    ...motivosGenerales(perfil.nombre),
+  ];
 
   return (
     <div className="space-y-8">

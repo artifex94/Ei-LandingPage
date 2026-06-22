@@ -6,6 +6,8 @@
  * que consume estos helpers, no acá.
  */
 
+import { saludoPorHora } from "./fecha-ar";
+
 const PREFIJO_PAIS_AR = "549";
 
 // Argentina es UTC-3 fijo (no observa horario de verano desde 2009) → desfase determinístico.
@@ -48,9 +50,24 @@ function partesFechaHoraAR(fechaISO: string): { hora: string; fecha: string } | 
   return { hora: `${hh}:${mm}`, fecha: `${dd}/${mo}/${ar.getUTCFullYear()}` };
 }
 
+/**
+ * SoftGuard manda las descripciones en MAYÚSCULAS ("ROBO ZONA 2"). Las bajamos a minúscula
+ * para un tono menos alarmante en el mensaje al cliente, preservando tokens con dígitos
+ * (p. ej. "220V"). La mayúscula inicial la decide quien arma la línea (viñeta sí, inline no).
+ */
+function normalizarDescripcion(descripcion: string): string {
+  return (descripcion ?? "")
+    .trim()
+    .split(/\s+/)
+    .map((w) => (/\d/.test(w) ? w : w.toLowerCase()))
+    .join(" ");
+}
+
+const capitalizar = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
 /** Línea de un evento para la lista: "descripción - zona X" (zona solo si hay). */
 function lineaEvento(descripcion: string, zona: string | null): string {
-  const desc = descripcion?.trim() || "un evento";
+  const desc = normalizarDescripcion(descripcion) || "un evento";
   const z = zona?.trim() ? ` - zona ${zona.trim()}` : "";
   return `${desc}${z}`;
 }
@@ -72,19 +89,19 @@ export function categoriaEvento(prioridad: number | null): CategoriaEvento {
  * (los muestra como "?"). La jerarquía la da la negrita + mayúsculas del título, no un emoji.
  */
 const CONFIG_CATEGORIA: Record<CategoriaEvento, { titulo: string; intro: string; cierre: string }> = {
-  critica: { titulo: "ALARMA ACTIVADA", intro: "tu alarma reportó", cierre: "¿Está todo bien? Si necesitás ayuda, respondé este mensaje." },
-  media: { titulo: "Aviso", intro: "tu sistema reportó", cierre: "Ya lo estamos revisando." },
-  otra: { titulo: "Registro", intro: "tu alarma registró", cierre: "" },
+  critica: { titulo: "Alerta de seguridad", intro: "Tu alarma reportó", cierre: "¿Está todo bien? Si necesitás ayuda, respondé este mensaje." },
+  media: { titulo: "Aviso", intro: "Tu sistema reportó", cierre: "Ya lo estamos revisando." },
+  otra: { titulo: "Registro", intro: "Tu alarma registró", cierre: "" },
 };
 
 /**
  * Mensaje wa.me para notificar uno o varios eventos de la MISMA cuenta (varias zonas en un solo
- * aviso), con el tono adaptado a la criticidad. Formato legible en emergencia: encabezado con
- * emoji + hora, y las zonas en lista vertical con viñetas (no entrecortadas en una sola línea).
+ * aviso), con el tono adaptado a la criticidad. Formato legible en emergencia: título sobrio en
+ * negrita + hora, saludo por horario, y las zonas en lista vertical con viñetas (no entrecortadas).
  * El cliente ya sabe quién escribe y dónde responder (es el chat), por eso no hay empresa ni teléfono.
  *
- *   *ALARMA ACTIVADA* · 22:14
- *   Hola Juan, tu alarma reportó:
+ *   *Alerta de seguridad* · 22:14
+ *   Buenas noches, Juan. Tu alarma reportó:
  *   · Robo - zona 2
  *   · Fuego - zona Cocina
  *
@@ -98,7 +115,10 @@ export function mensajeEvento(input: {
 }): string {
   const cfg = CONFIG_CATEGORIA[categoriaEvento(input.prioridad)];
   const primerNombre = (input.nombreContacto ?? "").trim().split(/\s+/)[0] ?? "";
-  const saludo = primerNombre ? `Hola ${primerNombre},` : "Hola,";
+  // Saludo según la hora del evento (que coincide con el momento de notificación: se avisa al instante).
+  const fechaSaludo = new Date(input.fechaISO);
+  const hola = saludoPorHora(Number.isNaN(fechaSaludo.getTime()) ? undefined : fechaSaludo);
+  const saludo = primerNombre ? `${hola}, ${primerNombre}.` : `${hola}.`;
   const partes = partesFechaHoraAR(input.fechaISO);
 
   const encabezado = `*${cfg.titulo}*${partes ? ` · ${partes.hora}` : ""}`;
@@ -107,7 +127,7 @@ export function mensajeEvento(input: {
   const cuerpo =
     lineas.length <= 1
       ? `${saludo} ${cfg.intro} ${lineas[0] ?? "un evento"}.`
-      : `${saludo} ${cfg.intro}:\n${lineas.map((l) => `· ${l}`).join("\n")}`;
+      : `${saludo} ${cfg.intro}:\n${lineas.map((l) => `· ${capitalizar(l)}`).join("\n")}`;
 
   const bloques = [`${encabezado}\n${cuerpo}`];
   if (cfg.cierre) bloques.push(cfg.cierre);

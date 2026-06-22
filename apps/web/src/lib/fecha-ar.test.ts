@@ -5,6 +5,7 @@ import {
   horaCortaAR,
   diaMesAR,
   fechaAR,
+  saludoPorHora,
 } from "./fecha-ar";
 
 describe("parseFechaSoftguard", () => {
@@ -56,5 +57,24 @@ describe("formato en hora de Argentina", () => {
 
   it("fecha inválida → string vacío", () => {
     expect(horaAR("no-es-fecha")).toBe("");
+  });
+});
+
+describe("saludoPorHora (según hora local AR, UTC-3)", () => {
+  // El UTC es AR + 3h. Probamos los bordes de cada franja en hora de Argentina.
+  it("mañana: 06:00–11:59 AR → Buenos días", () => {
+    expect(saludoPorHora(new Date("2026-06-19T09:00:00Z"))).toBe("Buenos días"); // 06:00 AR
+    expect(saludoPorHora(new Date("2026-06-19T14:59:00Z"))).toBe("Buenos días"); // 11:59 AR
+  });
+
+  it("tarde: 12:00–19:59 AR → Buenas tardes", () => {
+    expect(saludoPorHora(new Date("2026-06-19T15:00:00Z"))).toBe("Buenas tardes"); // 12:00 AR
+    expect(saludoPorHora(new Date("2026-06-19T22:59:00Z"))).toBe("Buenas tardes"); // 19:59 AR
+  });
+
+  it("noche: 20:00–05:59 AR → Buenas noches", () => {
+    expect(saludoPorHora(new Date("2026-06-19T23:00:00Z"))).toBe("Buenas noches"); // 20:00 AR
+    expect(saludoPorHora(new Date("2026-06-19T08:59:00Z"))).toBe("Buenas noches"); // 05:59 AR
+    expect(saludoPorHora(new Date("2026-06-19T01:00:00Z"))).toBe("Buenas noches"); // 22:00 AR (18/06)
   });
 });

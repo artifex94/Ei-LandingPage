@@ -59,6 +59,19 @@ export function fechaAR(fecha: string | Date): string {
   return `${p2(ar.getUTCDate())}/${p2(ar.getUTCMonth() + 1)}/${ar.getUTCFullYear()}`;
 }
 
+/**
+ * Saludo de cortesía según la hora local de Argentina al momento de notificar:
+ *   06:00–11:59 → "Buenos días" · 12:00–19:59 → "Buenas tardes" · resto → "Buenas noches".
+ * `fecha` es inyectable para tests deterministas; por defecto, el instante actual.
+ */
+export function saludoPorHora(fecha: Date = new Date()): string {
+  const ar = aHoraAR(fecha);
+  const h = ar ? ar.getUTCHours() : 0;
+  if (h >= 6 && h < 12) return "Buenos días";
+  if (h >= 12 && h < 20) return "Buenas tardes";
+  return "Buenas noches";
+}
+
 /** ¿La fecha cae hoy, en hora de Argentina? */
 export function esHoyAR(fecha: string | Date): boolean {
   const ar = aHoraAR(fecha);

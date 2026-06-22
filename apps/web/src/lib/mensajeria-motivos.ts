@@ -13,11 +13,23 @@ import {
   mensajeRecordatorioPago,
   mensajeVencimientoProximo,
   mensajeConfirmacionPago,
+  mensajeMoraSuspension,
+  mensajeCambioTarifa,
+  mensajeReactivacionServicio,
+  mensajeBienvenida,
+  mensajeVisitaTecnica,
+  mensajePruebaAlarma,
+  mensajeSinComunicacion,
+  mensajeActualizarDatos,
+  mensajeAvisoGeneral,
   type MotivoMensaje,
 } from "./whatsapp-templates";
 
 // Una confirmación de pago solo tiene sentido si el pago se acreditó hace poco.
 const CONFIRMACION_RECIENTE_MS = 10 * 24 * 60 * 60 * 1000;
+
+// A partir de cuántos períodos impagos la cobranza también ofrece el aviso de mora (tono más firme).
+const UMBRAL_MORA = 3;
 
 export interface PagoParaMotivos {
   mes: number;
@@ -57,6 +69,20 @@ export function motivosDeCobranza(nombreContacto: string, pagos: PagoParaMotivos
         mesesAdeudados: resumen.mesesAdeudados,
       }),
     });
+
+    // Mora acumulada: además del recordatorio, ofrecé el aviso de tono más firme.
+    // Es una opción adicional (no reemplaza al recordatorio): el operador elige el tono.
+    if (resumen.mesesAdeudados.length >= UMBRAL_MORA) {
+      opciones.push({
+        motivo: "MORA_SUSPENSION",
+        label: ETIQUETA_MOTIVO.MORA_SUSPENSION,
+        mensaje: mensajeMoraSuspension({
+          nombreContacto,
+          deudaTotal: resumen.deudaTotal,
+          mesesAdeudados: resumen.mesesAdeudados,
+        }),
+      });
+    }
   }
 
   // Vencimiento próximo: solo mientras el período corriente NO haya vencido todavía
@@ -100,4 +126,30 @@ export function motivosDeCobranza(nombreContacto: string, pagos: PagoParaMotivos
 
   opciones.push({ motivo: "LIBRE", label: ETIQUETA_MOTIVO.LIBRE, mensaje: "" });
   return opciones;
+}
+
+/**
+ * Catálogo de mensajes NO dependientes del estado de pago (operación, servicio técnico y
+ * relación). Pensado para las fichas de cliente/cuenta, donde el operador necesita un mensaje
+ * puntual. Los textos vienen pre-armados con saludo por hora; los que requieren un dato que el
+ * operador conoce (día, monto, fecha) traen placeholders `[...]` que se completan en el preview.
+ *
+ * NO se usa en los hubs de cobranza (mensajería, morosidad), que solo muestran motivos de deuda.
+ */
+export function motivosGenerales(nombreContacto: string): MotivoOpcion[] {
+  const item = (motivo: MotivoMensaje, mensaje: string): MotivoOpcion => ({
+    motivo,
+    label: ETIQUETA_MOTIVO[motivo],
+    mensaje,
+  });
+  return [
+    item("BIENVENIDA", mensajeBienvenida({ nombreContacto })),
+    item("VISITA_TECNICA", mensajeVisitaTecnica({ nombreContacto })),
+    item("PRUEBA_ALARMA", mensajePruebaAlarma({ nombreContacto })),
+    item("SIN_COMUNICACION", mensajeSinComunicacion({ nombreContacto })),
+    item("CAMBIO_TARIFA", mensajeCambioTarifa({ nombreContacto })),
+    item("REACTIVACION_SERVICIO", mensajeReactivacionServicio({ nombreContacto })),
+    item("ACTUALIZAR_DATOS", mensajeActualizarDatos({ nombreContacto })),
+    item("AVISO_GENERAL", mensajeAvisoGeneral({ nombreContacto })),
+  ];
 }
