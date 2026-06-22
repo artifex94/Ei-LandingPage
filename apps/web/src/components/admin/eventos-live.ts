@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EventosLiveResponse, EventoLive } from "@/app/api/admin/eventos-live/route";
+import { horaAR, diaMesAR, esHoyAR } from "@/lib/fecha-ar";
 
 export const POLL_MS = 10_000;
 const FLASH_MS = 4_000;
@@ -89,26 +90,17 @@ export function useEventosLive(limit: number) {
 
 // ── Helpers de presentación ───────────────────────────────────────────────────
 
-// Formato fijo 24 h (HH:mm:ss), sin locale: toLocaleTimeString("es-AR") cambia
-// según el ICU del runtime (12 h en algunos Node) y una consola de monitoreo
-// necesita SIEMPRE el mismo formato.
-const p2 = (n: number) => String(n).padStart(2, "0");
-
+// Formato fijo 24 h en hora de Argentina, determinístico (no depende del
+// timezone del browser del operador ni del ICU del runtime): una consola de
+// monitoreo necesita SIEMPRE la misma hora local, sea quien sea que la mire.
 export function hora(iso: string): string {
-  const d = new Date(iso);
-  return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+  return horaAR(iso);
 }
 
 /** Hora para listas largas: si el evento no es de hoy, antepone dd/mm. */
 export function horaConDia(iso: string): string {
-  const d = new Date(iso);
-  const hoy = new Date();
-  const esHoy =
-    d.getDate() === hoy.getDate() &&
-    d.getMonth() === hoy.getMonth() &&
-    d.getFullYear() === hoy.getFullYear();
-  if (esHoy) return hora(iso);
-  return `${p2(d.getDate())}/${p2(d.getMonth() + 1)} ${hora(iso)}`;
+  if (esHoyAR(iso)) return horaAR(iso);
+  return `${diaMesAR(iso)} ${horaAR(iso)}`;
 }
 
 /** Prioridad SoftGuard: 1 = crítica. Sin prioridad → neutro. */

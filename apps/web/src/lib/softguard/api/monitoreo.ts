@@ -12,6 +12,7 @@
  */
 
 import { readConfig, restGet, s, num, refCuenta } from "./core";
+import { parseFechaSoftguard } from "@/lib/fecha-ar";
 
 // ── Tipos crudos (campos reales del modelo ExtJS) ────────────────────────────────
 
@@ -101,7 +102,7 @@ export async function fetchEventosHistoricoMM(limit = 50): Promise<WebEvento[]> 
       iid_cuenta:    num(r.rec_iidcuenta) ?? 0,
       softguard_ref: refCuenta(r.cue_clinea, r.cue_ncuenta),
       titular:       s(r.cue_cnombre),
-      fecha_evento:  fecha ? new Date(fecha) : new Date(),
+      fecha_evento:  fecha ? parseFechaSoftguard(fecha) : new Date(),
       codigo,
       descripcion:   s(r.cod_cdescripcion) || s(r.rec_cContenido) || codigo,
       // Nombre de zona (zon_cdescripcion) si la cuenta la tiene nombrada; si no, el número.
@@ -135,7 +136,7 @@ export async function fetchEventosPendientes(
       iid_cuenta:    num(r.rec_iidcuenta) ?? 0,
       softguard_ref: refCuenta(r.cue_clinea, r.cue_ncuenta),
       titular:       s(r.cue_cnombre),
-      fecha_evento:  fecha ? new Date(fecha) : new Date(),
+      fecha_evento:  fecha ? parseFechaSoftguard(fecha) : new Date(),
       codigo,
       descripcion:   meta?.descripcion || s(r.rec_ccontenido) || codigo,
       zona:          s(r.zon_cdescripcion) || s(r.rec_czona) || null,

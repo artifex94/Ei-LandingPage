@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   filtrarEventos,
   FILTROS_INICIALES,
@@ -88,17 +88,22 @@ describe("COLUMNAS_MONITOREO (board)", () => {
 });
 
 describe("horaConDia", () => {
-  it("para un evento de hoy muestra solo la hora", () => {
-    const hoy = new Date();
-    hoy.setHours(14, 30, 5, 0);
-    expect(horaConDia(hoy.toISOString())).toMatch(/^14:30:05$/);
+  // La hora SIEMPRE se muestra en horario de Argentina (UTC-3), sin importar el
+  // timezone del runtime. Fijamos "ahora" para que el branch "es hoy" sea estable.
+  afterEach(() => vi.useRealTimers());
+
+  it("para un evento de hoy muestra solo la hora (en ART)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-19T20:00:00Z")); // 17:00 ART del 19/06
+    // 14:30:05 ART = 17:30:05 UTC
+    expect(horaConDia("2026-06-19T17:30:05Z")).toBe("14:30:05");
   });
 
-  it("para un evento de otro día antepone dd/mm", () => {
-    const ayer = new Date();
-    ayer.setDate(ayer.getDate() - 1);
-    ayer.setHours(9, 15, 0, 0);
-    expect(horaConDia(ayer.toISOString())).toMatch(/^\d{2}\/\d{2} 09:15:00$/);
+  it("para un evento de otro día antepone dd/mm (en ART)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-19T20:00:00Z")); // hoy = 19/06 ART
+    // 18/06 09:15:00 ART = 18/06 12:15:00 UTC
+    expect(horaConDia("2026-06-18T12:15:00Z")).toBe("18/06 09:15:00");
   });
 });
 
