@@ -31,14 +31,16 @@ describe("plantillas de mensajería al cliente", () => {
 
   it("vencimiento próximo: período, importe y día de vencimiento", () => {
     const msg = mensajeVencimientoProximo({ nombreContacto: "Ana", importe: 15000, mes: 6, anio: 2026 });
+    expect(msg).toContain("*Vencimiento próximo*");
     expect(msg).toContain("Hola Ana.");
     expect(msg).toContain("junio 2026");
-    expect(msg).toContain("vence el día 10");
+    expect(msg).toContain("vence el día *10*");
   });
 
   it("confirmación de pago agradece y marca al día", () => {
     const msg = mensajeConfirmacionPago({ nombreContacto: "Ana López", mes: 5, anio: 2026, importe: 15000 });
-    expect(msg).toContain("Recibimos tu pago de mayo 2026");
+    expect(msg).toContain("*Pago recibido*");
+    expect(msg).toContain("Recibimos tu pago de *mayo 2026*");
     expect(msg).toContain("al día");
   });
 

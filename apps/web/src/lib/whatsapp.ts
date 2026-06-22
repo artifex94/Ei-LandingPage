@@ -48,10 +48,10 @@ function partesFechaHoraAR(fechaISO: string): { hora: string; fecha: string } | 
   return { hora: `${hh}:${mm}`, fecha: `${dd}/${mo}/${ar.getUTCFullYear()}` };
 }
 
-/** Línea de un evento para la lista: "descripción — zona X" (zona solo si hay). */
+/** Línea de un evento para la lista: "descripción - zona X" (zona solo si hay). */
 function lineaEvento(descripcion: string, zona: string | null): string {
   const desc = descripcion?.trim() || "un evento";
-  const z = zona?.trim() ? ` — zona ${zona.trim()}` : "";
+  const z = zona?.trim() ? ` - zona ${zona.trim()}` : "";
   return `${desc}${z}`;
 }
 
@@ -65,13 +65,16 @@ export function categoriaEvento(prioridad: number | null): CategoriaEvento {
 }
 
 /**
- * Texto por criticidad: emoji + título del encabezado (en negrita wa.me), verbo de la intro y
- * cierre. Centraliza el copy — es la base ajustable de todos los avisos de evento.
+ * Texto por criticidad: título del encabezado (en negrita wa.me), verbo de la intro y cierre.
+ * Centraliza el copy — es la base ajustable de todos los avisos de evento.
+ *
+ * Sin emojis a propósito: WhatsApp Desktop mangla los emojis del texto pre-cargado de wa.me
+ * (los muestra como "?"). La jerarquía la da la negrita + mayúsculas del título, no un emoji.
  */
-const CONFIG_CATEGORIA: Record<CategoriaEvento, { emoji: string; titulo: string; intro: string; cierre: string }> = {
-  critica: { emoji: "🚨", titulo: "Alarma", intro: "tu alarma reportó", cierre: "¿Está todo bien?" },
-  media: { emoji: "🔔", titulo: "Aviso", intro: "tu sistema reportó", cierre: "Ya lo estamos revisando." },
-  otra: { emoji: "ℹ️", titulo: "Registro", intro: "tu alarma registró", cierre: "" },
+const CONFIG_CATEGORIA: Record<CategoriaEvento, { titulo: string; intro: string; cierre: string }> = {
+  critica: { titulo: "ALARMA ACTIVADA", intro: "tu alarma reportó", cierre: "¿Está todo bien? Si necesitás ayuda, respondé este mensaje." },
+  media: { titulo: "Aviso", intro: "tu sistema reportó", cierre: "Ya lo estamos revisando." },
+  otra: { titulo: "Registro", intro: "tu alarma registró", cierre: "" },
 };
 
 /**
@@ -80,12 +83,12 @@ const CONFIG_CATEGORIA: Record<CategoriaEvento, { emoji: string; titulo: string;
  * emoji + hora, y las zonas en lista vertical con viñetas (no entrecortadas en una sola línea).
  * El cliente ya sabe quién escribe y dónde responder (es el chat), por eso no hay empresa ni teléfono.
  *
- *   🚨 *Alarma* · 22:14
+ *   *ALARMA ACTIVADA* · 22:14
  *   Hola Juan, tu alarma reportó:
- *   • Robo — zona 2
- *   • Fuego — zona Cocina
+ *   · Robo - zona 2
+ *   · Fuego - zona Cocina
  *
- *   ¿Está todo bien?
+ *   ¿Está todo bien? Si necesitás ayuda, respondé este mensaje.
  */
 export function mensajeEvento(input: {
   prioridad: number | null;
@@ -98,13 +101,13 @@ export function mensajeEvento(input: {
   const saludo = primerNombre ? `Hola ${primerNombre},` : "Hola,";
   const partes = partesFechaHoraAR(input.fechaISO);
 
-  const encabezado = `${cfg.emoji} *${cfg.titulo}*${partes ? ` · ${partes.hora}` : ""}`;
+  const encabezado = `*${cfg.titulo}*${partes ? ` · ${partes.hora}` : ""}`;
   const lineas = [...new Set(input.eventos.map((e) => lineaEvento(e.descripcion, e.zona)))];
 
   const cuerpo =
     lineas.length <= 1
       ? `${saludo} ${cfg.intro} ${lineas[0] ?? "un evento"}.`
-      : `${saludo} ${cfg.intro}:\n${lineas.map((l) => `• ${l}`).join("\n")}`;
+      : `${saludo} ${cfg.intro}:\n${lineas.map((l) => `· ${l}`).join("\n")}`;
 
   const bloques = [`${encabezado}\n${cuerpo}`];
   if (cfg.cierre) bloques.push(cfg.cierre);

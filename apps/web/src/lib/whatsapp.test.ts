@@ -59,7 +59,7 @@ describe("mensajeEventoP1", () => {
   it("encabezado + cuerpo inline (1 zona) + pregunta, en líneas separadas", () => {
     const msg = mensajeEventoP1(base);
     expect(msg).toBe(
-      "🚨 *Alarma* · 22:14\nHola Juan, tu alarma reportó ROBO ZONA 2 — zona 2.\n\n¿Está todo bien?",
+      "*ALARMA ACTIVADA* · 22:14\nHola Juan, tu alarma reportó ROBO ZONA 2 - zona 2.\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.",
     );
   });
   it("no incluye empresa, teléfono, ref interna ni fecha larga", () => {
@@ -94,7 +94,7 @@ describe("mensajeEventosP1 (varias zonas en un solo aviso)", () => {
       fechaISO,
     });
     expect(msg).toBe(
-      "🚨 *Alarma* · 22:14\nHola Juan, tu alarma reportó:\n• ROBO — zona 2\n• FUEGO — zona Cocina\n\n¿Está todo bien?",
+      "*ALARMA ACTIVADA* · 22:14\nHola Juan, tu alarma reportó:\n· ROBO - zona 2\n· FUEGO - zona Cocina\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.",
     );
   });
 
@@ -108,7 +108,7 @@ describe("mensajeEventosP1 (varias zonas en un solo aviso)", () => {
       ],
       fechaISO,
     });
-    expect(msg).toContain("• A\n• B\n• C");
+    expect(msg).toContain("· A\n· B\n· C");
   });
 
   it("un solo evento equivale a mensajeEventoP1", () => {
@@ -132,23 +132,23 @@ describe("mensajeEvento (texto según criticidad)", () => {
   const fechaISO = "2026-06-19T01:14:00.000Z"; // = 22:14 AR
   const eventos = [{ descripcion: "ROBO", zona: "2" }];
 
-  it("P1 (crítica): encabezado 🚨 *Alarma* + pregunta", () => {
+  it("P1 (crítica): encabezado *ALARMA ACTIVADA* + pregunta", () => {
     const msg = mensajeEvento({ prioridad: 1, nombreContacto: "Juan", eventos, fechaISO });
-    expect(msg).toBe("🚨 *Alarma* · 22:14\nHola Juan, tu alarma reportó ROBO — zona 2.\n\n¿Está todo bien?");
+    expect(msg).toBe("*ALARMA ACTIVADA* · 22:14\nHola Juan, tu alarma reportó ROBO - zona 2.\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.");
   });
 
-  it("P2 (media): 🔔 *Aviso*, informa y tranquiliza, sin pregunta de emergencia", () => {
+  it("P2 (media): *Aviso*, informa y tranquiliza, sin pregunta de emergencia", () => {
     const msg = mensajeEvento({
       prioridad: 2,
       nombreContacto: "Ana",
       eventos: [{ descripcion: "CORTE 220V", zona: null }],
       fechaISO,
     });
-    expect(msg).toBe("🔔 *Aviso* · 22:14\nHola Ana, tu sistema reportó CORTE 220V.\n\nYa lo estamos revisando.");
+    expect(msg).toBe("*Aviso* · 22:14\nHola Ana, tu sistema reportó CORTE 220V.\n\nYa lo estamos revisando.");
     expect(msg).not.toContain("¿Está todo bien?");
   });
 
-  it("resto (sin prioridad): ℹ️ *Registro* neutro, sin pregunta de cierre", () => {
+  it("resto (sin prioridad): *Registro* neutro, sin pregunta de cierre", () => {
     const msg = mensajeEvento({
       prioridad: null,
       nombreContacto: "Eva",
@@ -171,7 +171,7 @@ describe("mensajeEvento (texto según criticidad)", () => {
       fechaISO,
     });
     expect(msg).toBe(
-      "🔔 *Aviso* · 22:14\nHola Leo, tu sistema reportó:\n• CORTE 220V\n• BATERIA BAJA\n\nYa lo estamos revisando.",
+      "*Aviso* · 22:14\nHola Leo, tu sistema reportó:\n· CORTE 220V\n· BATERIA BAJA\n\nYa lo estamos revisando.",
     );
   });
 

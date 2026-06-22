@@ -54,6 +54,9 @@ function periodo(mes: number, anio: number): string {
 
 const LINK_PORTAL = `${siteConfig.url}/portal/pagos`;
 
+// Formato wa.me: `*texto*` = negrita. Título en negrita + cuerpo en bloques separados por
+// línea en blanco. Sin emojis (WhatsApp Desktop los rompe en el texto pre-cargado).
+
 /** Recordatorio de deuda actual ("ponete al día"). */
 export function mensajeRecordatorioPago(input: {
   nombreContacto: string;
@@ -63,8 +66,9 @@ export function mensajeRecordatorioPago(input: {
   const meses = input.mesesAdeudados.map((m) => periodo(m.mes, m.anio)).join(", ");
   const detalle = meses ? ` (${meses})` : "";
   return (
-    `${saludo(input.nombreContacto)} Tenés pagos pendientes por ${pesos(input.deudaTotal)}${detalle}. ` +
-    `Ponete al día desde tu portal: ${LINK_PORTAL}`
+    `*Recordatorio de pago*\n\n` +
+    `${saludo(input.nombreContacto)} Tenés pagos pendientes por *${pesos(input.deudaTotal)}*${detalle}.\n\n` +
+    `Ponete al día desde tu portal:\n${LINK_PORTAL}`
   );
 }
 
@@ -78,8 +82,10 @@ export function mensajeVencimientoProximo(input: {
 }): string {
   const dia = input.diaVto ?? siteConfig.fiscal.diaVtoPago;
   return (
-    `${saludo(input.nombreContacto)} El pago de ${periodo(input.mes, input.anio)} ` +
-    `(${pesos(input.importe)}) vence el día ${dia}. Lo podés abonar desde tu portal: ${LINK_PORTAL}`
+    `*Vencimiento próximo*\n\n` +
+    `${saludo(input.nombreContacto)} El pago de *${periodo(input.mes, input.anio)}* ` +
+    `(${pesos(input.importe)}) vence el día *${dia}*.\n\n` +
+    `Lo podés abonar desde tu portal:\n${LINK_PORTAL}`
   );
 }
 
@@ -91,7 +97,8 @@ export function mensajeConfirmacionPago(input: {
   importe: number;
 }): string {
   return (
-    `${saludo(input.nombreContacto)} Recibimos tu pago de ${periodo(input.mes, input.anio)} ` +
+    `*Pago recibido*\n\n` +
+    `${saludo(input.nombreContacto)} Recibimos tu pago de *${periodo(input.mes, input.anio)}* ` +
     `(${pesos(input.importe)}). ¡Gracias! Tu cuenta está al día.`
   );
 }
