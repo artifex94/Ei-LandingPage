@@ -35,6 +35,7 @@ const CAMPO_LABEL: Record<string, string> = {
   nombre: "Nombre",
   telefono: "Teléfono",
   email: "Email",
+  orden_avisos: "Orden de avisos",
 };
 
 export default async function PerfilPage() {

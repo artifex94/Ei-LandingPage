@@ -226,6 +226,7 @@ model Perfil {
 model Cuenta {
   id              String          @id @default(uuid())
   softguard_ref   String          @unique
+  iid_softguard   Int?            // id interno de la cuenta en la central (rec_iidcuenta); lo backfillea el sync de eventos. Necesario para traer los contactos de aviso (Telefonos).
   perfil_id       String
   perfil          Perfil          @relation(fields: [perfil_id], references: [id])
   descripcion     String
@@ -265,6 +266,7 @@ model Cuenta {
   eventos_alarma  EventoAlarma[]
   camaras         CamaraCliente[]
   notificaciones  NotificacionCliente[]
+  solicitudes_cambio SolicitudCambioInfo[]
 
   @@index([perfil_id])
   @@map("cuentas")
@@ -388,7 +390,9 @@ model SolicitudCambioInfo {
   id           String           @id @default(uuid())
   perfil_id    String
   perfil       Perfil           @relation(fields: [perfil_id], references: [id])
-  campo        String           // "nombre" | "telefono" | "email"
+  cuenta_id    String?          // solo para campo "orden_avisos" (reordenar contactos de aviso de una cuenta)
+  cuenta       Cuenta?          @relation(fields: [cuenta_id], references: [id])
+  campo        String           // "nombre" | "telefono" | "email" | "orden_avisos"
   valor_actual String?
   valor_nuevo  String
   estado       EstadoCambioInfo @default(PENDIENTE)
@@ -400,6 +404,7 @@ model SolicitudCambioInfo {
 
   @@index([perfil_id])
   @@index([estado])
+  @@index([cuenta_id])
   @@map("solicitudes_cambio_info")
 }
 

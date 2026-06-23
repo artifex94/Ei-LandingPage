@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma/client";
 import { requireAdmin } from "@/lib/auth/session";
 import { accionAdmin } from "@/lib/auth/guard";
 import { UUID_RE } from "@/lib/constants/validation";
+import { CAMPO_ORDEN_AVISOS, esCampoPerfil } from "@/lib/solicitudes-cambio";
 
 /** Verifica unicidad del valor nuevo para campos únicos (telefono, email) */
 async function verificarUnicidad(
@@ -67,11 +68,14 @@ export const aprobarCambio = accionAdmin(
     }
 
     await prisma.$transaction(async (tx) => {
-      // Aplicar el cambio al perfil
-      await tx.perfil.update({
-        where: { id: solicitud.perfil_id },
-        data: { [solicitud.campo]: solicitud.valor_nuevo },
-      });
+      // Solo los campos del perfil (nombre/telefono/email) se auto-aplican. "orden_avisos"
+      // se aplica a mano en SoftGuard (solo-lectura desde la app): aprobar solo marca resuelta.
+      if (esCampoPerfil(solicitud.campo)) {
+        await tx.perfil.update({
+          where: { id: solicitud.perfil_id },
+          data: { [solicitud.campo]: solicitud.valor_nuevo },
+        });
+      }
 
       // Marcar la solicitud como aprobada
       await tx.solicitudCambioInfo.update({
@@ -86,6 +90,8 @@ export const aprobarCambio = accionAdmin(
 
     revalidatePath("/admin/solicitudes-cambio");
     revalidatePath(`/admin/clientes/${solicitud.perfil_id}`);
+    revalidatePath("/portal/perfil");
+    if (solicitud.cuenta_id) revalidatePath(`/portal/cuentas/${solicitud.cuenta_id}`);
 
     return {};
   }
@@ -131,6 +137,8 @@ export async function rechazarCambio(
 
   revalidatePath("/admin/solicitudes-cambio");
   revalidatePath(`/admin/clientes/${solicitud.perfil_id}`);
+  revalidatePath("/portal/perfil");
+  if (solicitud.cuenta_id) revalidatePath(`/portal/cuentas/${solicitud.cuenta_id}`);
 
   return { error: "", ok: true };
 }
@@ -163,6 +171,11 @@ export async function editarYAprobarCambio(
 
   if (!solicitud || solicitud.estado !== "PENDIENTE") {
     return { error: "Solicitud no encontrada o ya procesada." };
+  }
+
+  // "orden_avisos" no se edita inline (es un orden estructurado): se aprueba o se rechaza.
+  if (solicitud.campo === CAMPO_ORDEN_AVISOS) {
+    return { error: "Las solicitudes de orden de avisos se aprueban o rechazan, no se editan." };
   }
 
   const errorUnicidad = await verificarUnicidad(
