@@ -45,7 +45,13 @@ export function NotificarWhatsAppModal({
       mensajeEvento({
         prioridad: evento.prioridad,
         nombreContacto: c.nombre,
-        eventos: grupo.map((e) => ({ descripcion: e.descripcion, zona: e.zona })),
+        eventos: grupo.map((e) => ({
+          descripcion: e.descripcion,
+          zona: e.zona,
+          codigo: e.codigo,
+          zonaNumero: e.zonaNumero,
+          fecha: e.fecha,
+        })),
         fechaISO: grupo[grupo.length - 1].fecha, // el más reciente (grupo ordenado asc)
       }),
     [grupo, evento.prioridad],

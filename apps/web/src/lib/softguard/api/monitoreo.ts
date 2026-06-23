@@ -52,7 +52,8 @@ export interface WebEvento {
   fecha_evento: Date;
   codigo: string;            // rec_calarma (alfanumérico, ej. "V16")
   descripcion: string;       // del catálogo codigosalarmas, o rec_ccontenido
-  zona: string | null;       // zon_cdescripcion || rec_czona
+  zona: string | null;       // zon_cdescripcion || rec_czona (etiqueta para mostrar)
+  zonaNumero: string | null; // rec_czona crudo (número), aparte del nombre — para "(3) patio"
   prioridad: number | null;
   operador_id: string | null;
   observacion: string | null;
@@ -107,6 +108,7 @@ export async function fetchEventosHistoricoMM(limit = 50): Promise<WebEvento[]> 
       descripcion:   s(r.cod_cdescripcion) || s(r.rec_cContenido) || codigo,
       // Nombre de zona (zon_cdescripcion) si la cuenta la tiene nombrada; si no, el número.
       zona:          s(r.zon_cdescripcion) || s(r.rec_czona) || null,
+      zonaNumero:    s(r.rec_czona) || null,
       prioridad:     num(r.rec_iPrioridad) ?? num(r.cod_nprioridad),
       operador_id:   r.rec_ioperador != null ? s(r.rec_ioperador) : null,
       observacion:   s(r.rec_cObservaciones) || null,
@@ -140,6 +142,7 @@ export async function fetchEventosPendientes(
       codigo,
       descripcion:   meta?.descripcion || s(r.rec_ccontenido) || codigo,
       zona:          s(r.zon_cdescripcion) || s(r.rec_czona) || null,
+      zonaNumero:    s(r.rec_czona) || null,
       prioridad:     num(r.rec_iprioridad) ?? meta?.prioridad ?? null,
       operador_id:   r.rec_ioperador != null ? s(r.rec_ioperador) : null,
       observacion:   s(r.rec_cobservaciones) || null,

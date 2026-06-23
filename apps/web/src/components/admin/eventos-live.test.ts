@@ -19,6 +19,7 @@ function ev(over: Partial<EventoLive>): EventoLive {
     codigo: "COF",
     descripcion: "CORTE 220V",
     zona: null,
+    zonaNumero: null,
     prioridad: 1,
     fecha: new Date().toISOString(),
     procesado: false,

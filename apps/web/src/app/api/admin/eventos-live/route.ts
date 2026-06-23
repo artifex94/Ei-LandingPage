@@ -41,6 +41,7 @@ export interface EventoLive {
   codigo: string;
   descripcion: string;
   zona: string | null;
+  zonaNumero: string | null; // número de zona crudo (rec_czona), aparte del nombre
   prioridad: number | null;
   fecha: string; // ISO
   procesado: boolean;
@@ -73,6 +74,7 @@ async function eventosDesdeDb(limit: number): Promise<EventoLive[]> {
     codigo: e.codigo,
     descripcion: e.descripcion,
     zona: e.zona,
+    zonaNumero: null, // EventoAlarma (fallback DB) no guarda el número aparte
     prioridad: e.prioridad,
     fecha: e.fecha_evento.toISOString(),
     procesado: !ESTADOS_ABIERTOS.has(e.estado),
@@ -113,6 +115,7 @@ export async function GET(req: NextRequest) {
           codigo: e.codigo,
           descripcion: e.descripcion,
           zona: zonaPorId.get(e.id_evento) ?? e.zona,
+          zonaNumero: e.zonaNumero,
           prioridad: e.prioridad,
           fecha: e.fecha_evento.toISOString(),
           procesado: !sinAtender.has(e.id_evento),

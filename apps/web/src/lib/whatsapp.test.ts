@@ -6,6 +6,7 @@ import {
   mensajeEventosP1,
   mensajeEvento,
   categoriaEvento,
+  esRestauracion,
 } from "./whatsapp";
 
 describe("normalizarTelefono", () => {
@@ -59,7 +60,7 @@ describe("mensajeEventoP1", () => {
   it("encabezado (título sobrio + hora) + cuerpo inline (1 zona) + pregunta, en líneas separadas", () => {
     const msg = mensajeEventoP1(base);
     expect(msg).toBe(
-      "*Alerta de seguridad* · 22:14\nBuenas noches, Juan. Tu alarma reportó robo zona 2 - zona 2.\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.",
+      "*Alerta de seguridad* · 22:14\nBuenas noches, Juan. Tu alarma reportó robo zona 2 - zona (2).\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.",
     );
   });
   it("no incluye empresa, teléfono, ref interna ni fecha larga", () => {
@@ -86,7 +87,7 @@ describe("mensajeEventoP1", () => {
 describe("mensajeEventosP1 (varias zonas en un solo aviso)", () => {
   const fechaISO = "2026-06-19T01:14:00.000Z"; // = 22:14 AR
 
-  it("lista las zonas en viñetas verticales y deduplica repetidos", () => {
+  it("lista las zonas en viñetas verticales (formato (n) nombre) y deduplica repetidos", () => {
     const msg = mensajeEventosP1({
       nombreContacto: "Juan",
       eventos: [
@@ -97,7 +98,7 @@ describe("mensajeEventosP1 (varias zonas en un solo aviso)", () => {
       fechaISO,
     });
     expect(msg).toBe(
-      "*Alerta de seguridad* · 22:14\nBuenas noches, Juan. Tu alarma reportó:\n· Robo - zona 2\n· Fuego - zona Cocina\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.",
+      "*Alerta de seguridad* · 22:14\nBuenas noches, Juan. Tu alarma reportó:\n· Robo - zona (2)\n· Fuego - zona cocina\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.",
     );
   });
 
@@ -131,13 +132,28 @@ describe("categoriaEvento", () => {
   });
 });
 
+describe("esRestauracion (código SoftGuard: RES = restauración, BUR = robo)", () => {
+  it("detecta RES (solo/ con número) como restauración", () => {
+    expect(esRestauracion("RES")).toBe(true);
+    expect(esRestauracion("RES130")).toBe(true);
+    expect(esRestauracion("res130")).toBe(true);
+  });
+  it("NO confunde robo (BUR) ni otros códigos con restauración (seguridad)", () => {
+    expect(esRestauracion("BUR")).toBe(false);
+    expect(esRestauracion("BUR130")).toBe(false);
+    expect(esRestauracion("ROBO")).toBe(false);
+    expect(esRestauracion("PRESION")).toBe(false); // 'RES' embebido en otra palabra
+    expect(esRestauracion(null)).toBe(false);
+  });
+});
+
 describe("mensajeEvento (texto según criticidad)", () => {
   const fechaISO = "2026-06-19T01:14:00.000Z"; // = 22:14 AR
   const eventos = [{ descripcion: "ROBO", zona: "2" }];
 
   it("P1 (crítica): encabezado sobrio + saludo por hora + pregunta", () => {
     const msg = mensajeEvento({ prioridad: 1, nombreContacto: "Juan", eventos, fechaISO });
-    expect(msg).toBe("*Alerta de seguridad* · 22:14\nBuenas noches, Juan. Tu alarma reportó robo - zona 2.\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.");
+    expect(msg).toBe("*Alerta de seguridad* · 22:14\nBuenas noches, Juan. Tu alarma reportó robo - zona (2).\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.");
   });
 
   it("P2 (media): *Aviso*, informa y tranquiliza, sin pregunta de emergencia", () => {
@@ -173,6 +189,29 @@ describe("mensajeEvento (texto según criticidad)", () => {
     expect(msg).toContain("220V");
   });
 
+  it("formato de zona '(n) nombre' usando número crudo aparte del nombre", () => {
+    const msg = mensajeEvento({
+      prioridad: 1,
+      nombreContacto: "Agustín",
+      eventos: [{ codigo: "BUR130", descripcion: "ROBO", zona: "Patio", zonaNumero: "003", fecha: fechaISO }],
+      fechaISO,
+    });
+    expect(msg).toContain("robo - zona (3) patio");
+  });
+
+  it("zona solo-número → '(n)'; zona solo-nombre → nombre", () => {
+    const soloNum = mensajeEvento({
+      prioridad: 1, nombreContacto: "A", fechaISO,
+      eventos: [{ descripcion: "ROBO", zona: "002", zonaNumero: "002", fecha: fechaISO }],
+    });
+    expect(soloNum).toContain("- zona (2).");
+    const soloNombre = mensajeEvento({
+      prioridad: 1, nombreContacto: "A", fechaISO,
+      eventos: [{ descripcion: "ROBO", zona: "Patio", zonaNumero: null, fecha: fechaISO }],
+    });
+    expect(soloNombre).toContain("- zona patio.");
+  });
+
   it("multi-zona: viñeta por línea, con mayúscula inicial por viñeta", () => {
     const msg = mensajeEvento({
       prioridad: 2,
@@ -191,5 +230,74 @@ describe("mensajeEvento (texto según criticidad)", () => {
   it("mensajeEventosP1 es mensajeEvento con prioridad 1", () => {
     const input = { nombreContacto: "Juan", eventos, fechaISO };
     expect(mensajeEventosP1(input)).toBe(mensajeEvento({ prioridad: 1, ...input }));
+  });
+});
+
+describe("mensajeEvento — robo / restauración (pairing por zona + tiempo)", () => {
+  const tRobo = "2026-06-19T01:14:00.000Z"; // 22:14 AR
+  const tRest = "2026-06-19T01:20:00.000Z"; // 22:20 AR (posterior)
+
+  it("robo seguido de su restauración (misma zona, RES posterior) → solo 'Alarma restaurada'", () => {
+    const msg = mensajeEvento({
+      prioridad: 1,
+      nombreContacto: "Agustín",
+      eventos: [
+        { codigo: "BUR130", descripcion: "ROBO", zona: "Patio", zonaNumero: "003", fecha: tRobo },
+        { codigo: "RES130", descripcion: "RESTAURACION ROBO", zona: "Patio", zonaNumero: "003", fecha: tRest },
+      ],
+      fechaISO: tRest,
+    });
+    expect(msg).toBe(
+      "*Alarma restaurada* · 22:20\nBuenas noches, Agustín. Tu alarma se restauró en la zona (3) patio.\n\n¿Todo bien?",
+    );
+    expect(msg).not.toContain("robo");
+    expect(msg).not.toContain("Alerta de seguridad");
+  });
+
+  it("varias zonas restauradas → una por línea", () => {
+    const msg = mensajeEvento({
+      prioridad: 1,
+      nombreContacto: "Nombre",
+      eventos: [
+        { codigo: "BUR130", descripcion: "ROBO", zona: "Patio", zonaNumero: "003", fecha: tRobo },
+        { codigo: "RES130", descripcion: "RESTAURACION", zona: "Patio", zonaNumero: "003", fecha: tRest },
+        { codigo: "BUR130", descripcion: "ROBO", zona: "Comedor", zonaNumero: "002", fecha: tRobo },
+        { codigo: "RES130", descripcion: "RESTAURACION", zona: "Comedor", zonaNumero: "002", fecha: tRest },
+      ],
+      fechaISO: tRest,
+    });
+    expect(msg).toBe(
+      "*Alarma restaurada* · 22:20\nBuenas noches, Nombre. Tu alarma se restauró en las zonas:\n· (3) patio\n· (2) comedor\n\n¿Todo bien?",
+    );
+  });
+
+  it("mixto: una zona restaurada + otra activa → alerta SOLO de la activa", () => {
+    const msg = mensajeEvento({
+      prioridad: 1,
+      nombreContacto: "Nombre",
+      eventos: [
+        { codigo: "BUR130", descripcion: "ROBO", zona: "Patio", zonaNumero: "003", fecha: tRobo },
+        { codigo: "RES130", descripcion: "RESTAURACION", zona: "Patio", zonaNumero: "003", fecha: tRest },
+        { codigo: "BUR130", descripcion: "ROBO", zona: "Comedor", zonaNumero: "002", fecha: tRobo },
+      ],
+      fechaISO: tRest,
+    });
+    expect(msg).toContain("*Alerta de seguridad*");
+    expect(msg).toContain("robo - zona (2)");
+    expect(msg).not.toContain("(3) patio"); // la zona restaurada se omite
+  });
+
+  it("restauración ANTERIOR al robo no restaura (la zona sigue activa)", () => {
+    const msg = mensajeEvento({
+      prioridad: 1,
+      nombreContacto: "Agustín",
+      eventos: [
+        { codigo: "RES130", descripcion: "RESTAURACION", zona: "Patio", zonaNumero: "003", fecha: tRobo },
+        { codigo: "BUR130", descripcion: "ROBO", zona: "Patio", zonaNumero: "003", fecha: tRest },
+      ],
+      fechaISO: tRest,
+    });
+    expect(msg).toContain("*Alerta de seguridad*");
+    expect(msg).toContain("robo - zona (3) patio");
   });
 });
