@@ -9,6 +9,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/components/ui/LogoutButton";
 import { BrandLockup } from "@/components/layout/BrandLockup";
+import { NotificationBell } from "@/components/portal/NotificationBell";
+import type { NotificacionItem } from "@/lib/notificaciones-feed";
 
 // ── Definición de ítems ───────────────────────────────────────────────────────
 
@@ -149,9 +151,10 @@ function BottomNavItem({ nav, pathname }: { nav: NavDef; pathname: string }) {
 
 interface PortalNavProps {
   isEmpleado?: boolean;
+  feed?: NotificacionItem[];
 }
 
-export function PortalNav({ isEmpleado = false }: PortalNavProps) {
+export function PortalNav({ isEmpleado = false, feed = [] }: PortalNavProps) {
   const pathname = usePathname();
 
   const desktopItems = isEmpleado ? NAV_EMPLEADO_DESKTOP : [...NAV_CLIENTE, ITEM_EVENTOS];
@@ -172,7 +175,10 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
             ))}
           </nav>
 
-          <LogoutButton />
+          <div className="flex items-center gap-2">
+            <NotificationBell items={feed} variant="desktop" />
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
@@ -181,7 +187,10 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
         <Link href="/portal/dashboard">
           <BrandLockup context="Mi Central" compact />
         </Link>
-        <LogoutButton />
+        <div className="flex items-center gap-1">
+          <NotificationBell items={feed} variant="mobile" />
+          <LogoutButton />
+        </div>
       </header>
 
       {/* ── Bottom nav mobile ──────────────────────────────────────────────── */}

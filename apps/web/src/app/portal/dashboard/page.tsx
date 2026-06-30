@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   CreditCard, FileText, Zap, Wrench, ClipboardList, User,
-  MessageCircle, ChevronRight,
+  MessageCircle, ChevronRight, AlertTriangle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
+import { calcularEstadoFinanciero, peorEstadoFinanciero } from "@/lib/billing-state";
 import { CuentaCard } from "@/components/portal/CuentaCard";
 import { EstadoSistemaCard } from "@/components/portal/EstadoSistemaCard";
 import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
@@ -35,6 +36,14 @@ export default async function DashboardPage() {
     },
     orderBy: { descripcion: "asc" },
   });
+
+  // Estado financiero para el chip de mora (refuerza el CTA de cobranza que
+  // antes vivía en el banner del header). Reutiliza el query de cuentas/pagos.
+  const peorEstado = peorEstadoFinanciero(
+    cuentas.map((c) =>
+      calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira)
+    )
+  );
 
   const estadoSistema = cuentas.map((c) => ({
     id: c.id,
@@ -79,6 +88,23 @@ export default async function DashboardPage() {
           </a>
         </nav>
       </div>
+
+      {peorEstado.tipo === "GRACE_PERIOD" && (
+        <Link
+          href="/portal/pagos"
+          className="flex items-center gap-3 rounded-xl border border-tactical-500/30 bg-tactical-500/10 px-4 py-3 text-sm text-tactical-200 transition-colors hover:bg-tactical-500/15"
+        >
+          <AlertTriangle className="h-5 w-5 flex-shrink-0 text-tactical-400" strokeWidth={2} aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            Tenés un pago vencido hace{" "}
+            <strong className="font-bold">
+              {peorEstado.dias_mora} día{peorEstado.dias_mora !== 1 ? "s" : ""}
+            </strong>
+            . Tu servicio puede suspenderse.
+          </span>
+          <span className="flex-shrink-0 font-bold text-tactical-300">Regularizá →</span>
+        </Link>
+      )}
 
       <EstadoSistemaCard cuentas={estadoSistema} />
 

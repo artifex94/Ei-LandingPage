@@ -3,59 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
-import { requireAdminWithName as requireAdmin } from "@/lib/actions/auth";
+import { requireCapacidad } from "@/lib/auth/session";
 import { UUID_RE } from "@/lib/constants/validation";
 import type { EstadoEventoSync } from "@/generated/prisma/client";
+import { clasificarCodigo, PRIORIDAD, type TipoDia } from "@/lib/eventos-clasificacion";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
-export type TipoDia =
-  | "medica"
-  | "violencia"
-  | "fuego"
-  | "intrusion"
-  | "tecnico"
-  | "normal"
-  | "vacio";
+// NOTA: este archivo es "use server", así que NO se puede re-exportar `TipoDia`
+// con `export type { TipoDia }` — el proxy de server actions de Turbopack lo
+// trataría como una action de runtime y el build falla. Los consumidores del
+// tipo lo importan directo de `@/lib/eventos-clasificacion`.
 
 export interface DiaEvento {
   fecha: string;   // YYYY-MM-DD
   total: number;
   tipo: TipoDia;
-}
-
-// ── Prioridad de severidad (mayor número = más crítico) ────────────────────────
-
-const PRIORIDAD: Record<TipoDia, number> = {
-  vacio:     0,
-  normal:    1,
-  tecnico:   2,
-  intrusion: 3,
-  fuego:     4,
-  violencia: 5,
-  medica:    6,
-};
-
-// ── Clasificación Contact ID ───────────────────────────────────────────────────
-// Protocolo Contact ID / SIA usado por SoftGuard (campo EventoAlarma.codigo)
-//   E100-E101 → Emergencia médica / personal
-//   E110-E119 → Incendio / Humo / Combustión
-//   E120-E122 → Pánico / Coacción / Hold-up
-//   E130-E159 → Intrusión / Zona / Perímetro
-//   E300-E399 → Problemas técnicos (tamper, AC, batería)
-//   E4xx-E6xx → Operaciones normales (apertura, cierre, test, periódico)
-
-function clasificarCodigo(codigo: string): TipoDia {
-  const c = codigo.trim().toUpperCase();
-
-  if (/^[ER]10[01]/.test(c))       return "medica";
-  if (/^[ER]12[012]/.test(c))      return "violencia";
-  if (/^[ER]11[0-9]/.test(c))      return "fuego";
-  if (/^[ER]1[3-5][0-9]/.test(c))  return "intrusion";
-  if (/^[ER]3[0-9]{2}/.test(c))    return "tecnico";
-
-  // Apertura, cierre, test, heartbeat, restauraciones → actividad normal
-  return "normal";
 }
 
 // ── Query principal ────────────────────────────────────────────────────────────
@@ -116,8 +79,7 @@ export async function actualizarEstadoEvento(
     return { error: "ID de evento inválido." };
   }
 
-  const admin = await requireAdmin();
-  if (!admin) return { error: "Sin permisos." };
+  const admin = await requireCapacidad("puede_monitorear");
 
   if (!ESTADOS_VALIDOS.has(nuevoEstado)) {
     return { error: "Estado no válido." };

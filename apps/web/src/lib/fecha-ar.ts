@@ -72,6 +72,36 @@ export function saludoPorHora(fecha: Date = new Date()): string {
   return "Buenas noches";
 }
 
+/**
+ * Antigüedad legible para feeds/listas: "recién", "hace 5 min", "hace 2 h",
+ * "ayer", "hace 3 días"; para fechas más viejas (>7 días) o futuras cae a la
+ * fecha absoluta AR ("DD/MM/AAAA"). La diferencia temporal es independiente de
+ * la zona; solo la fecha absoluta de fallback se muestra en hora de Argentina.
+ */
+export function fechaRelativaAR(fecha: number | string | Date): string {
+  const t =
+    fecha instanceof Date ? fecha.getTime()
+    : typeof fecha === "number" ? fecha
+    : new Date(fecha).getTime();
+  if (Number.isNaN(t)) return "";
+
+  const diffMs = Date.now() - t;
+  if (diffMs < 0) return fechaAR(new Date(t)); // futuro → mostrar absoluta
+
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return "recién";
+  if (min < 60) return `hace ${min} min`;
+
+  const horas = Math.floor(min / 60);
+  if (horas < 24) return `hace ${horas} h`;
+
+  const dias = Math.floor(horas / 24);
+  if (dias === 1) return "ayer";
+  if (dias < 7) return `hace ${dias} días`;
+
+  return fechaAR(new Date(t));
+}
+
 /** ¿La fecha cae hoy, en hora de Argentina? */
 export function esHoyAR(fecha: string | Date): boolean {
   const ar = aHoraAR(fecha);
