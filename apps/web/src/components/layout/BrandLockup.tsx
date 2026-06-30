@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/ui/cn";
 
 interface BrandLockupProps {
@@ -9,16 +9,30 @@ interface BrandLockupProps {
 
 /** Identidad compartida por las superficies públicas y autenticadas. */
 export function BrandLockup({ context, compact = false, className }: BrandLockupProps) {
+  const size = compact ? 32 : 44;
   return (
     <div className={cn("flex items-center gap-3", className)}>
       <span
-        aria-hidden="true"
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-xl bg-tactical-500 text-slate-950 shadow-[0_8px_24px_rgba(241,119,32,0.18)]",
+          "relative inline-flex shrink-0 items-center justify-center",
           compact ? "h-8 w-8" : "h-11 w-11",
         )}
       >
-        <ShieldCheck className={compact ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2.3} />
+        <Image
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes="44px"
+          className="logo-glow pointer-events-none select-none object-contain"
+        />
+        <Image
+          src="/logo.png"
+          alt="Escobar Instalaciones"
+          width={size}
+          height={size}
+          className={cn("relative object-contain", compact ? "h-8 w-8" : "h-11 w-11")}
+        />
       </span>
       <span className="min-w-0">
         <span className={cn("block font-display font-bold leading-none text-white", compact ? "text-sm" : "text-base")}>

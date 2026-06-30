@@ -1,5 +1,11 @@
 import Image from "next/image";
-import { Activity, Eye, Headphones, ShieldCheck } from "lucide-react";
+import { Activity, Eye, Headphones, MapPin, ShieldCheck } from "lucide-react";
+
+const proof = [
+  { value: "26 años", label: "en el sector" },
+  { value: "+100", label: "clientes y creciendo" },
+  { value: "Respuesta", label: "inmediata ante el evento" },
+];
 
 const capabilities = [
   {
@@ -29,27 +35,48 @@ export default function FeaturesSection() {
     <section
       id="nosotros"
       aria-labelledby="features-heading"
-      className="relative overflow-hidden bg-slate-900 py-16 sm:py-20"
+      className="relative overflow-hidden bg-slate-900 py-12 sm:py-20"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_12%,rgba(241,119,32,0.10),transparent_32%)]" />
-      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="reveal-on-scroll mb-9 max-w-3xl">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-15 mix-blend-screen"
+        style={{ backgroundImage: "url('/images/victoria-security-texture.webp')" }}
+      />
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 2xl:max-w-[1600px] 2xl:px-12">
+        <div className="reveal-on-scroll mb-7 max-w-3xl sm:mb-9">
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-orange-400">
             Cómo trabajamos
           </p>
           <h2
             id="features-heading"
-            className="text-balance text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl"
+            className="text-balance text-2xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl"
           >
             De la evaluación al soporte
           </h2>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:mt-4 sm:text-lg sm:leading-7">
             Evaluamos el riesgo, instalamos prolijo y monitoreamos las 24 horas.
           </p>
         </div>
 
+        <dl className="reveal-on-scroll mb-4 grid grid-cols-3 gap-3 sm:max-w-2xl">
+          {proof.map((item) => (
+            <div
+              key={item.label}
+              className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-center sm:text-left"
+            >
+              <dt className="text-2xl font-black text-white sm:text-3xl">{item.value}</dt>
+              <dd className="mt-1 text-xs leading-4 text-slate-400">{item.label}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <p className="reveal-on-scroll mb-9 flex items-start gap-2 text-sm leading-6 text-slate-400">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" aria-hidden="true" />
+          Cobertura en Victoria y alrededores: Rosario, zonas rurales y localidades aledañas.
+        </p>
+
         <div className="grid gap-4 lg:grid-cols-[1.16fr_.84fr] lg:grid-rows-[auto_1fr]">
-          <figure className="image-reveal group relative min-h-[320px] overflow-hidden rounded-2xl border border-white/10 lg:row-span-2 lg:min-h-[620px]">
+          <figure className="image-reveal group relative min-h-[230px] overflow-hidden rounded-2xl border border-white/10 sm:min-h-[320px] lg:row-span-2 lg:min-h-[620px]">
             <Image
               src="/images/instalacion-panel.webp"
               alt="Técnico realizando una instalación ordenada en un panel de alarma"
@@ -69,7 +96,7 @@ export default function FeaturesSection() {
             </figcaption>
           </figure>
 
-          <figure className="image-reveal group relative min-h-[250px] overflow-hidden rounded-2xl border border-white/10">
+          <figure className="image-reveal group relative min-h-[190px] overflow-hidden rounded-2xl border border-white/10 sm:min-h-[250px]">
             <Image
               src="/images/monitoreo-local.webp"
               alt="Operadora atendiendo la central de monitoreo"

@@ -159,7 +159,7 @@ export function SolicitudAltaForm() {
                 name="requiere_factura"
                 value={requiereFactura ? "true" : "false"}
               />
-              <span className="text-sm text-slate-300">Requiero factura A o B</span>
+              <span className="text-sm text-slate-300">Requiero Factura</span>
             </label>
 
             <div
