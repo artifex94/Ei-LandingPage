@@ -128,6 +128,7 @@ export default function ServicesSection() {
                   src={image}
                   alt={imageAlt}
                   fill
+                  unoptimized
                   sizes="(max-width: 1024px) 50vw, 33vw"
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
                 />
@@ -163,7 +164,7 @@ export default function ServicesSection() {
               className="reveal-on-scroll group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65 p-4 text-left transition duration-200 hover:border-orange-400/35 hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             >
               <span className="pointer-events-none absolute inset-0 opacity-15">
-                <Image src={image} alt="" fill sizes="100vw" className="object-cover" />
+                <Image src={image} alt="" fill unoptimized sizes="100vw" className="object-cover" />
               </span>
               <span className="pointer-events-none absolute inset-0 bg-slate-950/70" />
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-orange-300 ring-1 ring-white/10">
@@ -215,6 +216,7 @@ export default function ServicesSection() {
                 src={open.image}
                 alt={open.imageAlt}
                 fill
+                unoptimized
                 sizes="100vw"
                 className="object-cover"
               />

@@ -81,6 +81,7 @@ export default function FeaturesSection() {
               src="/images/instalacion-panel.webp"
               alt="Técnico realizando una instalación ordenada en un panel de alarma"
               fill
+              unoptimized
               priority={false}
               sizes="(max-width: 1024px) 100vw, 58vw"
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
@@ -101,6 +102,7 @@ export default function FeaturesSection() {
               src="/images/monitoreo-local.webp"
               alt="Operadora atendiendo la central de monitoreo"
               fill
+              unoptimized
               sizes="(max-width: 1024px) 100vw, 42vw"
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
             />
