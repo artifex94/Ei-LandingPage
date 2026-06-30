@@ -61,3 +61,6 @@ Thumbs.db
 
 # SoftGuard capture (datos sensibles)
 scripts/.sg-capture.json
+
+# Screenshots de debug del scraper SoftGuard
+scripts/.sg-step-*.png
