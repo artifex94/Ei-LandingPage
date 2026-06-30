@@ -25,3 +25,5 @@ cd /home/artifex/dev/EscobarInstalaciones/apps/web && set -a && source .env.loca
 **Escalación:** Si el script falla 2 veces seguidas, pausar y notificarme antes de reintentar.
 
 **Scope permitido:** Solo ejecutar ese comando exacto. No modificar archivos, no conectarse a servicios externos adicionales, no tomar otras acciones.
+
+## Imported Claude Cowork project instructions
