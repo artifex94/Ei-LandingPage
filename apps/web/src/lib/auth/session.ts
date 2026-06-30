@@ -80,3 +80,37 @@ export async function requireAdminWithName(): Promise<{ id: string; nombre: stri
   }
   return { id: sesion.perfil.id, nombre: sesion.perfil.nombre };
 }
+
+/** Capacidades de empleado que habilitan acciones específicas (tabla Empleado). */
+export type Capacidad = "puede_monitorear" | "puede_facturar" | "puede_instalar";
+
+/**
+ * Exige ADMIN o que el empleado autenticado tenga AL MENOS UNA de las
+ * capacidades dadas. FAIL-CLOSED: si no califica, redirige a su área.
+ *
+ * Pensada para Server Actions que antes eran solo-ADMIN y ahora también debe
+ * poder ejecutar el agente con el flag correspondiente (Monitoreo, Cobros).
+ * ADMIN nunca pierde acceso: este guard SOLO suma el camino por capacidad.
+ * Retorna { id, nombre, email } del actor — drop-in de requireAdmin /
+ * requireAdminWithName para la auditoría.
+ */
+export async function requireCapacidad(
+  ...capacidades: Capacidad[]
+): Promise<{ id: string; nombre: string; email: string | null }> {
+  const sesion = await requireSesion();
+  const actor = {
+    id: sesion.perfil.id,
+    nombre: sesion.perfil.nombre,
+    email: sesion.perfil.email,
+  };
+  if (sesion.perfil.rol === "ADMIN") return actor;
+
+  const empleado = await prisma.empleado.findFirst({
+    where: { perfil_id: sesion.userId },
+    select: { puede_monitorear: true, puede_facturar: true, puede_instalar: true },
+  });
+  const habilitado =
+    empleado != null && capacidades.some((c) => empleado[c] === true);
+  if (!habilitado) redirect(rutaInicio(sesion.perfil.rol));
+  return actor;
+}

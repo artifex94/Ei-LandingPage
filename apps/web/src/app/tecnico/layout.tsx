@@ -23,7 +23,10 @@ export default async function TecnicoLayout({ children }: { children: React.Reac
     select: { puede_instalar: true },
   });
 
-  if (perfil.rol !== "ADMIN" && perfil.rol !== "TECNICO" && !empleado?.puede_instalar) {
+  // Aislamiento por capacidad: ADMIN o quien tenga puede_instalar. No alcanza
+  // con rol TECNICO a secas — los agentes de Monitoreo/Cobros también son
+  // TECNICO y no deben colarse acá. Todos los técnicos reales tienen el flag.
+  if (perfil.rol !== "ADMIN" && !empleado?.puede_instalar) {
     redirect("/portal/dashboard");
   }
 
@@ -31,7 +34,7 @@ export default async function TecnicoLayout({ children }: { children: React.Reac
     <div className="min-h-screen overflow-x-hidden bg-industrial-900 flex flex-col">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-orange-500 focus:text-slate-900 focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-4 focus-visible:left-4 focus-visible:z-50 focus-visible:bg-orange-500 focus-visible:text-slate-900 focus-visible:px-4 focus-visible:py-2 focus-visible:rounded-lg focus-visible:text-sm focus-visible:font-semibold"
       >
         Ir al contenido principal
       </a>

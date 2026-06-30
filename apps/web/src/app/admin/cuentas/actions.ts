@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
+import { requireCapacidad } from "@/lib/auth/session";
 import { UUID_RE } from "@/lib/constants/validation";
 
 const CATEGORIAS = ["ALARMA_MONITOREO", "DOMOTICA", "CAMARA_CCTV", "ANTENA_STARLINK", "OTRO"] as const;
@@ -171,8 +172,8 @@ export async function registrarPagoManual(
   prevState: CuentaActionResult,
   formData: FormData
 ): Promise<CuentaActionResult> {
-  const admin = await requireAdmin();
-  if (!admin) return { errores: ["Sin permisos de administrador."] };
+  // ADMIN o agente de cobros (puede_facturar): el área de Cobros actúa sola.
+  const admin = await requireCapacidad("puede_facturar");
 
   const parsed = pagoManualSchema.safeParse({
     cuenta_id: formData.get("cuenta_id"),
@@ -220,6 +221,8 @@ export async function registrarPagoManual(
 
   revalidatePath("/admin/pagos");
   revalidatePath(`/admin/clientes`);
+  revalidatePath("/cobros/pagos");
+  revalidatePath("/cobros");
   return { ok: true };
 }
 

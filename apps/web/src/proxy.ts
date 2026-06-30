@@ -129,6 +129,8 @@ export async function proxy(request: NextRequest) {
   const esRutaProtegida =
     pathname.startsWith("/portal") ||
     pathname.startsWith("/tecnico") ||
+    pathname.startsWith("/monitoreo") ||
+    pathname.startsWith("/cobros") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/recibo");
 

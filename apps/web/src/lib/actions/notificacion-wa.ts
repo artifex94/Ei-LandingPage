@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdminWithName } from "@/lib/auth/session";
+import { requireCapacidad } from "@/lib/auth/session";
 import { registrarAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma/client";
 import { ETIQUETA_MOTIVO, type MotivoMensaje } from "@/lib/whatsapp-templates";
@@ -47,7 +47,8 @@ export async function registrarNotificacionWA(input: {
   detalle?: Record<string, unknown>;
   historial?: { perfilId: string; cuentaId?: string | null };
 }): Promise<void> {
-  const admin = await requireAdminWithName();
+  // Genérico: lo usan cobranza (puede_facturar) y avisos de eventos (puede_monitorear).
+  const admin = await requireCapacidad("puede_facturar", "puede_monitorear");
 
   await registrarAudit({
     admin_id: admin.id,

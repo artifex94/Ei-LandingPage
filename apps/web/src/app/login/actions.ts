@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { prisma } from "@/lib/prisma/client";
 import { enviarWhatsApp, enviarWhatsAppTemplate } from "@/lib/twilio";
+import { rutaInicioEmpleado } from "@/lib/auth/policy";
 
 async function getAppUrl(): Promise<string> {
   // En producción detrás de Passenger el header host llega como localhost:3000.
@@ -30,6 +31,23 @@ function normalizarTelefono(raw: string): string | null {
   return null;
 }
 
+/**
+ * Decide a dónde mandar al usuario después de un login exitoso. Lee el rol y,
+ * si es empleado, sus capacidades, y delega la decisión en la política pura.
+ * Centraliza lo que antes estaba duplicado en cada flujo de login.
+ */
+async function landingPostLogin(userId: string): Promise<string> {
+  const perfil = await prisma.perfil.findUnique({
+    where: { id: userId },
+    select: { rol: true },
+  });
+  const empleado = await prisma.empleado.findFirst({
+    where: { perfil_id: userId },
+    select: { puede_monitorear: true, puede_facturar: true, puede_instalar: true },
+  });
+  return rutaInicioEmpleado(perfil?.rol ?? null, empleado);
+}
+
 // ─── Flujo 1: Email + contraseña (para el admin) ─────────────────────────────
 
 export async function loginConEmail(
@@ -46,10 +64,7 @@ export async function loginConEmail(
 
   if (error) return { error: "Email o contraseña incorrectos." };
 
-  const perfil = await prisma.perfil.findUnique({ where: { id: authData.user.id } });
-  if (perfil?.rol === "ADMIN") redirect("/admin/dashboard");
-  if (perfil?.rol === "TECNICO") redirect("/tecnico/dashboard");
-  redirect("/portal/dashboard");
+  redirect(await landingPostLogin(authData.user.id));
 }
 
 
@@ -72,10 +87,7 @@ export async function loginConCredencial(
 
   if (error) return { error: "Email/DNI o contraseña incorrectos." };
 
-  const perfil = await prisma.perfil.findUnique({ where: { id: authData.user.id } });
-  if (perfil?.rol === "ADMIN") redirect("/admin/dashboard");
-  if (perfil?.rol === "TECNICO") redirect("/tecnico/dashboard");
-  redirect("/portal/dashboard");
+  redirect(await landingPostLogin(authData.user.id));
 }
 // ─── Flujo 2: Magic link por email ───────────────────────────────────────────
 
