@@ -4,6 +4,7 @@ import { startOfWeek, endOfWeek } from "date-fns";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { EmpleadosTable } from "@/components/admin/empleados/EmpleadosTable";
+import { CapacidadesMatrix } from "@/components/admin/empleados/CapacidadesMatrix";
 import { siteConfig } from "@/config/site";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
@@ -123,6 +124,13 @@ export default async function TrabajadoresPage({
             {tab.label}
           </Link>
         ))}
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-2">
+          Capacidades por empleado
+        </h2>
+        <CapacidadesMatrix empleados={empleados} />
       </div>
 
       <EmpleadosTable
