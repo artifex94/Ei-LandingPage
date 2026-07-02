@@ -21,7 +21,9 @@ import { ExternalLink, MessageCircle, Phone, RefreshCw, Search, X } from "lucide
 import type { EventoLive } from "@/app/api/admin/eventos-live/route";
 import type { CuentaContextoResponse } from "@/app/api/admin/cuenta-contexto/route";
 import type { ContactosCuentaResponse } from "@/app/api/admin/contactos-cuenta/route";
+import type { PatronEventoResponse } from "@/app/api/admin/patron-evento/route";
 import type { WebContactoCuenta } from "@/lib/softguard/api";
+import { horaNumeroAR } from "@/lib/fecha-ar";
 import { BarraVidaUtil, EstadoConexion, EstadoEvento } from "./MultiMonitorLive";
 import { NotificarWhatsAppModal } from "./NotificarWhatsAppModal";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
@@ -39,38 +41,48 @@ import {
   useEventosLive,
   filtrarEventos,
   eventosAgrupadosCuenta,
+  agruparEventosRepetidos,
   etiquetaCuentaUi,
   hora,
   horaConDia,
   prioridadStyle,
   COLUMNAS_MONITOREO,
+  VENTANA_AGRUPACION_MS,
   type ColumnaKey,
   type ColumnaMonitoreo,
   type EstadoCentral,
+  type EventoAgrupado,
 } from "./eventos-live";
 
 const LIMIT_OPERADORES = 80;
 
-export function MonitorOperadores() {
+export function MonitorOperadores({ ventanaAgrupacionMin = 10 }: { ventanaAgrupacionMin?: number } = {}) {
   const { data, estado, reconectando, flashIds, poll } = useEventosLive(LIMIT_OPERADORES);
   const [q, setQ] = useState("");
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [tabActiva, setTabActiva] = useState<ColumnaKey>("p1");
-  const [seleccionado, setSeleccionado] = useState<EventoLive | null>(null);
+  const [seleccionado, setSeleccionado] = useState<EventoAgrupado | null>(null);
 
   const base = useMemo(() => data?.eventos ?? [], [data]);
   // Referencia de tiempo para la barra de vida útil: el `at` del feed (render puro, sin Date.now()).
   const refMs = data ? Date.parse(data.at) : 0;
+  const ventanaAgrupacionMs =
+    Number.isFinite(ventanaAgrupacionMin) && ventanaAgrupacionMin > 0
+      ? ventanaAgrupacionMin * 60_000
+      : VENTANA_AGRUPACION_MS;
 
   // Una request, cuatro listas: cada columna es el mismo feed con su filtro de prioridad,
-  // compartiendo `q` y `soloPendientes`.
+  // compartiendo `q` y `soloPendientes`. La agrupación de repetidos se aplica DESPUÉS del
+  // filtro, solo para el render de esta pantalla — el feed base (`eventos`) que consumen
+  // el resto de columnas y el modal de WhatsApp sigue evento por evento.
   const porColumna = useMemo(() => {
-    const out = {} as Record<ColumnaKey, EventoLive[]>;
+    const out = {} as Record<ColumnaKey, EventoAgrupado[]>;
     for (const col of COLUMNAS_MONITOREO) {
-      out[col.key] = filtrarEventos(base, { q, prioridad: col.prioridad, soloPendientes });
+      const filtrados = filtrarEventos(base, { q, prioridad: col.prioridad, soloPendientes });
+      out[col.key] = agruparEventosRepetidos(filtrados, ventanaAgrupacionMs);
     }
     return out;
-  }, [base, q, soloPendientes]);
+  }, [base, q, soloPendientes, ventanaAgrupacionMs]);
 
   // En móvil el contexto aparece como drawer superpuesto; Escape lo cierra.
   useEffect(() => {
@@ -82,7 +94,7 @@ export function MonitorOperadores() {
     return () => window.removeEventListener("keydown", onKey);
   }, [seleccionado]);
 
-  const seleccionar = (e: EventoLive) =>
+  const seleccionar = (e: EventoAgrupado) =>
     setSeleccionado((prev) => (prev?.id === e.id ? null : e));
 
   return (
@@ -148,6 +160,7 @@ export function MonitorOperadores() {
                   onSelect={seleccionar}
                   estado={estado}
                   refMs={refMs}
+                  ventanaMin={ventanaAgrupacionMin}
                 />
               </div>
             ))}
@@ -253,14 +266,16 @@ function ColumnaEventos({
   onSelect,
   estado,
   refMs,
+  ventanaMin,
 }: {
   col: ColumnaMonitoreo;
-  eventos: EventoLive[];
+  eventos: EventoAgrupado[];
   flashIds: Set<string>;
   seleccionadoId: string | null;
-  onSelect: (e: EventoLive) => void;
+  onSelect: (e: EventoAgrupado) => void;
   estado: EstadoCentral;
   refMs: number;
+  ventanaMin: number;
 }) {
   return (
     <section
@@ -286,6 +301,7 @@ function ColumnaEventos({
               seleccionado={seleccionadoId === e.id}
               onSelect={() => onSelect(e)}
               refMs={refMs}
+              ventanaMin={ventanaMin}
             />
           ))}
         </ul>
@@ -302,12 +318,14 @@ function FilaOperador({
   seleccionado,
   onSelect,
   refMs,
+  ventanaMin,
 }: {
-  evento: EventoLive;
+  evento: EventoAgrupado;
   flash: boolean;
   seleccionado: boolean;
   onSelect: () => void;
   refMs: number;
+  ventanaMin: number;
 }) {
   const p = prioridadStyle(evento.prioridad);
   return (
@@ -337,6 +355,15 @@ function FilaOperador({
         >
           {evento.codigo}
         </span>
+        {evento.repeticiones > 1 && (
+          <span
+            className="font-mono text-[10px] font-bold rounded border border-orange-600/60 bg-orange-950/50 text-orange-300 px-1.5 py-px shrink-0"
+            title={`${evento.repeticiones} eventos en ${ventanaMin} min`}
+            aria-label={`${evento.repeticiones} eventos en ${ventanaMin} min`}
+          >
+            ×{evento.repeticiones}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <p className={`text-xs font-semibold truncate ${p.texto}`}>{evento.descripcion}</p>
           <p className="text-[11px] text-slate-500 truncate mt-0.5">
@@ -365,7 +392,7 @@ type EstadoContexto =
   | { tipo: "error" }
   | { tipo: "ok"; data: CuentaContextoResponse };
 
-function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; eventos: EventoLive[]; onCerrar: () => void }) {
+function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoAgrupado; eventos: EventoLive[]; onCerrar: () => void }) {
   const [ctx, setCtx] = useState<EstadoContexto>({ tipo: "cargando" });
   const [notificando, setNotificando] = useState(false);
   const cacheRef = useRef(new Map<string, CuentaContextoResponse>());
@@ -417,6 +444,8 @@ function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; even
             {horaConDia(evento.fecha)}
             {evento.zona && <span> · {evento.zona}</span>}
           </p>
+          {evento.repeticiones > 1 && <RepeticionesEvento fechas={evento.fechasAgrupadas} />}
+          <PatronHorarioChip softguardRef={evento.softguard_ref} codigo={evento.codigo} fecha={evento.fecha} />
         </div>
         <button
           type="button"
@@ -479,6 +508,67 @@ function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; even
         />
       )}
     </section>
+  );
+}
+
+// ── Repeticiones del evento colapsado (Fase 10) ───────────────────────────────
+
+/** Lista compacta de horas de un evento que se agrupó por repetirse en poco tiempo. */
+function RepeticionesEvento({ fechas }: { fechas: string[] }) {
+  return (
+    <p className="text-[11px] text-slate-500 mt-1">
+      Se repitió {fechas.length} veces:{" "}
+      <span className="font-mono text-slate-400">{fechas.map((f) => hora(f)).join(" · ")}</span>
+    </p>
+  );
+}
+
+// ── Patrón horario (Fase 10) ──────────────────────────────────────────────────
+//
+// ¿Esta cuenta+código suele dispararse a esta hora? Histórico de 90 días,
+// calculado en el server (`/api/admin/patron-evento`) desde `EventoAlarma` —
+// sin cambios de schema, todo derivado en query-time. Ante cualquier falla el
+// endpoint responde `patron: null` y acá directamente no se muestra nada.
+
+function PatronHorarioChip({
+  softguardRef,
+  codigo,
+  fecha,
+}: {
+  softguardRef: string;
+  codigo: string;
+  fecha: string;
+}) {
+  const [patron, setPatron] = useState<PatronEventoResponse["patron"] | "cargando">("cargando");
+
+  useEffect(() => {
+    let cancelado = false;
+    queueMicrotask(() => {
+      if (!cancelado) setPatron("cargando");
+    });
+    const horaActual = horaNumeroAR(fecha);
+    const params = new URLSearchParams({ ref: softguardRef, codigo, hora: String(horaActual) });
+    fetch(`/api/admin/patron-evento?${params.toString()}`, { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<PatronEventoResponse>;
+      })
+      .then((data) => {
+        if (!cancelado) setPatron(data.patron);
+      })
+      .catch(() => {
+        if (!cancelado) setPatron(null);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [softguardRef, codigo, fecha]);
+
+  if (patron === "cargando" || patron === null) return null;
+  return (
+    <p className="text-[11px] text-slate-500 mt-1">
+      Suele disparar ~{String(patron.hora).padStart(2, "0")}:00 ({patron.veces} veces en 90 días)
+    </p>
   );
 }
 

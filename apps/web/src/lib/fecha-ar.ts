@@ -45,6 +45,12 @@ export function horaCortaAR(fecha: string | Date): string {
   return `${p2(ar.getUTCHours())}:${p2(ar.getUTCMinutes())}`;
 }
 
+/** Hora del día (0–23) en Argentina; `0` si la fecha es inválida (no rompe). */
+export function horaNumeroAR(fecha: string | Date): number {
+  const ar = aHoraAR(fecha);
+  return ar ? ar.getUTCHours() : 0;
+}
+
 /** "DD/MM" en hora de Argentina. */
 export function diaMesAR(fecha: string | Date): string {
   const ar = aHoraAR(fecha);

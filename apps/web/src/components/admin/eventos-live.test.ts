@@ -4,6 +4,7 @@ import {
   FILTROS_INICIALES,
   horaConDia,
   eventosAgrupadosCuenta,
+  agruparEventosRepetidos,
   COLUMNAS_MONITOREO,
   vidaUtilEvento,
   VENTANA_VIDA_UTIL_MS,
@@ -162,5 +163,80 @@ describe("eventosAgrupadosCuenta", () => {
 
   it("un solo evento → grupo de uno", () => {
     expect(eventosAgrupadosCuenta([base], base).map((e) => e.id)).toEqual(["base"]);
+  });
+});
+
+describe("agruparEventosRepetidos", () => {
+  const VENTANA_10MIN = 10 * 60 * 1000;
+
+  it("colapsa disparos de la misma cuenta+zona+código dentro de la ventana", () => {
+    const lista: EventoLive[] = [
+      ev({ id: "v1", zona: "Living", fecha: "2026-06-19T22:00:00.000Z" }),
+      ev({ id: "v2", zona: "Living", fecha: "2026-06-19T22:03:00.000Z" }),
+      ev({ id: "v3", zona: "Living", fecha: "2026-06-19T22:07:00.000Z" }),
+    ];
+    const out = agruparEventosRepetidos(lista, VENTANA_10MIN);
+    expect(out).toHaveLength(1);
+    expect(out[0].repeticiones).toBe(3);
+    // el representante es el más reciente del grupo.
+    expect(out[0].id).toBe("v3");
+  });
+
+  it("no agrupa si el disparo cae fuera de la ventana", () => {
+    const lista: EventoLive[] = [
+      ev({ id: "v1", zona: "Living", fecha: "2026-06-19T22:00:00.000Z" }),
+      ev({ id: "v2", zona: "Living", fecha: "2026-06-19T22:15:00.000Z" }), // +15min, fuera de 10min
+    ];
+    const out = agruparEventosRepetidos(lista, VENTANA_10MIN);
+    expect(out).toHaveLength(2);
+    expect(out.every((e) => e.repeticiones === 1)).toBe(true);
+  });
+
+  it("distintas zonas de la misma cuenta NO se agrupan entre sí", () => {
+    const lista: EventoLive[] = [
+      ev({ id: "z1", zona: "Living", fecha: "2026-06-19T22:00:00.000Z" }),
+      ev({ id: "z2", zona: "Cocina", fecha: "2026-06-19T22:02:00.000Z" }),
+    ];
+    const out = agruparEventosRepetidos(lista, VENTANA_10MIN);
+    expect(out).toHaveLength(2);
+  });
+
+  it("distintos códigos de la misma cuenta y zona NO se agrupan entre sí", () => {
+    const lista: EventoLive[] = [
+      ev({ id: "c1", zona: "Living", codigo: "COF", fecha: "2026-06-19T22:00:00.000Z" }),
+      ev({ id: "c2", zona: "Living", codigo: "RST", fecha: "2026-06-19T22:02:00.000Z" }),
+    ];
+    const out = agruparEventosRepetidos(lista, VENTANA_10MIN);
+    expect(out).toHaveLength(2);
+  });
+
+  it("distintas cuentas no se agrupan aunque coincida zona y código", () => {
+    const lista: EventoLive[] = [
+      ev({ id: "a1", softguard_ref: "ESI-0175", zona: "Living", fecha: "2026-06-19T22:00:00.000Z" }),
+      ev({ id: "a2", softguard_ref: "ESI-0042", zona: "Living", fecha: "2026-06-19T22:02:00.000Z" }),
+    ];
+    const out = agruparEventosRepetidos(lista, VENTANA_10MIN);
+    expect(out).toHaveLength(2);
+  });
+
+  it("el resultado queda ordenado por fecha más reciente primero, sin importar el orden del input", () => {
+    const lista: EventoLive[] = [
+      ev({ id: "viejo", softguard_ref: "ESI-0001", fecha: "2026-06-19T20:00:00.000Z" }),
+      ev({ id: "nuevo", softguard_ref: "ESI-0002", fecha: "2026-06-19T22:00:00.000Z" }),
+    ];
+    expect(agruparEventosRepetidos(lista, VENTANA_10MIN).map((e) => e.id)).toEqual(["nuevo", "viejo"]);
+  });
+
+  it("fechasAgrupadas queda de más viejo a más nuevo, incluyendo al representante", () => {
+    const lista: EventoLive[] = [
+      ev({ id: "g1", zona: "Living", fecha: "2026-06-19T22:00:00.000Z" }),
+      ev({ id: "g2", zona: "Living", fecha: "2026-06-19T22:05:00.000Z" }),
+    ];
+    const [grupo] = agruparEventosRepetidos(lista, VENTANA_10MIN);
+    expect(grupo.fechasAgrupadas).toEqual(["2026-06-19T22:00:00.000Z", "2026-06-19T22:05:00.000Z"]);
+  });
+
+  it("sin eventos → lista vacía", () => {
+    expect(agruparEventosRepetidos([], VENTANA_10MIN)).toEqual([]);
   });
 });

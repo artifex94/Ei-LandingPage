@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
-import type { EstadoEventoSync } from "@/generated/prisma/client";
+import type { EstadoEventoSync, FranjaTurno } from "@/generated/prisma/client";
 import { clasificarCodigo, PRIORIDAD, type TipoDia } from "@/lib/eventos-clasificacion";
 import { AccionEventoRapida } from "@/components/monitoreo/AccionEventoRapida";
 import { calcularMetricasDia, formatDuracion } from "@/lib/metricas-monitoreo";
 import { TZ_OFFSET_AR_MS } from "@/lib/fecha-ar";
-import { ShieldCheck, Gauge } from "lucide-react";
+import { getSesion } from "@/lib/auth/session";
+import { FRANJA_META } from "@/lib/ui/turno-ui";
+import { ShieldCheck, Gauge, Clock } from "lucide-react";
 
 export const metadata: Metadata = { title: "Cola de eventos" };
 
@@ -49,10 +51,40 @@ function limitesHoyAR(): { desde: Date; hasta: Date } {
   return { desde, hasta };
 }
 
+// Turno de HOY del empleado logueado, para la barra "Tu turno: …" — sin ruido si
+// no tiene turno asignado (ni PROGRAMADO ni EN_CURSO) o si algo falla en la query.
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function endOfToday(): Date {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+async function turnoDeHoyEmpleado(perfilId: string): Promise<{ franja: FranjaTurno } | null> {
+  try {
+    return await prisma.turno.findFirst({
+      where: {
+        empleado: { perfil_id: perfilId },
+        fecha: { gte: startOfToday(), lte: endOfToday() },
+        estado: { in: ["PROGRAMADO", "EN_CURSO"] },
+      },
+      select: { franja: true },
+      orderBy: { franja: "asc" },
+    });
+  } catch {
+    return null;
+  }
+}
+
 export default async function MonitoreoColaPage() {
   const { desde: desdeHoy, hasta: hastaHoy } = limitesHoyAR();
+  const sesion = await getSesion();
 
-  const [eventos, eventosHoy] = await Promise.all([
+  const [eventos, eventosHoy, turnoHoy] = await Promise.all([
     prisma.eventoAlarma.findMany({
       where: { estado: { in: PENDIENTES as unknown as EstadoEventoSync[] } },
       include: {
@@ -71,6 +103,7 @@ export default async function MonitoreoColaPage() {
       where: { fecha_evento: { gte: desdeHoy, lt: hastaHoy } },
       select: { estado: true, fecha_evento: true, tomado_en: true, resuelto_en: true },
     }),
+    sesion ? turnoDeHoyEmpleado(sesion.perfil.id) : Promise.resolve(null),
   ]);
 
   // Clasificar y ordenar por severidad (más crítico primero), luego por recencia.
@@ -98,6 +131,18 @@ export default async function MonitoreoColaPage() {
           {eventos.length !== 1 ? "s" : ""}
         </p>
       </div>
+
+      {/* Barra de turno: solo si el empleado logueado tiene turno hoy (sin ruido si no). */}
+      {turnoHoy && sesion && (
+        <div className="flex items-center gap-2 bg-industrial-800 border border-industrial-700 rounded-xl px-4 py-2.5 text-sm text-slate-300">
+          <Clock className="w-4 h-4 text-tactical-400 shrink-0" aria-hidden />
+          <span>
+            Tu turno: <strong className="text-white">{FRANJA_META[turnoHoy.franja].label}</strong>{" "}
+            <span className="text-slate-500">({FRANJA_META[turnoHoy.franja].horario})</span> ·{" "}
+            {sesion.perfil.nombre}
+          </span>
+        </div>
+      )}
 
       {/* Resumen rápido */}
       <div className="grid grid-cols-3 gap-3">

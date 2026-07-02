@@ -70,6 +70,14 @@ export const CATALOGO_PARAMETROS = [
     descripcion: "Ventana de días hacia adelante que cubre la auto-asignación de turnos del cron.",
     defaultValor: 3,
   },
+  {
+    clave: "VENTANA_AGRUPACION_MIN",
+    tipo: "INT" as const,
+    categoria: "monitoreo",
+    descripcion:
+      "Minutos dentro de los que varios eventos de la misma cuenta, zona y código se colapsan en una sola fila del board de monitoreo (con contador de repeticiones).",
+    defaultValor: 10,
+  },
 ] as const;
 
 /**

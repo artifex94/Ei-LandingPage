@@ -255,3 +255,53 @@ export function eventosAgrupadosCuenta(
     )
     .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
 }
+
+// ── Agrupación de eventos REPETIDOS (mismo aviso, varias veces) ──────────────
+//
+// Distinto de `eventosAgrupadosCuenta` (que junta zonas distintas de una misma
+// cuenta para un solo mensaje de WhatsApp): esto colapsa, SOLO para el render
+// del board, disparos consecutivos de la MISMA cuenta + zona + código dentro de
+// la ventana en una única fila con contador — el típico "se movió el sensor y
+// mandó 5 veces la misma alarma en 3 minutos". No cambia el feed que consumen
+// el resto de pantallas (`MultiMonitorLive`, el modal de WhatsApp): se aplica
+// en el cliente, justo antes de pintar cada columna del board de operadores.
+
+export interface EventoAgrupado extends EventoLive {
+  /** Cantidad de eventos colapsados en esta fila (1 = no se agrupó con nada). */
+  repeticiones: number;
+  /** Fecha (ISO) de cada evento del grupo, de más viejo a más nuevo (incluye el representante). */
+  fechasAgrupadas: string[];
+}
+
+/**
+ * Colapsa eventos consecutivos de la misma cuenta (`softguard_ref`) + `zona` +
+ * `codigo`, disparados dentro de `ventanaMs` uno del otro, en un solo item por
+ * grupo: se queda con los campos del más reciente y suma `repeticiones`. No
+ * asume el orden del input (lo ordena internamente por fecha descendente) —
+ * función pura, sin dependencia del reloj real.
+ */
+export function agruparEventosRepetidos(
+  eventos: EventoLive[],
+  ventanaMs: number = VENTANA_AGRUPACION_MS,
+): EventoAgrupado[] {
+  const ordenados = [...eventos].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+  const out: EventoAgrupado[] = [];
+  for (const e of ordenados) {
+    const grupo = out[out.length - 1];
+    const mismoAviso =
+      grupo &&
+      grupo.softguard_ref === e.softguard_ref &&
+      grupo.zona === e.zona &&
+      grupo.codigo === e.codigo &&
+      new Date(grupo.fecha).getTime() - new Date(e.fecha).getTime() <= ventanaMs;
+
+    if (mismoAviso) {
+      grupo.repeticiones += 1;
+      grupo.fechasAgrupadas.unshift(e.fecha); // e es más viejo que lo ya acumulado → va adelante
+      continue;
+    }
+    out.push({ ...e, repeticiones: 1, fechasAgrupadas: [e.fecha] });
+  }
+  return out;
+}
