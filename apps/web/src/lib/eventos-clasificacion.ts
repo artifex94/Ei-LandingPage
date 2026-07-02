@@ -48,3 +48,59 @@ export function clasificarCodigo(codigo: string): TipoDia {
   // Apertura, cierre, test, heartbeat, restauraciones → actividad normal
   return "normal";
 }
+
+// ── Protocolo guiado de actuación (Fase 7b) ─────────────────────────────────────
+//
+// El operador decidía de memoria a quién llamar y en qué orden ante un evento.
+// Esta lista ordenada de pasos guía esa decisión; cada paso se registra como
+// una fila en `GestionEvento` (ver `registrarGestionEvento` en
+// `lib/actions/eventos.ts`), que complementa `EventoAlarma.resolucion` (texto
+// libre) sin reemplazarlo.
+//
+// Hardcodeado a propósito: a esta escala (5 personas, ~100 cuentas) editar el
+// orden o el texto de un paso es un cambio de código + deploy aceptable.
+// Migrar a una tabla (patrón `ParametroNegocio`) solo si en la práctica hace
+// falta editarlo sin pasar por deploy.
+
+export type TipoGestionEvento =
+  | "LLAMADA_CONTACTO"
+  | "WHATSAPP_CONTACTO"
+  | "VERIFICACION_CAMARA"
+  | "AVISO_POLICIA"
+  | "OTRO";
+
+export interface PasoProtocolo {
+  tipo: TipoGestionEvento;
+  etiqueta: string;
+}
+
+const PROTOCOLOS: Record<TipoDia, PasoProtocolo[]> = {
+  medica: [
+    { tipo: "LLAMADA_CONTACTO", etiqueta: "Llamar contactos en orden" },
+    { tipo: "AVISO_POLICIA", etiqueta: "Llamar emergencias 107/911" },
+  ],
+  violencia: [
+    { tipo: "AVISO_POLICIA", etiqueta: "Avisar policía 101" },
+    { tipo: "LLAMADA_CONTACTO", etiqueta: "Llamar contactos" },
+  ],
+  fuego: [
+    { tipo: "LLAMADA_CONTACTO", etiqueta: "Llamar contactos en orden" },
+    { tipo: "AVISO_POLICIA", etiqueta: "Bomberos 100" },
+  ],
+  intrusion: [
+    { tipo: "LLAMADA_CONTACTO", etiqueta: "Llamar contactos en orden" },
+    { tipo: "VERIFICACION_CAMARA", etiqueta: "Verificar cámaras si tiene" },
+    { tipo: "AVISO_POLICIA", etiqueta: "Si se confirma, avisar 101" },
+  ],
+  tecnico: [
+    { tipo: "OTRO", etiqueta: "Registrar gestión si corresponde" },
+  ],
+  normal: [
+    { tipo: "OTRO", etiqueta: "Registrar gestión si corresponde" },
+  ],
+  vacio: [],
+};
+
+export function protocoloParaClasificacion(clasificacion: TipoDia): PasoProtocolo[] {
+  return PROTOCOLOS[clasificacion];
+}

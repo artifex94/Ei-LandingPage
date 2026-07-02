@@ -787,12 +787,61 @@ model EventoAlarma {
   tomado_por  String?
   resuelto_en DateTime?
 
+  // Pasos del protocolo guiado — Fase 7b del plan maestro. Complementa
+  // `resolucion` (texto libre), no la reemplaza.
+  gestiones GestionEvento[]
+
   synced_at DateTime @default(now())
 
   @@unique([softguard_ref, fecha_evento, codigo])
   @@index([cuenta_id, fecha_evento])
   @@index([estado, fecha_evento])
   @@map("eventos_alarma")
+}
+
+// ─────────────────────────────────────────────────────────────
+// FASE 7b — PROTOCOLO GUIADO DE ACTUACIÓN (monitoreadores)
+// ─────────────────────────────────────────────────────────────
+
+enum TipoGestionEvento {
+  LLAMADA_CONTACTO
+  WHATSAPP_CONTACTO
+  VERIFICACION_CAMARA
+  AVISO_POLICIA
+  OTRO
+}
+
+enum ResultadoGestion {
+  ATENDIO
+  NO_ATENDIO
+  OCUPADO
+  HECHO
+  SIN_RESPUESTA
+}
+
+// Fila por paso del protocolo guiado (una llamada a un contacto, un aviso a
+// policía, una verificación de cámara, etc). Complementa `EventoAlarma.
+// resolucion` (texto libre) con registro estructurado — el operador ya no
+// pierde "llamé al contacto 2, no atendió" al no tener dónde anotarlo.
+//
+// Diseñada como fuente de datos de la Fase 5 del roadmap wa.me (timeline de
+// contactos): por eso los campos son genéricos (`destino` string libre,
+// `tipo`/`resultado` acotados por enum) en vez de acoplarse a un contacto
+// puntual de SoftGuard.
+model GestionEvento {
+  id         String            @id @default(uuid())
+  evento_id  String
+  evento     EventoAlarma      @relation(fields: [evento_id], references: [id])
+  orden      Int
+  tipo       TipoGestionEvento
+  destino    String? // nombre + teléfono del contacto, cuando aplica
+  resultado  ResultadoGestion
+  nota       String?
+  operador   String
+  created_at DateTime          @default(now())
+
+  @@index([evento_id, orden])
+  @@map("gestiones_evento")
 }
 
 // ─────────────────────────────────────────────────────────────

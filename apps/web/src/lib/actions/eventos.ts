@@ -5,7 +5,11 @@ import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import { requireCapacidad } from "@/lib/auth/session";
 import { UUID_RE } from "@/lib/constants/validation";
-import type { EstadoEventoSync } from "@/generated/prisma/client";
+import type {
+  EstadoEventoSync,
+  TipoGestionEvento,
+  ResultadoGestion,
+} from "@/generated/prisma/client";
 import { clasificarCodigo, PRIORIDAD, type TipoDia } from "@/lib/eventos-clasificacion";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -132,4 +136,118 @@ export async function actualizarEstadoEvento(
   revalidatePath(`/admin/eventos/${id}`);
 
   return {};
+}
+
+// ── Protocolo guiado de actuación (Fase 7b) ──────────────────────────────────────
+
+const TIPOS_GESTION_VALIDOS = new Set<string>([
+  "LLAMADA_CONTACTO", "WHATSAPP_CONTACTO", "VERIFICACION_CAMARA", "AVISO_POLICIA", "OTRO",
+]);
+
+const RESULTADOS_GESTION_VALIDOS = new Set<string>([
+  "ATENDIO", "NO_ATENDIO", "OCUPADO", "HECHO", "SIN_RESPUESTA",
+]);
+
+export interface RegistrarGestionEventoInput {
+  evento_id: string;
+  tipo: string;
+  destino?: string;
+  resultado: string;
+  nota?: string;
+}
+
+/**
+ * Registra UN paso del protocolo guiado (ver `protocoloParaClasificacion` en
+ * `lib/eventos-clasificacion.ts`): una llamada a un contacto, un aviso a
+ * policía, una verificación de cámara, etc. `orden` se calcula solo (cantidad
+ * de pasos ya registrados + 1). NO toca el estado del evento — complementa
+ * `resolucion` (texto libre), no la reemplaza.
+ */
+export async function registrarGestionEvento(
+  input: RegistrarGestionEventoInput,
+): Promise<{ error?: string }> {
+  if (!UUID_RE.test(input.evento_id)) {
+    return { error: "ID de evento inválido." };
+  }
+
+  const admin = await requireCapacidad("puede_monitorear");
+
+  if (!TIPOS_GESTION_VALIDOS.has(input.tipo)) {
+    return { error: "Tipo de gestión no válido." };
+  }
+  if (!RESULTADOS_GESTION_VALIDOS.has(input.resultado)) {
+    return { error: "Resultado no válido." };
+  }
+  if (input.destino && input.destino.length > 200) {
+    return { error: "El destino no puede superar los 200 caracteres." };
+  }
+  if (input.nota && input.nota.length > 2000) {
+    return { error: "La nota no puede superar los 2000 caracteres." };
+  }
+
+  const evento = await prisma.eventoAlarma.findUnique({
+    where: { id: input.evento_id },
+    select: { id: true },
+  });
+  if (!evento) return { error: "Evento no encontrado." };
+
+  const pasosPrevios = await prisma.gestionEvento.count({
+    where: { evento_id: input.evento_id },
+  });
+
+  await prisma.gestionEvento.create({
+    data: {
+      evento_id: input.evento_id,
+      orden: pasosPrevios + 1,
+      tipo: input.tipo as TipoGestionEvento,
+      destino: input.destino || null,
+      resultado: input.resultado as ResultadoGestion,
+      nota: input.nota || null,
+      operador: admin.nombre,
+    },
+  });
+
+  revalidatePath(`/admin/eventos/${input.evento_id}`);
+
+  return {};
+}
+
+export interface GestionEventoItem {
+  id: string;
+  orden: number;
+  tipo: string;
+  destino: string | null;
+  resultado: string;
+  nota: string | null;
+  operador: string;
+  created_at: string; // ISO
+}
+
+/**
+ * Historial de pasos ya registrados para un evento, más antiguo primero.
+ * `catch` → `[]`: hasta que se corra el SQL manual de la Fase 7b
+ * (`gestiones_evento`) la tabla no existe en la DB y la query fallaría.
+ */
+export async function getGestionesEvento(eventoId: string): Promise<GestionEventoItem[]> {
+  if (!UUID_RE.test(eventoId)) return [];
+
+  try {
+    const rows = await prisma.gestionEvento.findMany({
+      where: { evento_id: eventoId },
+      orderBy: { orden: "asc" },
+    });
+
+    return rows.map((r) => ({
+      id: r.id,
+      orden: r.orden,
+      tipo: r.tipo,
+      destino: r.destino,
+      resultado: r.resultado,
+      nota: r.nota,
+      operador: r.operador,
+      created_at: r.created_at.toISOString(),
+    }));
+  } catch {
+    return [];
+  }
 }

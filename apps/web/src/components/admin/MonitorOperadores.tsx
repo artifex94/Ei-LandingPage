@@ -15,14 +15,26 @@
  * SOLO LECTURA contra SoftGuard: procesar eventos sigue siendo manual en la suite.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLink, MessageCircle, Phone, RefreshCw, Search, X } from "lucide-react";
 import type { EventoLive } from "@/app/api/admin/eventos-live/route";
 import type { CuentaContextoResponse } from "@/app/api/admin/cuenta-contexto/route";
+import type { ContactosCuentaResponse } from "@/app/api/admin/contactos-cuenta/route";
+import type { WebContactoCuenta } from "@/lib/softguard/api";
 import { BarraVidaUtil, EstadoConexion, EstadoEvento } from "./MultiMonitorLive";
 import { NotificarWhatsAppModal } from "./NotificarWhatsAppModal";
-import { Badge } from "@/components/ui/Badge";
+import { Badge, type BadgeVariant } from "@/components/ui/Badge";
+import {
+  clasificarCodigo,
+  protocoloParaClasificacion,
+  type TipoGestionEvento,
+} from "@/lib/eventos-clasificacion";
+import {
+  registrarGestionEvento,
+  getGestionesEvento,
+  type GestionEventoItem,
+} from "@/lib/actions/eventos";
 import {
   useEventosLive,
   filtrarEventos,
@@ -426,6 +438,8 @@ function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; even
         Notificar por WhatsApp
       </button>
 
+      <ProtocoloEvento evento={evento} />
+
       <div className="border-t border-slate-700/50 pt-3">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
           Cuenta #{evento.softguard_ref} en el portal
@@ -465,6 +479,279 @@ function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; even
         />
       )}
     </section>
+  );
+}
+
+// ── Protocolo guiado de actuación (Fase 7b) ─────────────────────────────────────
+//
+// Checklist de pasos según la clasificación del código Contact ID del evento
+// (`protocoloParaClasificacion`). Cada paso de llamada expande los contactos
+// priorizados de la cuenta (mismo endpoint que usa `NotificarWhatsAppModal`,
+// `/api/admin/contactos-cuenta`) con 1 tap por resultado; los demás pasos
+// tienen un único botón "Hecho". NO reemplaza `resolucion` (texto libre): la
+// complementa con registro estructurado (`registrarGestionEvento`).
+
+const ETIQUETA_TIPO_GESTION: Record<string, string> = {
+  LLAMADA_CONTACTO: "Llamada",
+  WHATSAPP_CONTACTO: "WhatsApp",
+  VERIFICACION_CAMARA: "Cámara",
+  AVISO_POLICIA: "Aviso a policía",
+  OTRO: "Otro",
+};
+
+const ETIQUETA_RESULTADO: Record<string, { label: string; variant: BadgeVariant }> = {
+  ATENDIO: { label: "Atendió", variant: "success" },
+  HECHO: { label: "Hecho", variant: "success" },
+  NO_ATENDIO: { label: "No atendió", variant: "warning" },
+  OCUPADO: { label: "Ocupado", variant: "neutral" },
+  SIN_RESPUESTA: { label: "Sin respuesta", variant: "neutral" },
+};
+
+type EstadoContactosProtocolo =
+  | { tipo: "idle" }
+  | { tipo: "cargando" }
+  | { tipo: "ok"; contactos: WebContactoCuenta[] }
+  | { tipo: "error" };
+
+function ProtocoloEvento({ evento }: { evento: EventoLive }) {
+  const pasos = useMemo(
+    () => protocoloParaClasificacion(clasificarCodigo(evento.codigo)),
+    [evento.codigo],
+  );
+  const tieneLlamadas = pasos.some((p) => p.tipo === "LLAMADA_CONTACTO");
+
+  const [contactos, setContactos] = useState<EstadoContactosProtocolo>({ tipo: "idle" });
+  const [gestiones, setGestiones] = useState<GestionEventoItem[]>([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(true);
+
+  const cargarHistorial = useCallback(() => {
+    let cancelado = false;
+    getGestionesEvento(evento.id)
+      .then((data) => {
+        if (!cancelado) setGestiones(data);
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoHistorial(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [evento.id]);
+
+  useEffect(() => {
+    let cancelado = false;
+    queueMicrotask(() => {
+      if (!cancelado) setCargandoHistorial(true);
+    });
+    const limpiar = cargarHistorial();
+    return () => {
+      cancelado = true;
+      limpiar();
+    };
+  }, [cargarHistorial]);
+
+  useEffect(() => {
+    if (!tieneLlamadas) return;
+    let cancelado = false;
+    queueMicrotask(() => {
+      if (!cancelado) setContactos({ tipo: "cargando" });
+    });
+    const params = new URLSearchParams();
+    if (evento.softguard_ref) params.set("ref", evento.softguard_ref);
+    if (evento.iid_cuenta) params.set("iid", String(evento.iid_cuenta));
+    fetch(`/api/admin/contactos-cuenta?${params.toString()}`, { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<ContactosCuentaResponse>;
+      })
+      .then((data) => {
+        if (!cancelado) setContactos({ tipo: "ok", contactos: data.contactos });
+      })
+      .catch(() => {
+        if (!cancelado) setContactos({ tipo: "error" });
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [tieneLlamadas, evento.softguard_ref, evento.iid_cuenta]);
+
+  if (pasos.length === 0) return null;
+
+  return (
+    <div className="border-t border-slate-700/50 pt-3 space-y-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+        Protocolo de actuación
+      </p>
+      <ol className="space-y-2">
+        {pasos.map((paso, i) => (
+          <li key={i} className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2.5">
+            <p className="text-xs font-semibold text-slate-200 mb-1.5">
+              <span className="text-slate-500 mr-1.5 tabular-nums">{i + 1}.</span>
+              {paso.etiqueta}
+            </p>
+            {paso.tipo === "LLAMADA_CONTACTO" ? (
+              <PasoLlamadas
+                eventoId={evento.id}
+                contactos={contactos}
+                onRegistrado={cargarHistorial}
+              />
+            ) : (
+              <PasoGenerico eventoId={evento.id} tipo={paso.tipo} onRegistrado={cargarHistorial} />
+            )}
+          </li>
+        ))}
+      </ol>
+
+      {!cargandoHistorial && gestiones.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Historial de gestión
+          </p>
+          <ul className="space-y-1">
+            {gestiones.map((g) => {
+              const res = ETIQUETA_RESULTADO[g.resultado] ?? { label: g.resultado, variant: "neutral" as const };
+              return (
+                <li key={g.id} className="flex items-center gap-1.5 text-[11px] min-w-0">
+                  <span className="text-slate-600 tabular-nums shrink-0">{horaConDia(g.created_at)}</span>
+                  <span className="text-slate-500 shrink-0">{ETIQUETA_TIPO_GESTION[g.tipo] ?? g.tipo}</span>
+                  {g.destino && <span className="text-slate-300 truncate min-w-0">· {g.destino}</span>}
+                  <Badge variant={res.variant} className="ml-auto shrink-0">
+                    {res.label}
+                  </Badge>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PasoLlamadas({
+  eventoId,
+  contactos,
+  onRegistrado,
+}: {
+  eventoId: string;
+  contactos: EstadoContactosProtocolo;
+  onRegistrado: () => void;
+}) {
+  if (contactos.tipo === "idle" || contactos.tipo === "cargando") {
+    return <p className="text-[11px] text-slate-600">Cargando contactos…</p>;
+  }
+  if (contactos.tipo === "error") {
+    return <p className="text-[11px] text-red-400/80">No se pudieron cargar los contactos.</p>;
+  }
+  if (contactos.contactos.length === 0) {
+    return <p className="text-[11px] text-slate-600">Esta cuenta no tiene contactos cargados.</p>;
+  }
+  return (
+    <ul className="space-y-1.5">
+      {contactos.contactos.map((c, i) => (
+        <ContactoLlamada key={i} eventoId={eventoId} contacto={c} onRegistrado={onRegistrado} />
+      ))}
+    </ul>
+  );
+}
+
+const RESULTADOS_LLAMADA = [
+  { valor: "ATENDIO", label: "Atendió", clase: "border-emerald-700/60 bg-emerald-950/40 text-emerald-200 hover:bg-emerald-900/40" },
+  { valor: "NO_ATENDIO", label: "No atendió", clase: "border-amber-700/60 bg-amber-950/40 text-amber-200 hover:bg-amber-900/40" },
+  { valor: "OCUPADO", label: "Ocupado", clase: "border-slate-600 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60" },
+] as const;
+
+function ContactoLlamada({
+  eventoId,
+  contacto,
+  onRegistrado,
+}: {
+  eventoId: string;
+  contacto: WebContactoCuenta;
+  onRegistrado: () => void;
+}) {
+  const [pending, start] = useTransition();
+  const [registrado, setRegistrado] = useState<string | null>(null);
+
+  function registrar(resultado: string) {
+    start(async () => {
+      const destino = `${contacto.nombre}${contacto.telefono ? ` (${contacto.telefono})` : ""}`;
+      const r = await registrarGestionEvento({
+        evento_id: eventoId,
+        tipo: "LLAMADA_CONTACTO",
+        destino,
+        resultado,
+      });
+      if (!r.error) {
+        setRegistrado(resultado);
+        onRegistrado();
+      }
+    });
+  }
+
+  return (
+    <li className="rounded border border-slate-700/40 bg-slate-800/40 px-2 py-1.5">
+      <p className="text-[11px] text-slate-300 truncate">
+        {contacto.nombre}
+        {contacto.rol && <span className="text-slate-500"> · {contacto.rol}</span>}
+      </p>
+      {contacto.telefono && (
+        <p className="text-[10px] text-slate-500 font-mono">{contacto.telefono}</p>
+      )}
+      <div className="flex flex-wrap gap-1.5 mt-1.5">
+        {RESULTADOS_LLAMADA.map((r) => (
+          <button
+            key={r.valor}
+            type="button"
+            disabled={pending}
+            onClick={() => registrar(r.valor)}
+            className={`text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors min-h-[30px] disabled:opacity-50 ${
+              registrado === r.valor ? r.clase : "border-slate-700 text-slate-400 hover:text-white"
+            }`}
+          >
+            {registrado === r.valor ? `✓ ${r.label}` : r.label}
+          </button>
+        ))}
+      </div>
+    </li>
+  );
+}
+
+function PasoGenerico({
+  eventoId,
+  tipo,
+  onRegistrado,
+}: {
+  eventoId: string;
+  tipo: TipoGestionEvento;
+  onRegistrado: () => void;
+}) {
+  const [pending, start] = useTransition();
+  const [hecho, setHecho] = useState(false);
+
+  function registrar() {
+    start(async () => {
+      const r = await registrarGestionEvento({ evento_id: eventoId, tipo, resultado: "HECHO" });
+      if (!r.error) {
+        setHecho(true);
+        onRegistrado();
+      }
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={pending || hecho}
+      onClick={registrar}
+      className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors min-h-[32px] disabled:opacity-50 ${
+        hecho
+          ? "border-emerald-700/60 bg-emerald-950/40 text-emerald-200"
+          : "border-slate-600 bg-slate-700 hover:bg-slate-600 text-white"
+      }`}
+    >
+      {hecho ? "✓ Hecho" : pending ? "Guardando…" : "Hecho"}
+    </button>
   );
 }
 

@@ -255,3 +255,72 @@ BEGIN
     CREATE INDEX "eventos_alarma_estado_fecha_evento_idx" ON "eventos_alarma"("estado", "fecha_evento");
   END IF;
 END$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Fase 7b: protocolo guiado de actuación — tabla gestiones_evento
+--
+-- El operador decidía de memoria a quién llamar y en qué orden ante un
+-- evento; la resolución quedaba en texto libre sin registro estructurado
+-- ("llamé al contacto 2, no atendió" se perdía). `registrarGestionEvento`
+-- (src/lib/actions/eventos.ts) guarda una fila por paso del protocolo
+-- (LLAMADA_CONTACTO/WHATSAPP_CONTACTO/VERIFICACION_CAMARA/AVISO_POLICIA/OTRO)
+-- sin tocar el estado del evento ni pisar `resolucion` (la complementa).
+--
+-- Diseñada como fuente de datos de la Fase 5 del roadmap wa.me (timeline de
+-- contactos): campos genéricos a propósito, no acoplados a un contacto
+-- puntual de SoftGuard.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'TipoGestionEvento') THEN
+    CREATE TYPE "TipoGestionEvento" AS ENUM (
+      'LLAMADA_CONTACTO', 'WHATSAPP_CONTACTO', 'VERIFICACION_CAMARA', 'AVISO_POLICIA', 'OTRO'
+    );
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ResultadoGestion') THEN
+    CREATE TYPE "ResultadoGestion" AS ENUM (
+      'ATENDIO', 'NO_ATENDIO', 'OCUPADO', 'HECHO', 'SIN_RESPUESTA'
+    );
+  END IF;
+END$$;
+
+CREATE TABLE IF NOT EXISTS "gestiones_evento" (
+  "id"         TEXT NOT NULL,
+  "evento_id"  TEXT NOT NULL,
+  "orden"      INTEGER NOT NULL,
+  "tipo"       "TipoGestionEvento" NOT NULL,
+  "destino"    TEXT,
+  "resultado"  "ResultadoGestion" NOT NULL,
+  "nota"       TEXT,
+  "operador"   TEXT NOT NULL,
+  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT "gestiones_evento_pkey" PRIMARY KEY ("id")
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'gestiones_evento' AND indexname = 'gestiones_evento_evento_id_orden_idx'
+  ) THEN
+    CREATE INDEX "gestiones_evento_evento_id_orden_idx" ON "gestiones_evento"("evento_id", "orden");
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'gestiones_evento_evento_id_fkey'
+  ) THEN
+    ALTER TABLE "gestiones_evento"
+      ADD CONSTRAINT "gestiones_evento_evento_id_fkey"
+      FOREIGN KEY ("evento_id") REFERENCES "eventos_alarma"("id")
+      ON DELETE RESTRICT ON UPDATE CASCADE;
+  END IF;
+END$$;
