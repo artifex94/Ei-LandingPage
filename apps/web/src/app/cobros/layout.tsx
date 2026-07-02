@@ -19,6 +19,7 @@ const NAV: AreaNavItem[] = [
   { href: "/cobros", label: "Morosidad", icon: "AlertTriangle" },
   { href: "/cobros/pagos", label: "Pagos", icon: "CreditCard" },
   { href: "/cobros/conciliacion", label: "Conciliación", icon: "ArrowLeftRight" },
+  { href: "/cobros/tesoreria", label: "Tesorería", icon: "TrendingUp" },
 ];
 
 export default async function CobrosLayout({

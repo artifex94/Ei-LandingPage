@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListChecks, MonitorPlay, AlertTriangle, CreditCard, ArrowLeftRight } from "lucide-react";
+import { ListChecks, MonitorPlay, AlertTriangle, CreditCard, ArrowLeftRight, TrendingUp } from "lucide-react";
 
 /**
  * Navegación de áreas operativas enfocadas (Monitoreo, Cobros).
@@ -15,7 +15,7 @@ import { ListChecks, MonitorPlay, AlertTriangle, CreditCard, ArrowLeftRight } fr
  * Server Components y no pueden cruzar referencias de componentes por props
  * hacia este Client Component. Para sumar un ícono nuevo, registralo en ICONS.
  */
-const ICONS = { ListChecks, MonitorPlay, AlertTriangle, CreditCard, ArrowLeftRight } as const;
+const ICONS = { ListChecks, MonitorPlay, AlertTriangle, CreditCard, ArrowLeftRight, TrendingUp } as const;
 
 export type AreaNavIcon = keyof typeof ICONS;
 
