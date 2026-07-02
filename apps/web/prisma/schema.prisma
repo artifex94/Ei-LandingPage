@@ -86,6 +86,27 @@ enum Prioridad {
   ALTA
 }
 
+// ── Feedback de clientes (bugs/mejoras) ──────────────────────────────────────
+
+enum TipoTicketFeedback {
+  BUG
+  MEJORA
+}
+
+enum PrioridadTicket {
+  BAJA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum EstadoTicketFeedback {
+  NUEVO
+  EN_REVISION
+  RESUELTO
+  DESCARTADO
+}
+
 enum TipoTitular {
   RESIDENCIAL
   COMERCIAL
@@ -232,6 +253,7 @@ model Perfil {
   ordenes_trabajo    OrdenTrabajo[]
   tareas_asignadas   TareaAgendada[]      @relation("TareasTecnico")
   disponibilidad     DisponibilidadTecnico[] @relation("DisponibilidadTecnico")
+  tickets_feedback   TicketFeedback[]
 
   // ── Fase 2: datos fiscales del receptor ──────────────────────
   cuit               String?              // CUIT del titular (para Factura C)
@@ -449,6 +471,29 @@ model SolicitudMantenimiento {
 
   @@index([cuenta_id])
   @@map("solicitudes_mantenimiento")
+}
+
+// Bucle cerrado de feedback: el cliente reporta un bug o sugiere una mejora
+// desde el portal (con adjunto opcional), el admin lo gestiona desde la
+// bandeja /admin/feedback y deja una nota visible para el cliente al resolver.
+model TicketFeedback {
+  id             String               @id @default(uuid())
+  perfil_id      String
+  perfil         Perfil               @relation(fields: [perfil_id], references: [id])
+  tipo           TipoTicketFeedback
+  descripcion    String
+  prioridad      PrioridadTicket
+  estado         EstadoTicketFeedback @default(NUEVO)
+  adjunto_url    String?
+  adjunto_mime   String?
+  creado_en      DateTime             @default(now())
+  actualizado_en DateTime             @updatedAt
+  resuelto_en    DateTime?
+  nota_admin     String?
+
+  @@index([estado, creado_en])
+  @@index([perfil_id])
+  @@map("tickets_feedback")
 }
 
 model AltaUsuario {

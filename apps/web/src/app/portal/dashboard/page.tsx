@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   CreditCard, FileText, Zap, Wrench, ClipboardList, User,
-  MessageCircle, ChevronRight, AlertTriangle,
+  MessageCircle, ChevronRight, AlertTriangle, MessageSquareWarning,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
@@ -143,6 +143,7 @@ export default async function DashboardPage() {
               { href: "/portal/documentos",  label: "Documentos",        icon: FileText },
               { href: "/portal/eventos",     label: "Eventos",           icon: Zap },
               { href: "/portal/solicitudes", label: "Mis solicitudes",   icon: ClipboardList },
+              { href: "/portal/feedback",    label: "Sugerencias",       icon: MessageSquareWarning },
               { href: "/portal/perfil",      label: "Mi perfil",         icon: User },
             ] satisfies { href: string; label: string; icon: LucideIcon }[]
           ).map(({ href, label, icon: Icon }) => (

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ShieldCheck, CreditCard, Headphones, FolderOpen, User,
-  Bell, CalendarDays, Clock,
+  Bell, CalendarDays, Clock, MessageSquareWarning,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/components/ui/LogoutButton";
@@ -49,6 +49,12 @@ const NAV_CLIENTE: NavDef[] = [
     icon: FolderOpen,
   },
   {
+    href: "/portal/feedback",
+    label: "Sugerencias",
+    mobileLabel: "Sugerencias",
+    icon: MessageSquareWarning,
+  },
+  {
     href: "/portal/perfil",
     label: "Mi perfil",
     mobileLabel: "Perfil",
@@ -64,10 +70,12 @@ const ITEM_EVENTOS: NavDef = {
 };
 
 // En mobile, Eventos reemplaza a Documentos (consulta esporádica, accesible
-// desde los accesos rápidos del dashboard y el nav desktop).
-const NAV_CLIENTE_MOBILE: NavDef[] = NAV_CLIENTE.map((nav) =>
-  nav.href === "/portal/documentos" ? ITEM_EVENTOS : nav
-);
+// desde los accesos rápidos del dashboard y el nav desktop). Sugerencias
+// queda afuera del bottom nav (5 destinos máximo): se accede desde los
+// accesos rápidos del dashboard y el nav desktop.
+const NAV_CLIENTE_MOBILE: NavDef[] = NAV_CLIENTE
+  .filter((nav) => nav.href !== "/portal/feedback")
+  .map((nav) => (nav.href === "/portal/documentos" ? ITEM_EVENTOS : nav));
 
 const NAV_EMPLEADO_MOBILE: NavDef[] = [
   { href: "/portal/dashboard",   label: "Inicio",        mobileLabel: "Inicio",  icon: ShieldCheck },

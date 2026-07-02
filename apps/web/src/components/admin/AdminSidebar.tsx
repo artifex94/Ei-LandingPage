@@ -11,14 +11,14 @@ import {
   ClipboardList, CalendarDays, Truck, CalendarCheck,
   Receipt, Bell, Briefcase,
   FileUp, Database, ScrollText, Radio, Settings, UmbrellaOff,
-  UserPlus, Activity, MessageCircle,
+  UserPlus, Activity, MessageCircle, MessageSquareWarning,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/components/ui/LogoutButton";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
-type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes" | "altasUsuarioPendientes" | "eventosSinProcesar" | "morososSinContactar";
+type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes" | "altasUsuarioPendientes" | "eventosSinProcesar" | "morososSinContactar" | "feedbackPendiente";
 
 interface NavItem {
   href: string;
@@ -51,6 +51,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/solicitudes-alta", label: "Altas de usuario",  icon: UserPlus,      badge: "altasUsuarioPendientes" },
       { href: "/admin/mantenimiento",    label: "Mantenimiento",     icon: Wrench,        badge: "pendingMantenimiento" },
       { href: "/admin/solicitudes-cambio", label: "Cambios de datos", icon: FilePen,      badge: "pendingSolicitudes" },
+      { href: "/admin/feedback",         label: "Feedback",          icon: MessageSquareWarning, badge: "feedbackPendiente" },
     ],
   },
   {
@@ -107,6 +108,7 @@ const BADGE_COLOR: Record<BadgeKey, string> = {
   altasUsuarioPendientes:  "bg-orange-500",
   eventosSinProcesar:      "bg-red-600",
   morososSinContactar:     "bg-green-500",
+  feedbackPendiente:       "bg-cyan-500",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -313,6 +315,7 @@ export function AdminSidebar({
   altasUsuarioPendientes = 0,
   eventosSinProcesar = 0,
   morososSinContactar = 0,
+  feedbackPendiente = 0,
 }: {
   nombreAdmin: string;
   pendingSolicitudes?: number;
@@ -322,6 +325,7 @@ export function AdminSidebar({
   altasUsuarioPendientes?: number;
   eventosSinProcesar?: number;
   morososSinContactar?: number;
+  feedbackPendiente?: number;
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -369,9 +373,10 @@ export function AdminSidebar({
     altasUsuarioPendientes,
     eventosSinProcesar,
     morososSinContactar,
+    feedbackPendiente,
   };
 
-  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes + altasUsuarioPendientes + eventosSinProcesar + morososSinContactar;
+  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes + altasUsuarioPendientes + eventosSinProcesar + morososSinContactar + feedbackPendiente;
 
   return (
     <>
