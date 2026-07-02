@@ -124,6 +124,13 @@ export async function conciliarMovimientos(pares: ParConciliacion[]): Promise<Co
           omitidos.push({ movimiento_id: par.movimiento_id, motivo: "El pago ya estaba acreditado." });
           return;
         }
+        if (!movimiento.importe.equals(pago.importe)) {
+          omitidos.push({
+            movimiento_id: par.movimiento_id,
+            motivo: `El importe no coincide (movimiento $${movimiento.importe.toFixed(2)} vs pago $${pago.importe.toFixed(2)}).`,
+          });
+          return;
+        }
 
         const estadoPrevio = pago.estado;
 

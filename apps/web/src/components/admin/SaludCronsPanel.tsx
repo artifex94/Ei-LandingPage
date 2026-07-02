@@ -13,7 +13,10 @@ const BADGE_VARIANT: Record<SaludCron["salud"], BadgeVariant> = {
 function badgeLabel(c: SaludCron): string {
   if (c.salud === "ok" && c.ultima) return `OK ${tiempoRelativo(c.ultima.started_at)}`;
   if (c.salud === "atrasado") return "Atrasado";
-  if (c.salud === "error") return "Error";
+  // "error" con finished_at null = corrida colgada (el proceso murió a mitad
+  // de camino), no una corrida que terminó y falló — distinción útil para el
+  // admin que va a mirar el panel.
+  if (c.salud === "error") return c.ultima?.finished_at === null ? "Corrida incompleta" : "Error";
   return "Sin datos";
 }
 

@@ -239,4 +239,35 @@ describe("agruparEventosRepetidos", () => {
   it("sin eventos → lista vacía", () => {
     expect(agruparEventosRepetidos([], VENTANA_10MIN)).toEqual([]);
   });
+
+  it("ventana rodante: una ráfaga con gaps < ventana se agrupa entera aunque el span total la supere", () => {
+    // Gaps consecutivos de 9 min (< 10 min) pero el span total (18 min) supera
+    // la ventana. Con ancla fija (comparar siempre contra el más reciente) v3
+    // quedaba afuera del grupo; con ventana rodante entra.
+    const lista: EventoLive[] = [
+      ev({ id: "v1", zona: "Living", fecha: "2026-06-19T22:00:00.000Z" }),
+      ev({ id: "v2", zona: "Living", fecha: "2026-06-19T22:09:00.000Z" }), // +9min de v1
+      ev({ id: "v3", zona: "Living", fecha: "2026-06-19T22:18:00.000Z" }), // +9min de v2, +18min de v1
+    ];
+    const out = agruparEventosRepetidos(lista, VENTANA_10MIN);
+    expect(out).toHaveLength(1);
+    expect(out[0].repeticiones).toBe(3);
+    expect(out[0].id).toBe("v3");
+  });
+
+  it("ventana rodante: un evento aislado con gap > ventana respecto del último agregado no se suma a una ráfaga posterior", () => {
+    // v3 y v2 arrancan una ráfaga de gaps de 9min (se agrupan). v1 está a
+    // 12min de v2 (el último agregado a esa ráfaga) → queda afuera, aunque
+    // esté a solo 18min de v3 (el ancla vieja, que ya no importa).
+    const lista: EventoLive[] = [
+      ev({ id: "v1", zona: "Living", fecha: "2026-06-19T22:00:00.000Z" }),
+      ev({ id: "v2", zona: "Living", fecha: "2026-06-19T22:12:00.000Z" }), // +12min de v1 → afuera
+      ev({ id: "v3", zona: "Living", fecha: "2026-06-19T22:21:00.000Z" }), // +9min de v2 → agrupa con v2
+    ];
+    const out = agruparEventosRepetidos(lista, VENTANA_10MIN);
+    expect(out).toHaveLength(2);
+    expect(out.map((g) => g.id)).toEqual(["v3", "v1"]);
+    expect(out[0].repeticiones).toBe(2); // v3 + v2
+    expect(out[1].repeticiones).toBe(1); // v1 solo
+  });
 });

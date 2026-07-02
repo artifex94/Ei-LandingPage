@@ -12,7 +12,7 @@ import { UUID_RE } from "@/lib/constants/validation";
 import { registrarAuditTx } from "@/lib/audit";
 import { construirDatosOTDesdeSolicitud, type OverridesOT } from "@/lib/ot-desde-solicitud";
 import { evaluarConflictosAgenda } from "@/lib/agenda-conflictos";
-import { validarCantidadMaterial } from "@/lib/ot-materiales";
+import { validarCantidadMaterial, validarCierreOT } from "@/lib/ot-materiales";
 import type { Perfil } from "@/generated/prisma/client";
 
 const MESES_ES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -141,10 +141,25 @@ export async function crearOTDesdeSolicitud(solicitud_id: string, overrides?: Ov
       },
     });
 
-    await tx.solicitudMantenimiento.update({
-      where: { id: solicitud_id },
-      data:  { ot_id: nuevaOT.id, estado: "EN_PROCESO" },
+    // Reclamo atómico: bajo Read Committed, dos clicks concurrentes pueden
+    // pasar el chequeo `if (solicitud.ot_id)` de arriba a la vez (ninguno ve
+    // el ot_id del otro todavía). El `where: { ot_id: null }` hace que solo
+    // uno gane la carrera — el que pierde descarta la OT que creó y devuelve
+    // la que efectivamente quedó vinculada.
+    const claim = await tx.solicitudMantenimiento.updateMany({
+      where: { id: solicitud_id, ot_id: null },
+      data:  { ot_id: nuevaOT.id, estado: "EN_PROCESO", resuelta_en: null },
     });
+
+    if (claim.count === 0) {
+      await tx.ordenTrabajo.delete({ where: { id: nuevaOT.id } });
+      const solicitudActual = await tx.solicitudMantenimiento.findUnique({ where: { id: solicitud_id } });
+      const otExistente = solicitudActual?.ot_id
+        ? await tx.ordenTrabajo.findUnique({ where: { id: solicitudActual.ot_id } })
+        : null;
+      if (!otExistente) throw new Error("Conflicto al vincular la solicitud. Reintentá.");
+      return otExistente;
+    }
 
     await registrarAuditTx(tx, {
       admin_id:     admin.id,
@@ -307,6 +322,7 @@ export async function cambiarEstadoOT(
   if (!ESTADOS_OT_VALIDOS.has(nuevo_estado)) throw new Error("Estado de OT inválido.");
   const usuario = await getUsuario();
   if (!usuario) throw new Error("No autorizado");
+  await verificarOwnershipOT(ot_id, usuario);
 
   if (extra?.satisfaccion !== undefined && (extra.satisfaccion < 1 || extra.satisfaccion > 5)) {
     throw new Error("La satisfacción debe ser entre 1 y 5.");
@@ -331,6 +347,15 @@ export async function cambiarEstadoOT(
   const cancelacionPermitida = nuevo_estado === "CANCELADA" && esAdmin;
   if (!transicionesPermitidas.includes(nuevo_estado) && !cancelacionPermitida) {
     throw new Error(`Transición inválida: ${otAntes.estado} → ${nuevo_estado}`);
+  }
+
+  if (nuevo_estado === "COMPLETADA") {
+    const validacionCierre = validarCierreOT({
+      esAdmin,
+      tieneFirma: Boolean(otAntes.firma_cliente_url),
+      motivoNoFirma: extra?.motivo_no_firma,
+    });
+    if (!validacionCierre.valido) throw new Error(validacionCierre.error);
   }
 
   const ahora = new Date();
@@ -416,6 +441,7 @@ export async function registrarGPS(
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new Error("Coordenadas GPS inválidas.");
   const usuario = await getUsuario();
   if (!usuario) throw new Error("No autorizado");
+  await verificarOwnershipOT(ot_id, usuario);
 
   const data =
     tipo === "salida"   ? { gps_salida_lat: lat,   gps_salida_lng: lng } :
@@ -436,6 +462,7 @@ export async function subirFotosOT(ot_id: string, formData: FormData) {
   if (!UUID_RE.test(ot_id)) throw new Error("ID de OT inválido.");
   const usuario = await getUsuario();
   if (!usuario) throw new Error("No autorizado");
+  await verificarOwnershipOT(ot_id, usuario);
 
   const supabaseAdmin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -493,6 +520,7 @@ export async function guardarFirmaCliente(ot_id: string, firmaDataUrl: string) {
   if (firmaDataUrl.length > FIRMA_MAX_SIZE) throw new Error("La firma supera el tamaño máximo.");
   const usuario = await getUsuario();
   if (!usuario) throw new Error("No autorizado");
+  await verificarOwnershipOT(ot_id, usuario);
 
   const supabaseAdmin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

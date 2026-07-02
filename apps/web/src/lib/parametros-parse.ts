@@ -48,6 +48,7 @@ export const CATALOGO_PARAMETROS = [
     categoria: "cobranza",
     descripcion: "A partir de cuántos períodos impagos se ofrece el aviso de mora (tono más firme).",
     defaultValor: 3,
+    min: 1,
   },
   {
     clave: "DIAS_GRACIA",
@@ -55,6 +56,7 @@ export const CATALOGO_PARAMETROS = [
     categoria: "cobranza",
     descripcion: "Días de atraso desde los que una cuenta pasa a período de gracia.",
     defaultValor: 1,
+    min: 0,
   },
   {
     clave: "DIAS_SUSPENSION",
@@ -62,6 +64,7 @@ export const CATALOGO_PARAMETROS = [
     categoria: "cobranza",
     descripcion: "Días de atraso desde los que una cuenta se considera suspendida por falta de pago.",
     defaultValor: 15,
+    min: 1,
   },
   {
     clave: "COBERTURA_DIAS_TURNOS",
@@ -69,6 +72,7 @@ export const CATALOGO_PARAMETROS = [
     categoria: "turnos",
     descripcion: "Ventana de días hacia adelante que cubre la auto-asignación de turnos del cron.",
     defaultValor: 3,
+    min: 1,
   },
   {
     clave: "VENTANA_AGRUPACION_MIN",
@@ -77,6 +81,7 @@ export const CATALOGO_PARAMETROS = [
     descripcion:
       "Minutos dentro de los que varios eventos de la misma cuenta, zona y código se colapsan en una sola fila del board de monitoreo (con contador de repeticiones).",
     defaultValor: 10,
+    min: 1,
   },
 ] as const;
 
@@ -84,10 +89,15 @@ export const CATALOGO_PARAMETROS = [
  * Valida y normaliza el valor ingresado en la UI de `/admin/configuracion` según el
  * `tipo` declarado del parámetro. Función PURA: no toca la DB, la usa la action de
  * escritura (`actualizarParametro`) ANTES de persistir.
+ *
+ * `min` (opcional, solo aplica a INT/DECIMAL): cota inferior por parámetro —
+ * ver `CATALOGO_PARAMETROS`. Sin esto, ej. `DIAS_SUSPENSION=-5` dejaba TODAS
+ * las cuentas SUSPENDED en el portal (dpd siempre >= a un umbral negativo).
  */
 export function validarValorParametro(
   valorRaw: string,
   tipo: TipoParametroValor,
+  min?: number,
 ): { ok: true; valor: string } | { ok: false; error: string } {
   const valor = valorRaw.trim();
   if (!valor) return { ok: false, error: "El valor no puede estar vacío." };
@@ -96,11 +106,13 @@ export function validarValorParametro(
     case "INT": {
       const n = Number(valor);
       if (!Number.isInteger(n)) return { ok: false, error: "Debe ser un número entero." };
+      if (min !== undefined && n < min) return { ok: false, error: `Debe ser mayor o igual a ${min}.` };
       return { ok: true, valor: String(n) };
     }
     case "DECIMAL": {
       const n = Number(valor);
       if (!Number.isFinite(n)) return { ok: false, error: "Debe ser un número." };
+      if (min !== undefined && n < min) return { ok: false, error: `Debe ser mayor o igual a ${min}.` };
       return { ok: true, valor: String(n) };
     }
     case "STRING":

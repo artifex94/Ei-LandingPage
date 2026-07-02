@@ -10,6 +10,13 @@
  * Nota sobre el hash: usa `node:crypto` (disponible en Node y en el entorno
  * de test de Vitest) en vez de Web Crypto async, así el parser sigue siendo
  * una función sync sin I/O.
+ *
+ * Nota sobre colisiones: fecha|importe|descripcion NO es único — dos
+ * transferencias legítimas idénticas el mismo día (mismo monto, misma
+ * descripción del banco) colisionan. `parsearExtractoCSV` agrega un índice
+ * de ocurrencia (0, 1, 2...) al hash de cada fila repetida DENTRO del mismo
+ * archivo importado; es estable entre re-imports del mismo extracto porque
+ * el banco siempre lista las filas duplicadas en el mismo orden.
  */
 
 import { createHash } from "node:crypto";
@@ -55,7 +62,7 @@ export interface MovimientoConciliable {
 }
 
 export type ClasificacionMatch = "confiable" | "ambiguo" | "sin_match";
-export type MotivoMatch = "ref_externa" | "importe_unico" | "ninguno";
+export type MotivoMatch = "ref_externa" | "ref_externa_importe_distinto" | "importe_unico" | "ninguno";
 
 export interface CandidatoPropuesto {
   pago_id: string;
@@ -70,13 +77,20 @@ export interface PropuestaMatch {
   /** Candidatos disponibles (1 en "confiable", 2+ en "ambiguo", 0 en "sin_match"). */
   candidatos: CandidatoPropuesto[];
   motivo: MotivoMatch;
+  /** Texto humano opcional con la razón del caso "ambiguo" (ej. ref coincide pero el importe no). */
+  detalle?: string;
 }
 
 // ── Hash de idempotencia ─────────────────────────────────────────────────────
 
-export function calcularHashMovimiento(fecha: Date, importe: number, descripcion: string): string {
+export function calcularHashMovimiento(
+  fecha: Date,
+  importe: number,
+  descripcion: string,
+  ocurrencia = 0,
+): string {
   const fechaIso = fecha.toISOString().slice(0, 10);
-  const clave = `${fechaIso}|${importe.toFixed(2)}|${descripcion.trim()}`;
+  const clave = `${fechaIso}|${importe.toFixed(2)}|${descripcion.trim()}|${ocurrencia}`;
   return createHash("sha256").update(clave).digest("hex");
 }
 
@@ -104,8 +118,40 @@ function desentrecomillar(campo: string): string {
   return t;
 }
 
+/**
+ * Split de una fila CSV que respeta campos entrecomillados: un separador
+ * dentro de `"..."` NO parte el campo, y `""` escapada dentro de un campo
+ * entrecomillado se conserva como una comilla literal. `linea.split(sep)`
+ * ingenuo corrompía extractos con descripciones como `"Pago, ref. ""ABC"""`
+ * (columnas corridas → montos/fechas mal asignados en silencio).
+ */
 function splitFila(linea: string, sep: "," | ";"): string[] {
-  return linea.split(sep).map(desentrecomillar);
+  const campos: string[] = [];
+  let actual = "";
+  let dentroComillas = false;
+
+  for (let i = 0; i < linea.length; i++) {
+    const c = linea[i];
+    if (c === '"') {
+      if (dentroComillas && linea[i + 1] === '"') {
+        // Comilla escapada ("") dentro de un campo entrecomillado: se
+        // conserva tal cual y desentrecomillar() no vuelve a tocarla.
+        actual += '""';
+        i++;
+      } else {
+        dentroComillas = !dentroComillas;
+        actual += c;
+      }
+    } else if (c === sep && !dentroComillas) {
+      campos.push(actual);
+      actual = "";
+    } else {
+      actual += c;
+    }
+  }
+  campos.push(actual);
+
+  return campos.map(desentrecomillar);
 }
 
 interface ColumnasDetectadas {
@@ -240,6 +286,10 @@ export function parsearExtractoCSV(texto: string): ParseoExtractoResult {
 
   const movimientos: MovimientoParseado[] = [];
   const errores: string[] = [];
+  // Cuenta ocurrencias de (fecha|importe|descripcion) DENTRO de este archivo
+  // para desambiguar el hash de filas idénticas (ver nota de colisión arriba
+  // del archivo) — estable entre re-imports porque el orden de filas no cambia.
+  const ocurrencias = new Map<string, number>();
 
   for (let i = 1; i < lineas.length; i++) {
     const fila = i + 1; // 1-based incluyendo header, para que coincida con lo que ve el usuario en una planilla
@@ -277,11 +327,15 @@ export function parsearExtractoCSV(texto: string): ParseoExtractoResult {
       continue;
     }
 
+    const claveOcurrencia = `${fecha.toISOString().slice(0, 10)}|${importe.toFixed(2)}|${descripcion}`;
+    const ocurrencia = ocurrencias.get(claveOcurrencia) ?? 0;
+    ocurrencias.set(claveOcurrencia, ocurrencia + 1);
+
     movimientos.push({
       fecha,
       importe,
       descripcion,
-      hash: calcularHashMovimiento(fecha, importe, descripcion),
+      hash: calcularHashMovimiento(fecha, importe, descripcion, ocurrencia),
       fila,
     });
   }
@@ -302,7 +356,11 @@ function diferenciaEnDias(a: Date, b: Date): number {
 /**
  * Propone un match por movimiento contra la lista de pagos pendientes
  * (PROCESANDO/PENDIENTE, ya filtrados por el caller). Prioridad:
- *   1. La descripción contiene la ref_externa de un pago → "confiable" (ref_externa).
+ *   1. La descripción contiene la ref_externa de un pago Y el importe coincide
+ *      → "confiable" (ref_externa).
+ *   1b. La descripción contiene la ref_externa pero el importe NO coincide →
+ *      "ambiguo" (ref_externa_importe_distinto) — la ref sola no alcanza para
+ *      pre-tildar un pago por un monto distinto al avisado.
  *   2. Importe exacto + único candidato dentro de ±2 días de `updated_at` → "confiable" (importe_unico).
  *   3. Importe exacto + 2+ candidatos en la ventana → "ambiguo" (el tesorero elige).
  *   4. Sin candidatos → "sin_match".
@@ -316,12 +374,22 @@ export function proponerMatches(
     if (refEncontrada) {
       const pagoPorRef = pagosPendientes.find((p) => p.ref_externa?.toUpperCase() === refEncontrada);
       if (pagoPorRef) {
+        if (pagoPorRef.importe === mov.importe) {
+          return {
+            movimiento_id: mov.id,
+            clasificacion: "confiable",
+            pago_id: pagoPorRef.id,
+            candidatos: [{ pago_id: pagoPorRef.id, importe: pagoPorRef.importe }],
+            motivo: "ref_externa",
+          };
+        }
         return {
           movimiento_id: mov.id,
-          clasificacion: "confiable",
-          pago_id: pagoPorRef.id,
+          clasificacion: "ambiguo",
+          pago_id: null,
           candidatos: [{ pago_id: pagoPorRef.id, importe: pagoPorRef.importe }],
-          motivo: "ref_externa",
+          motivo: "ref_externa_importe_distinto",
+          detalle: `La referencia coincide pero el importe difiere ($${mov.importe.toFixed(2)} vs $${pagoPorRef.importe.toFixed(2)}).`,
         };
       }
     }

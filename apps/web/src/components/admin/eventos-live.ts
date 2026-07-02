@@ -279,6 +279,12 @@ export interface EventoAgrupado extends EventoLive {
  * grupo: se queda con los campos del más reciente y suma `repeticiones`. No
  * asume el orden del input (lo ordena internamente por fecha descendente) —
  * función pura, sin dependencia del reloj real.
+ *
+ * Ventana RODANTE: cada evento se compara contra el ÚLTIMO evento ya
+ * incorporado al grupo (no contra el más reciente / ancla fija). Con ancla
+ * fija, una ráfaga de gaps consistentes de 9 min (cada uno < 10 min de
+ * ventana) se cortaba apenas el span total contra el primer evento superaba
+ * los 10 min, aunque ningún gap individual la superara.
  */
 export function agruparEventosRepetidos(
   eventos: EventoLive[],
@@ -287,21 +293,26 @@ export function agruparEventosRepetidos(
   const ordenados = [...eventos].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
   const out: EventoAgrupado[] = [];
+  let ultimoAgregadoMs = 0;
+
   for (const e of ordenados) {
     const grupo = out[out.length - 1];
+    const eMs = new Date(e.fecha).getTime();
     const mismoAviso =
       grupo &&
       grupo.softguard_ref === e.softguard_ref &&
       grupo.zona === e.zona &&
       grupo.codigo === e.codigo &&
-      new Date(grupo.fecha).getTime() - new Date(e.fecha).getTime() <= ventanaMs;
+      ultimoAgregadoMs - eMs <= ventanaMs;
 
     if (mismoAviso) {
       grupo.repeticiones += 1;
       grupo.fechasAgrupadas.unshift(e.fecha); // e es más viejo que lo ya acumulado → va adelante
+      ultimoAgregadoMs = eMs;
       continue;
     }
     out.push({ ...e, repeticiones: 1, fechasAgrupadas: [e.fecha] });
+    ultimoAgregadoMs = eMs;
   }
   return out;
 }

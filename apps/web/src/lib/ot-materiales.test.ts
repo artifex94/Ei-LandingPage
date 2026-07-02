@@ -3,6 +3,7 @@ import {
   calcularCostoTotalMateriales,
   validarCantidadMaterial,
   aplicarPresetNota,
+  validarCierreOT,
 } from "./ot-materiales";
 
 describe("calcularCostoTotalMateriales", () => {
@@ -86,5 +87,32 @@ describe("aplicarPresetNota", () => {
 
   it("ignora presets vacíos", () => {
     expect(aplicarPresetNota("algo", "   ")).toBe("algo");
+  });
+});
+
+describe("validarCierreOT", () => {
+  it("permite completar con firma, sin motivo", () => {
+    expect(validarCierreOT({ esAdmin: false, tieneFirma: true }).valido).toBe(true);
+  });
+
+  it("rechaza completar sin firma y sin motivo (técnico)", () => {
+    const r = validarCierreOT({ esAdmin: false, tieneFirma: false });
+    expect(r.valido).toBe(false);
+    expect(r.error).toMatch(/motivo/);
+  });
+
+  it("rechaza motivo en blanco (solo espacios)", () => {
+    const r = validarCierreOT({ esAdmin: false, tieneFirma: false, motivoNoFirma: "   " });
+    expect(r.valido).toBe(false);
+  });
+
+  it("permite completar sin firma si vino motivo", () => {
+    const r = validarCierreOT({ esAdmin: false, tieneFirma: false, motivoNoFirma: "Cliente ausente" });
+    expect(r.valido).toBe(true);
+  });
+
+  it("el ADMIN puede completar sin firma y sin motivo", () => {
+    const r = validarCierreOT({ esAdmin: true, tieneFirma: false });
+    expect(r.valido).toBe(true);
   });
 });

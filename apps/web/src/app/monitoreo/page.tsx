@@ -53,23 +53,29 @@ function limitesHoyAR(): { desde: Date; hasta: Date } {
 
 // Turno de HOY del empleado logueado, para la barra "Tu turno: …" — sin ruido si
 // no tiene turno asignado (ni PROGRAMADO ni EN_CURSO) o si algo falla en la query.
-function startOfToday(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-function endOfToday(): Date {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  return d;
+//
+// OJO: `Turno.fecha` es una columna @db.Date que el cron de auto-asignación
+// (app/api/cron/turnos/route.ts, generarFechasUTC) genera con getUTC*/Date.UTC —
+// su "día" es el día calendario UTC, no el día AR. Por eso acá NO se puede
+// reusar `limitesHoyAR()` (desplaza +3h para alinear con medianoche AR): eso
+// correría la ventana respecto a cómo se generó `fecha` y dejaría el turno de
+// hoy sin matchear. Se resuelve "hoy" con las mismas coordenadas UTC que usa
+// el cron, en vez de depender del timezone local del proceso del server
+// (que `new Date().setHours()` sí arrastra, y que acá no está garantizado).
+function limitesHoyUTC(): { desde: Date; hasta: Date } {
+  const ahora = new Date();
+  const desde = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate()));
+  const hasta = new Date(desde.getTime() + 24 * 60 * 60 * 1000);
+  return { desde, hasta };
 }
 
 async function turnoDeHoyEmpleado(perfilId: string): Promise<{ franja: FranjaTurno } | null> {
   try {
+    const { desde, hasta } = limitesHoyUTC();
     return await prisma.turno.findFirst({
       where: {
         empleado: { perfil_id: perfilId },
-        fecha: { gte: startOfToday(), lte: endOfToday() },
+        fecha: { gte: desde, lt: hasta },
         estado: { in: ["PROGRAMADO", "EN_CURSO"] },
       },
       select: { franja: true },

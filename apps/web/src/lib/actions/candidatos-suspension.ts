@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireCapacidad } from "@/lib/auth/session";
 import { registrarAuditTx } from "@/lib/audit";
 import { prisma } from "@/lib/prisma/client";
+import { resumenDeudaCuentas } from "@/lib/billing-deuda";
 
 /**
  * Resolución humana de la cola "A suspender hoy" (Fase 3 del plan maestro).
@@ -54,6 +55,46 @@ export async function suspenderCandidato(
   const candidato = await obtenerCandidatoAbierto(input.candidato_id);
   if (!candidato) return { error: "El candidato ya fue resuelto o no existe." };
 
+  // El candidato guarda dpd/deuda del último cron (hasta 1 mes de antigüedad).
+  // Si el cliente pagó después de esa corrida, suspenderlo con esos datos
+  // stale sería un error operativo — re-consultamos la deuda real (mismo
+  // criterio que `resumenDeudaCuentas`, ya usado en /admin/morosidad y en el
+  // cron de cierre mensual) ANTES de tocar el estado de la cuenta.
+  const pagosImpagos = await prisma.pago.findMany({
+    where: { cuenta_id: candidato.cuenta_id, estado: { in: ["PENDIENTE", "VENCIDO"] } },
+    select: { mes: true, anio: true, importe: true, estado: true },
+  });
+  const { deudaTotal } = resumenDeudaCuentas(
+    pagosImpagos.map((p) => ({ ...p, importe: Number(p.importe) })),
+  );
+
+  if (deudaTotal <= 0) {
+    await prisma.$transaction(async (tx) => {
+      await tx.candidatoSuspension.update({
+        where: { id: candidato.id },
+        data: { resuelto_en: new Date(), accion: "PAGO_RECIBIDO" },
+      });
+      await registrarAuditTx(tx, {
+        admin_id: admin.id,
+        admin_nombre: admin.nombre,
+        accion: "SUSPENSION_EVITADA_CUENTA_AL_DIA",
+        entidad: "cuenta",
+        entidad_id: candidato.cuenta_id,
+        state_transition: { prior_state: candidato.cuenta.estado, new_state: candidato.cuenta.estado },
+        justification: input.justificacion,
+        detalle: {
+          candidato_id: candidato.id,
+          dpd_cron: candidato.dpd,
+          deuda_total_cron: Number(candidato.deuda_total),
+        },
+      });
+    });
+
+    revalidatePath("/cobros");
+    revalidatePath("/admin/morosidad");
+    return { error: "La cuenta ya está al día — no se suspendió. El candidato se cerró como pago recibido." };
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.cuenta.update({
       where: { id: candidato.cuenta_id },
@@ -74,7 +115,7 @@ export async function suspenderCandidato(
       detalle: {
         candidato_id: candidato.id,
         dpd: candidato.dpd,
-        deuda_total: Number(candidato.deuda_total),
+        deuda_total: deudaTotal,
       },
     });
   });

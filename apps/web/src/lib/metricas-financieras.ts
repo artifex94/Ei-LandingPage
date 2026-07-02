@@ -113,34 +113,45 @@ export function calcularTasaCobranza(
  * - `proyeccionMes` = cobradoMes + pendienteMes × tasa de cobranza del
  *   trimestre calendario previo. Si el trimestre previo no generó pagos,
  *   la tasa es 0 (conservador: no se proyecta cobranza sin historial).
+ *
+ * Bucketing por componentes UTC (no locales): `acreditado_en` mezcla dos
+ * fuentes — timestamps reales (webhooks MP/Talo, hora AR real) y columnas
+ * `@db.Date` guardadas a medianoche UTC (transferencias conciliadas, ver
+ * `parsearFecha`/`construirFechaUTC` en `conciliacion-bancaria.ts`). Usar
+ * `getMonth`/`getFullYear` (locales) hacía que el resultado dependiera de la
+ * TZ del PROCESO que corre esta función — no determinístico entre dev/CI/
+ * prod. Los componentes UTC son estables sin importar `process.env.TZ`:
+ * coinciden exactamente con el día calendario para los `@db.Date`, y
+ * desvían como mucho 3h para los timestamps AR reales (offset AR = UTC-3;
+ * el server de prod corre en UTC de todos modos).
  */
 export function calcularLiquidez(
   pagos: PagoParaLiquidez[],
   ahora: Date = new Date()
 ): Liquidez {
-  const finHoy = new Date(ahora);
-  finHoy.setHours(23, 59, 59, 999);
+  const anioAhora = ahora.getUTCFullYear();
+  const mesAhora0 = ahora.getUTCMonth(); // 0-indexado, para Date.UTC
+  const diaAhora = ahora.getUTCDate();
 
-  const inicioSemana = new Date(ahora);
-  inicioSemana.setDate(inicioSemana.getDate() - 7);
-  inicioSemana.setHours(0, 0, 0, 0);
+  const finHoyMs = Date.UTC(anioAhora, mesAhora0, diaAhora, 23, 59, 59, 999);
+  const inicioSemanaMs = Date.UTC(anioAhora, mesAhora0, diaAhora - 7, 0, 0, 0, 0);
 
-  const mesActual = ahora.getMonth() + 1;
-  const anioActual = ahora.getFullYear();
+  const mesActual = mesAhora0 + 1;
+  const anioActual = anioAhora;
 
   const pagados = pagos.filter((p) => p.estado === "PAGADO" && p.acreditado_en);
 
   const cobradoSemana = pagados
     .filter((p) => {
-      const f = new Date(p.acreditado_en as Date | string);
-      return f >= inicioSemana && f <= finHoy;
+      const fMs = new Date(p.acreditado_en as Date | string).getTime();
+      return fMs >= inicioSemanaMs && fMs <= finHoyMs;
     })
     .reduce((s, p) => s + p.importe, 0);
 
   const cobradoMes = pagados
     .filter((p) => {
       const f = new Date(p.acreditado_en as Date | string);
-      return f.getMonth() + 1 === mesActual && f.getFullYear() === anioActual;
+      return f.getUTCMonth() + 1 === mesActual && f.getUTCFullYear() === anioActual;
     })
     .reduce((s, p) => s + p.importe, 0);
 

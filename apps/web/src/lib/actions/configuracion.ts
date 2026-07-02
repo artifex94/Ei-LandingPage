@@ -42,7 +42,7 @@ export const actualizarParametro = accionAdmin(
     const catalogo = CATALOGO_PARAMETROS.find((p) => p.clave === clave);
     if (!catalogo) return { error: "Parámetro desconocido." };
 
-    const validado = validarValorParametro(String(formData.get("valor") ?? ""), catalogo.tipo);
+    const validado = validarValorParametro(String(formData.get("valor") ?? ""), catalogo.tipo, catalogo.min);
     if (!validado.ok) return { error: validado.error };
 
     const anterior = await prisma.parametroNegocio.findUnique({ where: { clave } });

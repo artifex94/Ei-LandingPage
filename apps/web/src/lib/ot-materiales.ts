@@ -55,3 +55,28 @@ export function aplicarPresetNota(notaActual: string, preset: string): string {
   if (lineas.includes(presetTrim)) return actual;
   return actual ? `${actual}\n${presetTrim}` : presetTrim;
 }
+
+export interface DatosCierreOT {
+  /** ADMIN puede completar sin firma ni motivo (override manual, ej. técnico sin señal). */
+  esAdmin: boolean;
+  tieneFirma: boolean;
+  motivoNoFirma?: string | null;
+}
+
+/**
+ * Al completar una OT (EN_SITIO → COMPLETADA) sin firma del cliente, el
+ * técnico tiene que dejar constancia del motivo (cliente ausente, rechazó
+ * firmar, etc.) — si no, la OT queda cerrada sin ningún registro de por qué
+ * falta la conformidad. El ADMIN queda exento (completa desde /admin/ot sin
+ * ese campo en la UI).
+ */
+export function validarCierreOT({ esAdmin, tieneFirma, motivoNoFirma }: DatosCierreOT): ValidacionCantidad {
+  if (esAdmin || tieneFirma) return { valido: true };
+  if (!motivoNoFirma || !motivoNoFirma.trim()) {
+    return {
+      valido: false,
+      error: "Para completar sin firma, indicá el motivo (cliente ausente, rechazó firmar, etc.).",
+    };
+  }
+  return { valido: true };
+}

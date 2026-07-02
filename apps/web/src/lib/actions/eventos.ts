@@ -191,21 +191,32 @@ export async function registrarGestionEvento(
   });
   if (!evento) return { error: "Evento no encontrado." };
 
-  const pasosPrevios = await prisma.gestionEvento.count({
-    where: { evento_id: input.evento_id },
-  });
+  // count + create bajo Serializable: dos taps concurrentes en el mismo
+  // evento no deben terminar con el mismo `orden`. No hay constraint único
+  // en (evento_id, orden), así que Read Committed no alcanza (el count sobre
+  // filas que todavía no existen no bloquea nada) — Serializable hace que
+  // Postgres aborte una de las dos transacciones en conflicto; esa acción
+  // simplemente falla y el operador puede reintentar el tap.
+  await prisma.$transaction(
+    async (tx) => {
+      const pasosPrevios = await tx.gestionEvento.count({
+        where: { evento_id: input.evento_id },
+      });
 
-  await prisma.gestionEvento.create({
-    data: {
-      evento_id: input.evento_id,
-      orden: pasosPrevios + 1,
-      tipo: input.tipo as TipoGestionEvento,
-      destino: input.destino || null,
-      resultado: input.resultado as ResultadoGestion,
-      nota: input.nota || null,
-      operador: admin.nombre,
+      await tx.gestionEvento.create({
+        data: {
+          evento_id: input.evento_id,
+          orden: pasosPrevios + 1,
+          tipo: input.tipo as TipoGestionEvento,
+          destino: input.destino || null,
+          resultado: input.resultado as ResultadoGestion,
+          nota: input.nota || null,
+          operador: admin.nombre,
+        },
+      });
     },
-  });
+    { isolationLevel: "Serializable" },
+  );
 
   revalidatePath(`/admin/eventos/${input.evento_id}`);
 
@@ -230,6 +241,7 @@ export interface GestionEventoItem {
  */
 export async function getGestionesEvento(eventoId: string): Promise<GestionEventoItem[]> {
   if (!UUID_RE.test(eventoId)) return [];
+  await requireCapacidad("puede_monitorear");
 
   try {
     const rows = await prisma.gestionEvento.findMany({

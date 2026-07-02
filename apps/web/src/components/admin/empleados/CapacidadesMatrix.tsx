@@ -29,7 +29,10 @@ export function CapacidadesMatrix({ empleados }: { empleados: EmpleadoConPerfil[
     setPendingCell(cellId);
     startTransition(async () => {
       await toggleCapacidadEmpleado(emp.id, capacidad, !emp[capacidad]);
-      setPendingCell(null);
+      // Solo limpiar si esta celda sigue siendo la pendiente — si otro toggle
+      // ya arrancó (y pisó pendingCell) mientras esta promesa estaba en
+      // vuelo, no hay que borrarle su estado "pending" a esa otra celda.
+      setPendingCell((actual) => (actual === cellId ? null : actual));
     });
   }
 

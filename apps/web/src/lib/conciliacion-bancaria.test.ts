@@ -83,6 +83,60 @@ describe("parsearExtractoCSV", () => {
     expect(h1).toBe(h2);
     expect(h1).not.toBe(h3);
   });
+
+  it("calcularHashMovimiento con distinta 'ocurrencia' da hashes distintos (desambigua duplicados)", () => {
+    const fecha = new Date(Date.UTC(2026, 6, 1));
+    const h0 = calcularHashMovimiento(fecha, 15000, "Transferencia recibida", 0);
+    const h1 = calcularHashMovimiento(fecha, 15000, "Transferencia recibida", 1);
+    expect(h0).not.toBe(h1);
+  });
+
+  it("respeta comillas dobles: un separador dentro de un campo entrecomillado no parte la fila", () => {
+    const csv = [
+      "Fecha,Descripcion,Importe",
+      '01/07/2026,"Transferencia, ref. varios",15000.00',
+    ].join("\n");
+    const { movimientos, errores } = parsearExtractoCSV(csv);
+    expect(errores).toHaveLength(0);
+    expect(movimientos).toHaveLength(1);
+    expect(movimientos[0].descripcion).toBe("Transferencia, ref. varios");
+    expect(movimientos[0].importe).toBe(15000);
+  });
+
+  it("respeta comillas escapadas (\"\") dentro de un campo entrecomillado", () => {
+    const csv = [
+      "Fecha,Descripcion,Importe",
+      '01/07/2026,"Pago, ref. ""EI-ABCDEF123456""",15000.00',
+    ].join("\n");
+    const { movimientos, errores } = parsearExtractoCSV(csv);
+    expect(errores).toHaveLength(0);
+    expect(movimientos).toHaveLength(1);
+    expect(movimientos[0].descripcion).toBe('Pago, ref. "EI-ABCDEF123456"');
+  });
+
+  it("dos filas idénticas (mismo día, importe y descripción) generan hashes distintos y no se pierden por idempotencia", () => {
+    const csv = [
+      "Fecha,Descripcion,Importe",
+      "01/07/2026,Transferencia recibida,15000.00",
+      "01/07/2026,Transferencia recibida,15000.00",
+    ].join("\n");
+    const { movimientos, errores } = parsearExtractoCSV(csv);
+    expect(errores).toHaveLength(0);
+    expect(movimientos).toHaveLength(2);
+    expect(movimientos[0].hash).not.toBe(movimientos[1].hash);
+  });
+
+  it("re-parsear el mismo texto produce exactamente los mismos hashes (idempotencia estable entre re-imports)", () => {
+    const csv = [
+      "Fecha,Descripcion,Importe",
+      "01/07/2026,Transferencia recibida,15000.00",
+      "01/07/2026,Transferencia recibida,15000.00",
+      "01/07/2026,Otra transferencia,5000.00",
+    ].join("\n");
+    const r1 = parsearExtractoCSV(csv);
+    const r2 = parsearExtractoCSV(csv);
+    expect(r2.movimientos.map((m) => m.hash)).toEqual(r1.movimientos.map((m) => m.hash));
+  });
 });
 
 describe("proponerMatches", () => {
@@ -102,7 +156,7 @@ describe("proponerMatches", () => {
     ...over,
   });
 
-  it("clasifica confiable por ref_externa aunque el importe no coincida exacto en fecha lejana", () => {
+  it("clasifica confiable por ref_externa cuando el importe SÍ coincide, aunque la fecha esté lejana", () => {
     const mov = movimiento({ descripcion: "Transferencia EI-ABCDEF123456 recibida" });
     const p = pago({ id: "pago-ref", ref_externa: "EI-ABCDEF123456", updated_at: new Date(Date.UTC(2020, 0, 1)) });
 
@@ -110,6 +164,19 @@ describe("proponerMatches", () => {
     expect(resultado.clasificacion).toBe("confiable");
     expect(resultado.motivo).toBe("ref_externa");
     expect(resultado.pago_id).toBe("pago-ref");
+  });
+
+  it("ref_externa coincide pero el importe difiere: ambiguo con detalle, NO se pre-tilda como confiable", () => {
+    const mov = movimiento({ descripcion: "Transferencia EI-ABCDEF123456 recibida", importe: 15000 });
+    const p = pago({ id: "pago-ref", ref_externa: "EI-ABCDEF123456", importe: 12000 });
+
+    const [resultado] = proponerMatches([mov], [p]);
+    expect(resultado.clasificacion).toBe("ambiguo");
+    expect(resultado.motivo).toBe("ref_externa_importe_distinto");
+    expect(resultado.pago_id).toBeNull();
+    expect(resultado.candidatos).toEqual([{ pago_id: "pago-ref", importe: 12000 }]);
+    expect(resultado.detalle).toContain("$15000.00");
+    expect(resultado.detalle).toContain("$12000.00");
   });
 
   it("clasifica confiable por importe exacto cuando hay un único candidato en la ventana de ±2 días", () => {

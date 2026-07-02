@@ -52,9 +52,9 @@ export async function obtenerSaludCrons(ahora: Date = new Date()): Promise<Salud
         const row = await prisma.cronRun.findFirst({
           where: { cron: c.nombre },
           orderBy: { started_at: "desc" },
-          select: { estado: true, started_at: true },
+          select: { estado: true, started_at: true, finished_at: true },
         });
-        ultima = row ? { estado: row.estado, started_at: row.started_at } : null;
+        ultima = row ? { estado: row.estado, started_at: row.started_at, finished_at: row.finished_at } : null;
       } catch {
         ultima = null;
       }

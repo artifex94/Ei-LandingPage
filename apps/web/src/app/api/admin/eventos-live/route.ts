@@ -18,7 +18,10 @@
  * eventos sincronizados en EventoAlarma (DB local) con fuente="db" para que
  * el panel pueda indicar que el dato es diferido.
  *
- * Autenticación: sesión con rol ADMIN (mismo patrón que /api/admin/export).
+ * Autenticación: ADMIN o empleado con capacidad `puede_monitorear` — mismo
+ * criterio que /api/admin/patron-evento. Lo consume `MonitorOperadores`, que
+ * también se monta en /monitoreo/en-vivo (gateado por `puede_monitorear`)
+ * para operadores no-ADMIN.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -139,8 +142,17 @@ async function eventosDesdeDb(limit: number): Promise<EventoLive[]> {
 
 export async function GET(req: NextRequest) {
   const sesion = await getSesion();
-  if (!sesion || sesion.perfil.rol !== "ADMIN") {
+  if (!sesion) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+  if (sesion.perfil.rol !== "ADMIN") {
+    const empleado = await prisma.empleado.findFirst({
+      where: { perfil_id: sesion.userId },
+      select: { puede_monitorear: true },
+    });
+    if (!empleado?.puede_monitorear) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
   }
 
   const limitRaw = Number(req.nextUrl.searchParams.get("limit") ?? 15);
