@@ -9,6 +9,8 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { enviarWhatsApp } from "@/lib/twilio";
 import type { TipoOT, EstadoOT, Prioridad } from "@/generated/prisma/client";
 import { UUID_RE } from "@/lib/constants/validation";
+import { registrarAuditTx } from "@/lib/audit";
+import { construirDatosOTDesdeSolicitud, type OverridesOT } from "@/lib/ot-desde-solicitud";
 
 const MESES_ES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const ESTADOS_OT_VALIDOS = new Set(["SOLICITADA","ASIGNADA","EN_RUTA","EN_SITIO","COMPLETADA","CANCELADA"]);
@@ -85,6 +87,69 @@ export async function crearOT(data: {
 
   revalidatePath("/admin/ot");
   revalidatePath("/portal/soporte");
+  return ot;
+}
+
+// ── Convertir solicitud de mantenimiento en OT (admin) — Fase 2 ──────────────
+// Idempotente: si la solicitud ya tiene ot_id, devuelve la OT existente en
+// vez de crear una duplicada (protege contra doble click / reintento).
+
+export async function crearOTDesdeSolicitud(solicitud_id: string, overrides?: OverridesOT) {
+  if (!UUID_RE.test(solicitud_id)) throw new Error("ID de solicitud inválido.");
+  const admin = await requireAdmin();
+
+  const ot = await prisma.$transaction(async (tx) => {
+    const solicitud = await tx.solicitudMantenimiento.findUnique({ where: { id: solicitud_id } });
+    if (!solicitud) throw new Error("Solicitud no encontrada.");
+
+    if (solicitud.ot_id) {
+      const otExistente = await tx.ordenTrabajo.findUnique({ where: { id: solicitud.ot_id } });
+      if (otExistente) return otExistente;
+    }
+
+    const datos = construirDatosOTDesdeSolicitud(
+      {
+        cuenta_id: solicitud.cuenta_id,
+        descripcion: solicitud.descripcion,
+        prioridad: solicitud.prioridad,
+      },
+      overrides,
+    );
+
+    const nuevaOT = await tx.ordenTrabajo.create({
+      data: {
+        tipo:        datos.tipo,
+        descripcion: datos.descripcion,
+        prioridad:   datos.prioridad,
+        cuenta_id:   datos.cuenta_id,
+      },
+    });
+
+    await tx.solicitudMantenimiento.update({
+      where: { id: solicitud_id },
+      data:  { ot_id: nuevaOT.id, estado: "EN_PROCESO" },
+    });
+
+    await registrarAuditTx(tx, {
+      admin_id:     admin.id,
+      admin_nombre: admin.nombre,
+      accion:       "OT_CREAR_DESDE_SOLICITUD",
+      entidad:      "orden_trabajo",
+      entidad_id:   nuevaOT.id,
+      detalle:      {
+        solicitud_id,
+        tipo: datos.tipo,
+        solicitud_prior_estado: solicitud.estado,
+        solicitud_new_estado: "EN_PROCESO",
+      },
+      state_transition: { prior_state: null, new_state: "SOLICITADA" },
+    });
+
+    return nuevaOT;
+  });
+
+  revalidatePath("/admin/ot");
+  revalidatePath("/admin/mantenimiento");
   return ot;
 }
 

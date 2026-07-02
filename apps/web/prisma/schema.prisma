@@ -360,6 +360,8 @@ model SolicitudMantenimiento {
   prioridad   Prioridad       @default(MEDIA)
   creada_en   DateTime        @default(now())
   resuelta_en DateTime?
+  ot_id       String?         @unique // Fase 2: link 1:1 a la OT generada por conversión
+  ot          OrdenTrabajo?   @relation(fields: [ot_id], references: [id])
 
   @@index([cuenta_id])
   @@map("solicitudes_mantenimiento")
@@ -651,6 +653,7 @@ model OrdenTrabajo {
 
   reservas_vehiculo ReservaVehiculo[]
   tarea             TareaAgendada?    @relation("OTTarea")
+  solicitud         SolicitudMantenimiento? // back-relation Fase 2: solicitud que originó esta OT (si vino de una conversión)
 
   @@index([estado])
   @@index([tecnico_id, fecha_visita])
