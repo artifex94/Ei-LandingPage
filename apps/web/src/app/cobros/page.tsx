@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
+import { ColaSuspensionHoy } from "@/components/admin/ColaSuspensionHoy";
 import { motivosDeCobranza, agruparPagosPorCuenta, UMBRAL_MORA } from "@/lib/mensajeria-motivos";
+import { etiquetaCuenta } from "@/lib/whatsapp";
 import { getParam } from "@/lib/parametros";
 
 export const metadata: Metadata = { title: "Morosidad" };
@@ -14,6 +16,38 @@ export default async function CobrosMorosidadPage() {
   const mesActual = ahora.getMonth() + 1;
   const anioActual = ahora.getFullYear();
   const umbralMora = await getParam("UMBRAL_MORA", UMBRAL_MORA);
+
+  // Cola "A suspender hoy" (Fase 3 plan maestro): candidatos abiertos generados
+  // por el cron mensual. Suspender/condonar es siempre decisión del tesorero.
+  // El .catch degrada a lista vacía si la tabla aún no existe en la DB
+  // (SQL manual pendiente de aplicar), para no romper la landing del tesorero.
+  const candidatosAbiertos = await prisma.candidatoSuspension
+    .findMany({
+      where: { resuelto_en: null },
+      include: {
+        cuenta: {
+          select: {
+            descripcion: true,
+            calle: true,
+            softguard_ref: true,
+            perfil: { select: { nombre: true } },
+          },
+        },
+      },
+      orderBy: { dpd: "desc" },
+    })
+    .catch(() => []);
+
+  const filasColaSuspension = candidatosAbiertos.map((c) => ({
+    id: c.id,
+    clienteNombre: c.cuenta.perfil.nombre,
+    cuentaEtiqueta: etiquetaCuenta(
+      { descripcion: c.cuenta.descripcion, calle: c.cuenta.calle, softguardRef: c.cuenta.softguard_ref },
+      "plano",
+    ),
+    dpd: c.dpd,
+    deudaTotal: Number(c.deuda_total),
+  }));
 
   // Un pago se considera vencido si:
   //   a) su estado es "VENCIDO" (cron ya lo transitó), O
@@ -83,6 +117,8 @@ export default async function CobrosMorosidadPage() {
           por cobrar
         </p>
       </div>
+
+      <ColaSuspensionHoy candidatos={filasColaSuspension} />
 
       {grupos.length === 0 ? (
         <div className="bg-green-900/20 border border-green-800 rounded-xl p-8 text-center">

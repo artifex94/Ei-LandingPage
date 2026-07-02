@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   console.log(
     `[cron] mes=${r.mes}/${r.anio} pagosCreados=${r.pagosCreados} vencidos=${r.marcadosVencidos} ` +
       `notificados=${r.notificados} yaAvisados=${r.yaAvisados} errores=${r.erroresEnvio} ` +
+      `candidatosSuspension=${r.candidatosSuspensionCreados}/${r.candidatosSuspensionActualizados}/${r.candidatosSuspensionCerradosPago} ` +
       `facturasBorradores=${r.facturasBorradores} facturasOmitidas=${r.facturasOmitidas}`,
   );
 

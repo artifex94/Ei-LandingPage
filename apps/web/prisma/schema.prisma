@@ -112,6 +112,13 @@ enum EstadoAltaUsuario {
   RECHAZADA
 }
 
+// Resolución humana de un CandidatoSuspension (plan maestro — Fase 3 tesoreros).
+enum AccionSuspension {
+  SUSPENDIDA
+  CONDONADA
+  PAGO_RECIBIDO
+}
+
 // ── Fase 3: Órdenes de Trabajo ───────────────────────────────
 
 enum TipoOT {
@@ -274,6 +281,7 @@ model Cuenta {
   camaras         CamaraCliente[]
   notificaciones  NotificacionCliente[]
   solicitudes_cambio SolicitudCambioInfo[]
+  candidatos_suspension CandidatoSuspension[]
 
   @@index([perfil_id])
   @@map("cuentas")
@@ -349,6 +357,33 @@ model ParametroNegocio {
   updated_at  DateTime      @updatedAt
 
   @@map("parametros_negocio")
+}
+
+// Cola de candidatos a suspensión por mora — Fase 3 del plan maestro (tesoreros).
+// El cron mensual (`ejecutarCierreMensual`) detecta cuentas ACTIVA con DPD >=
+// DIAS_SUSPENSION y genera/actualiza un candidato ABIERTO (resuelto_en = null) por
+// cuenta; el tesorero decide manualmente desde /cobros si suspende o condona
+// (`suspenderCandidato` / `condonarCandidato`). La suspensión NUNCA es automática.
+//
+// Regla de unicidad: "un candidato ABIERTO por cuenta" (no `@@unique([cuenta_id,
+// generado_en])` — eso permitiría abrir uno nuevo cada corrida del cron mientras el
+// anterior sigue sin resolver). Prisma no soporta índices únicos parciales sin
+// preview feature, así que se enforce a nivel de aplicación (findFirst con
+// resuelto_en: null antes de crear) y se refuerza con un índice único parcial
+// manual — ver prisma/sql-manual/2026-07-02_fases-plan-maestro.sql.
+model CandidatoSuspension {
+  id          String            @id @default(uuid())
+  cuenta_id   String
+  cuenta      Cuenta            @relation(fields: [cuenta_id], references: [id])
+  dpd         Int
+  deuda_total Decimal           @db.Decimal(10, 2)
+  generado_en DateTime          @default(now())
+  resuelto_en DateTime?
+  accion      AccionSuspension?
+
+  @@index([cuenta_id, resuelto_en])
+  @@index([resuelto_en])
+  @@map("candidatos_suspension")
 }
 
 model SolicitudMantenimiento {

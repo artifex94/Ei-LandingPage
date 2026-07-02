@@ -42,3 +42,81 @@ BEGIN
       ON DELETE SET NULL ON UPDATE CASCADE;
   END IF;
 END$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Fase 3: cola "A suspender hoy" — tabla candidatos_suspension
+--
+-- El cron mensual detecta cuentas ACTIVA con DPD >= DIAS_SUSPENSION y genera/
+-- actualiza un candidato ABIERTO (resuelto_en IS NULL) por cuenta; el tesorero
+-- decide manualmente desde /cobros si suspende (escribe cuentas.estado =
+-- SUSPENDIDA_PAGO) o condona. La suspensión NUNCA es automática.
+--
+-- Un candidato ABIERTO por cuenta es la regla de unicidad real (no por
+-- generado_en): el índice único parcial de abajo lo refuerza a nivel de DB
+-- además del check a nivel de aplicación (findFirst con resuelto_en: null).
+-- ─────────────────────────────────────────────────────────────────────────────
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'AccionSuspension') THEN
+    CREATE TYPE "AccionSuspension" AS ENUM ('SUSPENDIDA', 'CONDONADA', 'PAGO_RECIBIDO');
+  END IF;
+END$$;
+
+CREATE TABLE IF NOT EXISTS "candidatos_suspension" (
+  "id"          TEXT NOT NULL,
+  "cuenta_id"   TEXT NOT NULL,
+  "dpd"         INTEGER NOT NULL,
+  "deuda_total" DECIMAL(10,2) NOT NULL,
+  "generado_en" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "resuelto_en" TIMESTAMP(3),
+  "accion"      "AccionSuspension",
+
+  CONSTRAINT "candidatos_suspension_pkey" PRIMARY KEY ("id")
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'candidatos_suspension' AND indexname = 'candidatos_suspension_cuenta_id_resuelto_en_idx'
+  ) THEN
+    CREATE INDEX "candidatos_suspension_cuenta_id_resuelto_en_idx" ON "candidatos_suspension"("cuenta_id", "resuelto_en");
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'candidatos_suspension' AND indexname = 'candidatos_suspension_resuelto_en_idx'
+  ) THEN
+    CREATE INDEX "candidatos_suspension_resuelto_en_idx" ON "candidatos_suspension"("resuelto_en");
+  END IF;
+END$$;
+
+-- Índice único parcial: un solo candidato ABIERTO por cuenta (no representable
+-- en schema.prisma sin preview feature de índices parciales).
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'candidatos_suspension' AND indexname = 'candidatos_suspension_cuenta_id_abierto_key'
+  ) THEN
+    CREATE UNIQUE INDEX "candidatos_suspension_cuenta_id_abierto_key"
+      ON "candidatos_suspension"("cuenta_id")
+      WHERE "resuelto_en" IS NULL;
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'candidatos_suspension_cuenta_id_fkey'
+  ) THEN
+    ALTER TABLE "candidatos_suspension"
+      ADD CONSTRAINT "candidatos_suspension_cuenta_id_fkey"
+      FOREIGN KEY ("cuenta_id") REFERENCES "cuentas"("id")
+      ON DELETE RESTRICT ON UPDATE CASCADE;
+  END IF;
+END$$;
