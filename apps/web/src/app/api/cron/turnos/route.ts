@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { enviarWhatsApp } from "@/lib/twilio";
 import { getParam } from "@/lib/parametros";
+import { conRegistroCronRun } from "@/lib/cron-run";
 import {
   planificarSemana,
   generarFechasUTC,
@@ -45,6 +46,11 @@ export async function POST(req: NextRequest) {
     authBuf.length === expBuf.length && crypto.timingSafeEqual(authBuf, expBuf);
   if (!valido) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const resultado = await conRegistroCronRun("turnos-auto", () => ejecutarAutoAsignacion());
+  return NextResponse.json(resultado);
+}
+
+async function ejecutarAutoAsignacion() {
   const COBERTURA_DIAS = await getParam("COBERTURA_DIAS_TURNOS", COBERTURA_DIAS_DEFAULT);
 
   // Ventana de cobertura: hoy + próximos días, en UTC (el host corre en UTC).
@@ -82,7 +88,7 @@ export async function POST(req: NextRequest) {
       );
     }
     console.warn("[cron/turnos] sin monitores activos");
-    return NextResponse.json({ ok: true, creados: 0, monitores: 0 });
+    return { ok: true, creados: 0, monitores: 0 };
   }
 
   const propuestas = planificarSemana({
@@ -142,5 +148,5 @@ export async function POST(req: NextRequest) {
   }
 
   console.log(`[cron/turnos] creados=${creados} insalvables=${insalvables.length}`);
-  return NextResponse.json({ ok: true, creados, insalvables: insalvables.length });
+  return { ok: true, creados, insalvables: insalvables.length };
 }

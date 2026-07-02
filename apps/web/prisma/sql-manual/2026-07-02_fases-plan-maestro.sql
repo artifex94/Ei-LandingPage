@@ -120,3 +120,41 @@ BEGIN
       ON DELETE RESTRICT ON UPDATE CASCADE;
   END IF;
 END$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Fase 5: panel de salud de crons — tabla cron_runs
+--
+-- Historial de corridas de los 3 crons (cierre mensual, sync SoftGuard,
+-- auto-turnos), escrito por el wrapper `conRegistroCronRun`
+-- (src/lib/cron-run.ts). Sin esto un cron caído (ej. sync SoftGuard muerto)
+-- es invisible hasta que reclama un cliente — ver /admin/sync-softguard.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'EstadoCronRun') THEN
+    CREATE TYPE "EstadoCronRun" AS ENUM ('OK', 'ERROR');
+  END IF;
+END$$;
+
+CREATE TABLE IF NOT EXISTS "cron_runs" (
+  "id"          TEXT NOT NULL,
+  "cron"        TEXT NOT NULL,
+  "estado"      "EstadoCronRun" NOT NULL,
+  "started_at"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "finished_at" TIMESTAMP(3),
+  "duracion_ms" INTEGER,
+  "resumen"     TEXT,
+
+  CONSTRAINT "cron_runs_pkey" PRIMARY KEY ("id")
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'cron_runs' AND indexname = 'cron_runs_cron_started_at_idx'
+  ) THEN
+    CREATE INDEX "cron_runs_cron_started_at_idx" ON "cron_runs"("cron", "started_at" DESC);
+  END IF;
+END$$;

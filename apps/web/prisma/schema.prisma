@@ -119,6 +119,11 @@ enum AccionSuspension {
   PAGO_RECIBIDO
 }
 
+enum EstadoCronRun {
+  OK
+  ERROR
+}
+
 // ── Fase 3: Órdenes de Trabajo ───────────────────────────────
 
 enum TipoOT {
@@ -384,6 +389,24 @@ model CandidatoSuspension {
   @@index([cuenta_id, resuelto_en])
   @@index([resuelto_en])
   @@map("candidatos_suspension")
+}
+
+// Historial de corridas de los crons (cierre mensual, sync SoftGuard, auto-turnos)
+// — Fase 5 del plan maestro (administradores). Sin esto un cron caído (ej. sync
+// SoftGuard muerto) es invisible hasta que reclama un cliente. Escrito por el
+// wrapper `conRegistroCronRun` (ver src/lib/cron-run.ts); nunca por el propio
+// cron a mano, para que el registro sea uniforme.
+model CronRun {
+  id          String        @id @default(uuid())
+  cron        String
+  estado      EstadoCronRun
+  started_at  DateTime      @default(now())
+  finished_at DateTime?
+  duracion_ms Int?
+  resumen     String?
+
+  @@index([cron, started_at(sort: Desc)])
+  @@map("cron_runs")
 }
 
 model SolicitudMantenimiento {

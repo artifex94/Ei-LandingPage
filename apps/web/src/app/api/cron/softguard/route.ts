@@ -17,6 +17,7 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { syncCuentasWebApi, syncEventosWebApi, syncEstadoOTWebApi } from "@/lib/softguard/sync";
 import { softguardWebApiConfigured } from "@/lib/softguard/api";
+import { conRegistroCronRun } from "@/lib/cron-run";
 
 export async function POST(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -46,9 +47,12 @@ export async function POST(req: NextRequest) {
   }
 
   // En secuencia para no martillar la suite web con requests concurrentes.
-  const cuentas = await syncCuentasWebApi();
-  const eventos = await syncEventosWebApi();
-  const ots     = await syncEstadoOTWebApi();
+  const { cuentas, eventos, ots } = await conRegistroCronRun("softguard-sync", async () => {
+    const cuentas = await syncCuentasWebApi();
+    const eventos = await syncEventosWebApi();
+    const ots     = await syncEstadoOTWebApi();
+    return { cuentas, eventos, ots };
+  });
 
   const duracion_ms = Date.now() - t0;
 
