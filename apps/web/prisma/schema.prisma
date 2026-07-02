@@ -330,6 +330,8 @@ model Pago {
   imputado_softguard Boolean  @default(false)
   imputado_en        DateTime?
 
+  movimientos_bancarios MovimientoBancario[]
+
   @@unique([cuenta_id, mes, anio])
   @@index([cuenta_id])
   @@index([factura_id])
@@ -407,6 +409,30 @@ model CronRun {
 
   @@index([cron, started_at(sort: Desc)])
   @@map("cron_runs")
+}
+
+// Conciliación bancaria — Fase 6 del plan maestro (tesoreros). Hoy las
+// transferencias avisadas por `avisarTransferencia` se buscan a ojo en el
+// homebanking; este modelo persiste el extracto CSV importado (créditos
+// únicamente) para matchear contra `Pago` PROCESANDO/PENDIENTE por
+// ref_externa o por importe. `hash` es la clave de idempotencia del import
+// (sha256 de fecha|importe|descripcion) — createMany + skipDuplicates evita
+// duplicar movimientos si el tesorero re-sube el mismo extracto.
+model MovimientoBancario {
+  id             String    @id @default(uuid())
+  hash           String    @unique
+  fecha          DateTime  @db.Date
+  importe        Decimal   @db.Decimal(10, 2)
+  descripcion    String
+  pago_id        String?
+  pago           Pago?     @relation(fields: [pago_id], references: [id])
+  conciliado_en  DateTime?
+  importado_en   DateTime  @default(now())
+  importado_por  String
+
+  @@index([fecha])
+  @@index([conciliado_en])
+  @@map("movimientos_bancarios")
 }
 
 model SolicitudMantenimiento {

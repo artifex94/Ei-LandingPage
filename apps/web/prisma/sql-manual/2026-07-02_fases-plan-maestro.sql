@@ -158,3 +158,70 @@ BEGIN
     CREATE INDEX "cron_runs_cron_started_at_idx" ON "cron_runs"("cron", "started_at" DESC);
   END IF;
 END$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Fase 6: conciliación bancaria — tabla movimientos_bancarios
+--
+-- Hoy las transferencias avisadas (`avisarTransferencia`, Pago PROCESANDO con
+-- ref_externa "EI-{12hex}") se buscan a ojo en el homebanking. Esta tabla
+-- persiste el extracto CSV importado (solo créditos) para proponer matches
+-- contra `Pago` por ref_externa o por importe; conciliar es siempre decisión
+-- del tesorero (ver src/lib/actions/conciliacion.ts). `hash` es la clave de
+-- idempotencia del import (createMany + skipDuplicates).
+-- ─────────────────────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS "movimientos_bancarios" (
+  "id"            TEXT NOT NULL,
+  "hash"          TEXT NOT NULL,
+  "fecha"         DATE NOT NULL,
+  "importe"       DECIMAL(10,2) NOT NULL,
+  "descripcion"   TEXT NOT NULL,
+  "pago_id"       TEXT,
+  "conciliado_en" TIMESTAMP(3),
+  "importado_en"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "importado_por" TEXT NOT NULL,
+
+  CONSTRAINT "movimientos_bancarios_pkey" PRIMARY KEY ("id")
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'movimientos_bancarios' AND indexname = 'movimientos_bancarios_hash_key'
+  ) THEN
+    CREATE UNIQUE INDEX "movimientos_bancarios_hash_key" ON "movimientos_bancarios"("hash");
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'movimientos_bancarios' AND indexname = 'movimientos_bancarios_fecha_idx'
+  ) THEN
+    CREATE INDEX "movimientos_bancarios_fecha_idx" ON "movimientos_bancarios"("fecha");
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'movimientos_bancarios' AND indexname = 'movimientos_bancarios_conciliado_en_idx'
+  ) THEN
+    CREATE INDEX "movimientos_bancarios_conciliado_en_idx" ON "movimientos_bancarios"("conciliado_en");
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'movimientos_bancarios_pago_id_fkey'
+  ) THEN
+    ALTER TABLE "movimientos_bancarios"
+      ADD CONSTRAINT "movimientos_bancarios_pago_id_fkey"
+      FOREIGN KEY ("pago_id") REFERENCES "pagos"("id")
+      ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END$$;
