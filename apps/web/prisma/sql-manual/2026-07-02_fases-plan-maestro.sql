@@ -225,3 +225,33 @@ BEGIN
       ON DELETE SET NULL ON UPDATE CASCADE;
   END IF;
 END$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Fase 7a: timestamps de gestión — eventos_alarma
+--
+-- EventoAlarma no registraba CUÁNDO se tomó ni se resolvió un evento ni por
+-- quién, así que era imposible medir tiempos de atención. `actualizarEstadoEvento`
+-- (src/lib/actions/eventos.ts) los pobla al pasar a EN_PROCESO (tomado_en/
+-- tomado_por) y al resolver (resuelto_en), solo si estaban NULL — no se pisan
+-- en re-tomas ni re-resoluciones. El índice (estado, fecha_evento) acelera la
+-- query de métricas del día en /monitoreo.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+ALTER TABLE "eventos_alarma"
+  ADD COLUMN IF NOT EXISTS "tomado_en" TIMESTAMP(3);
+
+ALTER TABLE "eventos_alarma"
+  ADD COLUMN IF NOT EXISTS "tomado_por" TEXT;
+
+ALTER TABLE "eventos_alarma"
+  ADD COLUMN IF NOT EXISTS "resuelto_en" TIMESTAMP(3);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'eventos_alarma' AND indexname = 'eventos_alarma_estado_fecha_evento_idx'
+  ) THEN
+    CREATE INDEX "eventos_alarma_estado_fecha_evento_idx" ON "eventos_alarma"("estado", "fecha_evento");
+  END IF;
+END$$;

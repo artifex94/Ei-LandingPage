@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma/client";
 import type { EstadoEventoSync } from "@/generated/prisma/client";
 import { clasificarCodigo, PRIORIDAD, type TipoDia } from "@/lib/eventos-clasificacion";
 import { AccionEventoRapida } from "@/components/monitoreo/AccionEventoRapida";
-import { ShieldCheck } from "lucide-react";
+import { calcularMetricasDia, formatDuracion } from "@/lib/metricas-monitoreo";
+import { TZ_OFFSET_AR_MS } from "@/lib/fecha-ar";
+import { ShieldCheck, Gauge } from "lucide-react";
 
 export const metadata: Metadata = { title: "Cola de eventos" };
 
@@ -37,21 +39,39 @@ function fmtFecha(d: Date): string {
   });
 }
 
+// Límites del día "de hoy" en hora de Argentina, expresados como instantes
+// UTC (lo que realmente se guarda en `fecha_evento`).
+function limitesHoyAR(): { desde: Date; hasta: Date } {
+  const ahoraAR = new Date(Date.now() - TZ_OFFSET_AR_MS);
+  const inicioAR = Date.UTC(ahoraAR.getUTCFullYear(), ahoraAR.getUTCMonth(), ahoraAR.getUTCDate());
+  const desde = new Date(inicioAR + TZ_OFFSET_AR_MS);
+  const hasta = new Date(desde.getTime() + 24 * 60 * 60 * 1000);
+  return { desde, hasta };
+}
+
 export default async function MonitoreoColaPage() {
-  const eventos = await prisma.eventoAlarma.findMany({
-    where: { estado: { in: PENDIENTES as unknown as EstadoEventoSync[] } },
-    include: {
-      cuenta: {
-        select: {
-          descripcion: true,
-          softguard_ref: true,
-          perfil: { select: { nombre: true } },
+  const { desde: desdeHoy, hasta: hastaHoy } = limitesHoyAR();
+
+  const [eventos, eventosHoy] = await Promise.all([
+    prisma.eventoAlarma.findMany({
+      where: { estado: { in: PENDIENTES as unknown as EstadoEventoSync[] } },
+      include: {
+        cuenta: {
+          select: {
+            descripcion: true,
+            softguard_ref: true,
+            perfil: { select: { nombre: true } },
+          },
         },
       },
-    },
-    orderBy: { fecha_evento: "desc" },
-    take: 200,
-  });
+      orderBy: { fecha_evento: "desc" },
+      take: 200,
+    }),
+    prisma.eventoAlarma.findMany({
+      where: { fecha_evento: { gte: desdeHoy, lt: hastaHoy } },
+      select: { estado: true, fecha_evento: true, tomado_en: true, resuelto_en: true },
+    }),
+  ]);
 
   // Clasificar y ordenar por severidad (más crítico primero), luego por recencia.
   const enriquecidos = eventos
@@ -65,6 +85,7 @@ export default async function MonitoreoColaPage() {
   const nuevos = eventos.filter((e) => e.estado === "NUEVO").length;
   const enEspera = eventos.filter((e) => e.estado === "EN_ESPERA").length;
   const enProceso = eventos.length - nuevos - enEspera;
+  const metricasHoy = calcularMetricasDia(eventosHoy);
 
   return (
     <section aria-labelledby="cola-heading" className="space-y-6">
@@ -94,6 +115,35 @@ export default async function MonitoreoColaPage() {
           </div>
         ))}
       </div>
+
+      {/* Métricas del día (colapsable) */}
+      <details className="bg-industrial-800 border border-industrial-700 rounded-xl px-4 py-3 group">
+        <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-300 hover:text-white transition-colors">
+          <Gauge className="w-4 h-4 text-tactical-400" aria-hidden />
+          Métricas de hoy
+        </summary>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 pt-3 border-t border-industrial-700">
+          {[
+            { label: "Atendidos", value: String(metricasHoy.atendidos), cls: "text-green-300" },
+            { label: "Pendientes", value: String(metricasHoy.pendientes), cls: "text-amber-300" },
+            {
+              label: "Tiempo medio de toma",
+              value: formatDuracion(metricasHoy.tiempoMedioTomaMs),
+              cls: "text-blue-300",
+            },
+            {
+              label: "Tiempo medio de resolución",
+              value: formatDuracion(metricasHoy.tiempoMedioResolucionMs),
+              cls: "text-slate-200",
+            },
+          ].map((m) => (
+            <div key={m.label}>
+              <p className={`text-xl font-bold font-mono ${m.cls}`}>{m.value}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{m.label}</p>
+            </div>
+          ))}
+        </div>
+      </details>
 
       {/* Lista priorizada */}
       {enriquecidos.length === 0 ? (

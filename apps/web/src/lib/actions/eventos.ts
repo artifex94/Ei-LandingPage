@@ -70,6 +70,11 @@ const ESTADOS_VALIDOS = new Set<string>([
   "PROCESADO_MODO_PRUEBA", "PROCESADO_MODO_OFF",
 ]);
 
+// Estados que cierran el evento (fin de la gestión) → pisan `resuelto_en`.
+const ESTADOS_RESUELTOS = new Set<string>([
+  "PROCESADO", "PROCESADO_NO_ALERTA", "PROCESADO_MODO_PRUEBA", "PROCESADO_MODO_OFF",
+]);
+
 export async function actualizarEstadoEvento(
   id: string,
   nuevoEstado: string,
@@ -91,16 +96,22 @@ export async function actualizarEstadoEvento(
 
   const evento = await prisma.eventoAlarma.findUnique({
     where: { id },
-    select: { estado: true },
+    select: { estado: true, tomado_en: true, resuelto_en: true },
   });
 
   if (!evento) return { error: "Evento no encontrado." };
+
+  const ahora = new Date();
+  const seEstaTomando = nuevoEstado !== "NUEVO" && evento.tomado_en === null;
+  const seEstaResolviendo = ESTADOS_RESUELTOS.has(nuevoEstado) && evento.resuelto_en === null;
 
   await prisma.eventoAlarma.update({
     where: { id },
     data: {
       estado: nuevoEstado as EstadoEventoSync,
       ...(resolucion !== undefined ? { resolucion } : {}),
+      ...(seEstaTomando ? { tomado_en: ahora, tomado_por: admin.nombre } : {}),
+      ...(seEstaResolviendo ? { resuelto_en: ahora } : {}),
     },
   });
 

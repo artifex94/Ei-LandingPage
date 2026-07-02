@@ -779,10 +779,19 @@ model EventoAlarma {
   notificado_cliente Boolean          @default(false)
   raw                String?
 
+  // Timestamps de gestión — Fase 7a del plan maestro (monitoreadores): permiten
+  // medir tiempos de atención NUEVO→tomado→resuelto. Se pueblan en
+  // `actualizarEstadoEvento` (src/lib/actions/eventos.ts); nunca se pisan una
+  // vez seteados (no se reescriben en re-tomas/re-resoluciones).
+  tomado_en   DateTime?
+  tomado_por  String?
+  resuelto_en DateTime?
+
   synced_at DateTime @default(now())
 
   @@unique([softguard_ref, fecha_evento, codigo])
   @@index([cuenta_id, fecha_evento])
+  @@index([estado, fecha_evento])
   @@map("eventos_alarma")
 }
 
