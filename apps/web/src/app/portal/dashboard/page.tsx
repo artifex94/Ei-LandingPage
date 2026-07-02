@@ -8,6 +8,8 @@ import type { LucideIcon } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { calcularEstadoFinanciero, peorEstadoFinanciero } from "@/lib/billing-state";
+import { DIAS_GRACIA, DIAS_SUSPENSION } from "@/lib/constants/billing";
+import { getParam } from "@/lib/parametros";
 import { CuentaCard } from "@/components/portal/CuentaCard";
 import { EstadoSistemaCard } from "@/components/portal/EstadoSistemaCard";
 import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
@@ -37,11 +39,17 @@ export default async function DashboardPage() {
     orderBy: { descripcion: "asc" },
   });
 
+  const [diasGracia, diasSuspension] = await Promise.all([
+    getParam("DIAS_GRACIA", DIAS_GRACIA),
+    getParam("DIAS_SUSPENSION", DIAS_SUSPENSION),
+  ]);
+  const configEstadoFinanciero = { diasGracia, diasSuspension };
+
   // Estado financiero para el chip de mora (refuerza el CTA de cobranza que
   // antes vivía en el banner del header). Reutiliza el query de cuentas/pagos.
   const peorEstado = peorEstadoFinanciero(
     cuentas.map((c) =>
-      calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira)
+      calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira, configEstadoFinanciero)
     )
   );
 
@@ -120,7 +128,7 @@ export default async function DashboardPage() {
           <ul className="grid gap-3 sm:grid-cols-2" role="list">
             {cuentas.map((cuenta) => (
               <li key={cuenta.id} className="min-w-0">
-                <CuentaCard cuenta={cuenta} />
+                <CuentaCard cuenta={cuenta} config={configEstadoFinanciero} />
               </li>
             ))}
           </ul>

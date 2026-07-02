@@ -3,7 +3,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza, agruparPagosPorCuenta } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, agruparPagosPorCuenta, UMBRAL_MORA } from "@/lib/mensajeria-motivos";
+import { getParam } from "@/lib/parametros";
 
 export const metadata: Metadata = { title: "Morosidad" };
 
@@ -33,6 +34,7 @@ export default async function MorosidadPage() {
   const ahora = new Date();
   const mesActual  = ahora.getMonth() + 1;
   const anioActual = ahora.getFullYear();
+  const umbralMora = await getParam("UMBRAL_MORA", UMBRAL_MORA);
 
   // Un pago se considera vencido si:
   //   a) su estado es "VENCIDO" (cron ya lo transitó), O
@@ -140,6 +142,7 @@ export default async function MorosidadPage() {
                   })),
                 })),
               ),
+              umbralMora,
             );
 
             return (

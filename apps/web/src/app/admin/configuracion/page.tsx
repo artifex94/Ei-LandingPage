@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
 import { ConfiguracionForm } from "@/components/admin/configuracion/ConfiguracionForm";
+import { ParametrosNegocioForm, type ParametroDisplay } from "@/components/admin/configuracion/ParametrosNegocioForm";
 import { TARIFA_FALLBACK_PESOS } from "@/lib/constants/billing";
+import { CATALOGO_PARAMETROS } from "@/lib/parametros";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
 const TUTORIAL_CONFIGURACION = [
@@ -17,12 +19,38 @@ const TUTORIAL_CONFIGURACION = [
     titulo: "Datos fiscales",
     descripcion: "Completá CUIT, razón social y condición IVA. Estos datos se usan al generar los borradores de facturación.",
   },
+  {
+    titulo: "Parámetros de negocio",
+    descripcion: "Umbrales de cobranza y cobertura de turnos editables sin deploy. Si nunca se editaron, se usa el valor por defecto (columna Default).",
+  },
 ];
 
 export const metadata: Metadata = { title: "Configuración" };
 
 export default async function ConfiguracionPage() {
-  const ultimaTarifa = await prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" } });
+  // findMany en try/catch: hasta que se corra la sync manual de `parametros_negocio`
+  // (ver prisma/sql-manual/2026-07-02_parametro-negocio.sql) la tabla puede no existir
+  // todavía — la UI debe seguir mostrando los defaults, no romper la página.
+  const [ultimaTarifa, filasParametros] = await Promise.all([
+    prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" } }),
+    prisma.parametroNegocio.findMany().catch(() => []),
+  ]);
+
+  const porClave = new Map(filasParametros.map((f) => [f.clave, f]));
+  const parametros: ParametroDisplay[] = CATALOGO_PARAMETROS.map((p) => {
+    const fila = porClave.get(p.clave);
+    return {
+      clave: p.clave,
+      tipo: p.tipo,
+      categoria: p.categoria,
+      descripcion: p.descripcion,
+      defaultValor: String(p.defaultValor),
+      valorActual: fila ? fila.valor : String(p.defaultValor),
+      esDefault: !fila,
+      updatedPor: fila?.updated_por ?? null,
+      updatedAt: fila?.updated_at?.toISOString() ?? null,
+    };
+  });
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -34,6 +62,8 @@ export default async function ConfiguracionPage() {
       </div>
 
       <ConfiguracionForm tarifaActual={ultimaTarifa ? Number(ultimaTarifa.monto) : TARIFA_FALLBACK_PESOS} />
+
+      <ParametrosNegocioForm parametros={parametros} />
 
       <TutorialContextual
         section="configuracion"

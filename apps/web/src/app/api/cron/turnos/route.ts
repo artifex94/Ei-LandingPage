@@ -13,6 +13,7 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { enviarWhatsApp } from "@/lib/twilio";
+import { getParam } from "@/lib/parametros";
 import {
   planificarSemana,
   generarFechasUTC,
@@ -20,7 +21,7 @@ import {
   type FranjaTurno,
 } from "@/lib/scheduling/auto-asignar";
 
-const COBERTURA_DIAS = 3;
+const COBERTURA_DIAS_DEFAULT = 3;
 
 const FRANJA_LABEL: Record<string, string> = {
   MANANA: "Mañana (06–14 hs)",
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest) {
   const valido =
     authBuf.length === expBuf.length && crypto.timingSafeEqual(authBuf, expBuf);
   if (!valido) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const COBERTURA_DIAS = await getParam("COBERTURA_DIAS_TURNOS", COBERTURA_DIAS_DEFAULT);
 
   // Ventana de cobertura: hoy + próximos días, en UTC (el host corre en UTC).
   const hoyUtc = new Date();

@@ -99,6 +99,13 @@ enum EstadoCambioInfo {
   RECHAZADO
 }
 
+enum TipoParametro {
+  INT
+  DECIMAL
+  STRING
+  JSON
+}
+
 enum EstadoAltaUsuario {
   PENDIENTE
   PROCESADA
@@ -326,6 +333,22 @@ model TarifaHistorico {
   created_at    DateTime @default(now())
 
   @@map("tarifas_historico")
+}
+
+// Parámetros de negocio editables sin deploy (umbral de mora, días de gracia/suspensión,
+// cobertura de turnos, etc.). Clave-valor tipado; lectura autenticados, escritura ADMIN.
+// Sin seed: la fila se crea recién al editar por primera vez (hasta entonces rige el
+// fallback hardcodeado que sigue viviendo en cada caller — ver `src/lib/parametros.ts`).
+model ParametroNegocio {
+  clave       String        @id
+  valor       String
+  tipo        TipoParametro
+  categoria   String
+  descripcion String
+  updated_por String?
+  updated_at  DateTime      @updatedAt
+
+  @@map("parametros_negocio")
 }
 
 model SolicitudMantenimiento {

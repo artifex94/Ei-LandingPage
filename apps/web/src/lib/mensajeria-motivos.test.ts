@@ -70,6 +70,20 @@ describe("motivosDeCobranza", () => {
     expect(ms).toContain("RECORDATORIO_PAGO");
     expect(ms).not.toContain("MORA_SUSPENSION");
   });
+
+  it("con umbralMora custom (2) ofrece MORA_SUSPENSION antes que el default (3)", () => {
+    vi.useFakeTimers().setSystemTime(new Date(2026, 5, 20));
+    const pagos = [
+      { mes: 4, anio: 2026, importe: 15000, estado: "VENCIDO" },
+      { mes: 5, anio: 2026, importe: 15000, estado: "VENCIDO" },
+    ];
+    // Con el default (3) todavía no dispara (caso ya cubierto arriba).
+    expect(motivosDeCobranza("Juan", pagos).map((m) => m.motivo)).not.toContain("MORA_SUSPENSION");
+    // Con umbralMora=2 (parámetro configurable) sí dispara con los mismos 2 meses.
+    expect(
+      motivosDeCobranza("Juan", pagos, undefined, 2).map((m) => m.motivo),
+    ).toContain("MORA_SUSPENSION");
+  });
 });
 
 describe("motivosGenerales (catálogo manual, no dependiente del pago)", () => {

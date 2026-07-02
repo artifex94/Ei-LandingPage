@@ -11,7 +11,8 @@ import { EliminarClienteForm } from "@/components/admin/EliminarClienteForm";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "@/app/admin/solicitudes-cambio/AccionesForm";
 import { UUID_RE } from "@/lib/constants/validation";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza, motivosGenerales, agruparPagosPorCuenta } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, motivosGenerales, agruparPagosPorCuenta, UMBRAL_MORA } from "@/lib/mensajeria-motivos";
+import { getParam } from "@/lib/parametros";
 
 const getClientePerfil = cache(async (id: string) => {
   return prisma.perfil.findUnique({
@@ -81,9 +82,10 @@ export default async function ClienteDetallePage({
 }) {
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
-  const [perfil, tarifaActual] = await Promise.all([
+  const [perfil, tarifaActual, umbralMora] = await Promise.all([
     getClientePerfil(id),
     prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" }, select: { monto: true } }),
+    getParam("UMBRAL_MORA", UMBRAL_MORA),
   ]);
 
   if (!perfil || perfil.rol !== "CLIENTE") notFound();
@@ -137,7 +139,7 @@ export default async function ClienteDetallePage({
   const pagosMotivos = pagosPorCuenta.flatMap((g) => g.pagos);
 
   const motivosWA = [
-    ...motivosDeCobranza(perfil.nombre, pagosMotivos, pagosPorCuenta),
+    ...motivosDeCobranza(perfil.nombre, pagosMotivos, pagosPorCuenta, umbralMora),
     ...motivosGenerales(perfil.nombre),
   ];
 

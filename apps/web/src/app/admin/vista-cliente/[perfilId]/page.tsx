@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { SensorItem } from "@/components/portal/SensorItem";
-import { calcularEstadoFinanciero } from "@/lib/billing-state";
+import { calcularEstadoFinanciero, type EstadoFinancieroConfig } from "@/lib/billing-state";
+import { DIAS_GRACIA, DIAS_SUSPENSION } from "@/lib/constants/billing";
+import { getParam } from "@/lib/parametros";
 import type { EstadoPago } from "@/generated/prisma/client";
 
 export async function generateMetadata({ params }: { params: Promise<{ perfilId: string }> }): Promise<Metadata> {
@@ -197,9 +199,11 @@ function PanelEstado({ sensores }: { sensores: CuentaConDatos["sensores"] }) {
 function TabDashboard({
   perfil,
   cuentas,
+  config,
 }: {
   perfil: Pick<PerfilConDatos, "nombre">;
   cuentas: CuentaConDatos[];
+  config?: EstadoFinancieroConfig;
 }) {
   const primerNombre = perfil.nombre.split(" ")[0];
 
@@ -226,7 +230,8 @@ function TabDashboard({
               cuenta.estado,
               cuenta.pagos,
               cuenta.override_activo,
-              cuenta.override_expira
+              cuenta.override_expira,
+              config
             );
 
             let badgeBg: string, badgeText: string, badgeLabel: string;
@@ -612,6 +617,12 @@ export default async function VistaClientePage({
 
   const cuentas = perfil.cuentas;
 
+  const [diasGracia, diasSuspension] = await Promise.all([
+    getParam("DIAS_GRACIA", DIAS_GRACIA),
+    getParam("DIAS_SUSPENSION", DIAS_SUSPENSION),
+  ]);
+  const configEstadoFinanciero: EstadoFinancieroConfig = { diasGracia, diasSuspension };
+
   const todosLosAnios = [
     ...new Set([anioActual, ...cuentas.flatMap((c) => c.pagos.map((p) => p.anio))]),
   ].sort((a, b) => b - a);
@@ -699,7 +710,7 @@ export default async function VistaClientePage({
         {/* Contenido */}
         <div className="bg-slate-900 p-6 min-h-[400px]">
           {activeTab === "dashboard" && (
-            <TabDashboard perfil={perfil} cuentas={cuentas} />
+            <TabDashboard perfil={perfil} cuentas={cuentas} config={configEstadoFinanciero} />
           )}
 
           {activeTab === "cuenta" && cuentaActiva && (

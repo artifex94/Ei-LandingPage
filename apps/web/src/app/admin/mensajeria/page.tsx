@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza, agruparPagosPorCuenta } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, agruparPagosPorCuenta, UMBRAL_MORA } from "@/lib/mensajeria-motivos";
 import { resumenDeudaCuentas } from "@/lib/billing-deuda";
+import { getParam } from "@/lib/parametros";
 
 export const metadata: Metadata = { title: "Mensajería" };
 
@@ -26,6 +27,8 @@ export default async function MensajeriaPage() {
       },
     ],
   };
+
+  const umbralMora = await getParam("UMBRAL_MORA", UMBRAL_MORA);
 
   const [cuentasVencidas, contactadosRows, historialRows] = await Promise.all([
     prisma.cuenta.findMany({
@@ -75,7 +78,7 @@ export default async function MensajeriaPage() {
       return {
         perfil,
         resumen: resumenDeudaCuentas(pagos),
-        motivos: motivosDeCobranza(perfil.nombre, pagos, pagosPorCuenta),
+        motivos: motivosDeCobranza(perfil.nombre, pagos, pagosPorCuenta, umbralMora),
         contactado: contactados.has(perfil.id),
       };
     })

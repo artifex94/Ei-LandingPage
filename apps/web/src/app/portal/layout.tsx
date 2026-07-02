@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { calcularEstadoFinanciero, peorEstadoFinanciero } from "@/lib/billing-state";
+import { DIAS_GRACIA, DIAS_SUSPENSION } from "@/lib/constants/billing";
+import { getParam } from "@/lib/parametros";
 import { construirFeedNotificaciones } from "@/lib/notificaciones-feed";
 import { PagoRequeridoGuard } from "@/components/portal/PagoRequeridoGuard";
 import { PortalNav } from "@/components/portal/PortalNav";
@@ -50,8 +52,12 @@ export default async function PortalLayout({
     prisma.empleado.findFirst({ where: { perfil_id: userId }, select: { id: true } }),
   ]);
 
+  const [diasGracia, diasSuspension] = await Promise.all([
+    getParam("DIAS_GRACIA", DIAS_GRACIA),
+    getParam("DIAS_SUSPENSION", DIAS_SUSPENSION),
+  ]);
   const estados = cuentas.map((c) =>
-    calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira)
+    calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira, { diasGracia, diasSuspension })
   );
   const peorEstado = peorEstadoFinanciero(estados);
 

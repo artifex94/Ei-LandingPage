@@ -30,8 +30,10 @@ import {
 // Una confirmación de pago solo tiene sentido si el pago se acreditó hace poco.
 const CONFIRMACION_RECIENTE_MS = 10 * 24 * 60 * 60 * 1000;
 
-// A partir de cuántos períodos impagos la cobranza también ofrece el aviso de mora (tono más firme).
-const UMBRAL_MORA = 3;
+// A partir de cuántos períodos impagos la cobranza también ofrece el aviso de mora (tono más
+// firme). Exportado como default para que los callers server puedan pasar
+// `getParam("UMBRAL_MORA", UMBRAL_MORA)` sin duplicar el valor.
+export const UMBRAL_MORA = 3;
 
 export interface PagoParaMotivos {
   mes: number;
@@ -91,11 +93,16 @@ export function agruparPagosPorCuenta(cuentas: CuentaParaAgrupar[]): PagosPorCue
  * DERIVA del mismo desglose (flatten pre-filtro de $0) en vez del parámetro `pagos` — así total
  * y desglose salen de la MISMA fuente por construcción y no pueden desincronizarse. Sin
  * `pagosPorCuenta`, el agregado sigue saliendo de `pagos` como siempre (retrocompatible).
+ *
+ * `umbralMora` es opcional (default = `UMBRAL_MORA`): el caller server puede pasar
+ * `getParam("UMBRAL_MORA", UMBRAL_MORA)` para que el umbral sea editable desde
+ * `/admin/configuracion` sin tocar esta función pura.
  */
 export function motivosDeCobranza(
   nombreContacto: string,
   pagos: PagoParaMotivos[],
   pagosPorCuenta?: PagosPorCuenta[],
+  umbralMora: number = UMBRAL_MORA,
 ): MotivoOpcion[] {
   const opciones: MotivoOpcion[] = [];
   const resumen = pagosPorCuenta
@@ -124,7 +131,7 @@ export function motivosDeCobranza(
 
     // Mora acumulada: además del recordatorio, ofrecé el aviso de tono más firme.
     // Es una opción adicional (no reemplaza al recordatorio): el operador elige el tono.
-    if (resumen.mesesAdeudados.length >= UMBRAL_MORA) {
+    if (resumen.mesesAdeudados.length >= umbralMora) {
       opciones.push({
         motivo: "MORA_SUSPENSION",
         label: ETIQUETA_MOTIVO.MORA_SUSPENSION,
