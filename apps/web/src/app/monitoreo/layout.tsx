@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { requireSesion } from "@/lib/auth/session";
+import { getSesionReal } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { LogoutButton } from "@/components/ui/LogoutButton";
 import { BrandLockup } from "@/components/layout/BrandLockup";
@@ -25,7 +25,9 @@ export default async function MonitoreoLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { userId, perfil } = await requireSesion();
+  const sesion = await getSesionReal();
+  if (!sesion) redirect("/login");
+  const { userId, perfil } = sesion;
 
   // Gate fino por capacidad: ADMIN ve todo; el resto necesita puede_monitorear.
   // FAIL-CLOSED, mismo patrón que el panel técnico.

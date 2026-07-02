@@ -32,7 +32,11 @@ export async function crearSolicitudReordenContactos(
   _prev: { error: string; ok?: boolean } | null,
   formData: FormData,
 ): Promise<{ error: string; ok?: boolean } | null> {
-  const { userId } = await requireSesion();
+  const sesion = await requireSesion();
+  if (sesion.impersonacion) {
+    return { error: "Vista de administrador: el portal está en solo lectura." };
+  }
+  const { userId } = sesion;
 
   let ordenRaw: unknown;
   try {

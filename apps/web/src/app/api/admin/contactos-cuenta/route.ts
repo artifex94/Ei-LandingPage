@@ -14,7 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSesion } from "@/lib/auth/session";
+import { getSesionReal } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import {
   softguardWebApiConfigured,
@@ -35,7 +35,7 @@ export interface ContactosCuentaResponse {
 }
 
 export async function GET(req: NextRequest) {
-  const sesion = await getSesion();
+  const sesion = await getSesionReal();
   if (!sesion) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

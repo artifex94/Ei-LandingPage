@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { requireSesion } from "@/lib/auth/session";
+import { getSesionReal } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { LogoutButton } from "@/components/ui/LogoutButton";
 import { TecnicoTabNav } from "@/components/tecnico/TecnicoTabNav";
@@ -17,7 +17,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1 };
 
 export default async function TecnicoLayout({ children }: { children: React.ReactNode }) {
-  const { userId, perfil } = await requireSesion();
+  const sesion = await getSesionReal();
+  if (!sesion) redirect("/login");
+  const { userId, perfil } = sesion;
   const empleado = await prisma.empleado.findFirst({
     where: { perfil_id: userId },
     select: { puede_instalar: true },

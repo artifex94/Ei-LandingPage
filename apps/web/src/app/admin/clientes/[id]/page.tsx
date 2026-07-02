@@ -177,9 +177,9 @@ export default async function ClienteDetallePage({
             <Link
               href={`/admin/vista-cliente/${perfil.id}`}
               className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-600 transition-colors"
-              aria-label="Ver portal del cliente (vista cliente)"
+              aria-label="Ver portal como este cliente (vista admin, solo lectura)"
             >
-              Ver portal
+              Ver portal como cliente
             </Link>
           </div>
         </div>

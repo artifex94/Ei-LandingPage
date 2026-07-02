@@ -152,9 +152,11 @@ function BottomNavItem({ nav, pathname }: { nav: NavDef; pathname: string }) {
 interface PortalNavProps {
   isEmpleado?: boolean;
   feed?: NotificacionItem[];
+  /** true cuando un ADMIN está impersonando: corre la topbar mobile debajo del ImpersonacionBanner (h-10, fijo arriba de todo). */
+  impersonando?: boolean;
 }
 
-export function PortalNav({ isEmpleado = false, feed = [] }: PortalNavProps) {
+export function PortalNav({ isEmpleado = false, feed = [], impersonando = false }: PortalNavProps) {
   const pathname = usePathname();
 
   const desktopItems = isEmpleado ? NAV_EMPLEADO_DESKTOP : [...NAV_CLIENTE, ITEM_EVENTOS];
@@ -177,19 +179,23 @@ export function PortalNav({ isEmpleado = false, feed = [] }: PortalNavProps) {
 
           <div className="flex items-center gap-2">
             <NotificationBell items={feed} variant="desktop" />
-            <LogoutButton />
+            <LogoutButton impersonando={impersonando} />
           </div>
         </div>
       </header>
 
       {/* ── Topbar mobile ──────────────────────────────────────────────────── */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-industrial-950/95 backdrop-blur-xl border-b border-white/10 px-4 h-14 flex items-center justify-between">
+      <header
+        className={`lg:hidden fixed left-0 right-0 z-30 bg-industrial-950/95 backdrop-blur-xl border-b border-white/10 px-4 h-14 flex items-center justify-between ${
+          impersonando ? "top-10" : "top-0"
+        }`}
+      >
         <Link href="/portal/dashboard">
           <BrandLockup context="Mi Central" compact />
         </Link>
         <div className="flex items-center gap-1">
           <NotificationBell items={feed} variant="mobile" />
-          <LogoutButton />
+          <LogoutButton impersonando={impersonando} />
         </div>
       </header>
 

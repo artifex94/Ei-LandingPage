@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { getSesion } from "@/lib/auth/session";
+import { getSesionReal } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
 async function verificarAdmin() {
-  const sesion = await getSesion();
+  const sesion = await getSesionReal();
   if (!sesion || sesion.perfil.rol !== "ADMIN") return null;
   return sesion.perfil;
 }

@@ -8,6 +8,7 @@ import { getParam } from "@/lib/parametros";
 import { construirFeedNotificaciones } from "@/lib/notificaciones-feed";
 import { PagoRequeridoGuard } from "@/components/portal/PagoRequeridoGuard";
 import { PortalNav } from "@/components/portal/PortalNav";
+import { ImpersonacionBanner } from "@/components/portal/ImpersonacionBanner";
 import "./portal.css";
 import { siteConfig } from "@/config/site";
 
@@ -24,11 +25,14 @@ export default async function PortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { userId, perfil } = await requireSesion();
+  const { userId, perfil, impersonacion } = await requireSesion();
 
   // Segunda línea de defensa: el middleware ya debería haber redirigido,
   // pero si por algún motivo llega un ADMIN o TECNICO aquí, los enviamos
-  // a su área correspondiente sin ejecutar la lógica de cliente.
+  // a su área correspondiente sin ejecutar la lógica de cliente. Nótese que
+  // `perfil.rol` acá ya refleja la impersonación (getSesion() resuelve el
+  // perfil del CLIENTE impersonado), así que un ADMIN impersonando pasa este
+  // check con normalidad; solo un ADMIN SIN cookie válida cae en el redirect.
   if (perfil.rol === "ADMIN")   redirect("/admin/dashboard");
   if (perfil.rol === "TECNICO") redirect("/tecnico/mi-dia");
 
@@ -84,12 +88,17 @@ export default async function PortalLayout({
         Ir al contenido principal
       </a>
 
+      {/* Vista admin: el modal de PagoRequeridoGuard sigue mostrándose (el
+          admin ve exactamente lo que ve el cliente), pero el banner corre
+          por encima (z-60 > z-50 del modal) para que "Salir" siga accesible. */}
+      {impersonacion && <ImpersonacionBanner clienteNombre={perfil.nombre} />}
+
       {peorEstado.tipo === "SUSPENDED" && (
-        <PagoRequeridoGuard deudaTotal={deudaTotal} />
+        <PagoRequeridoGuard deudaTotal={deudaTotal} impersonando={!!impersonacion} />
       )}
 
-      <div className="portal-shell min-h-screen bg-industrial-900 flex flex-col">
-        <PortalNav isEmpleado={!!empleado} feed={feed} />
+      <div className={`portal-shell min-h-screen bg-industrial-900 flex flex-col ${impersonacion ? "pt-10" : ""}`}>
+        <PortalNav isEmpleado={!!empleado} feed={feed} impersonando={!!impersonacion} />
 
         <main
           id="main-content"

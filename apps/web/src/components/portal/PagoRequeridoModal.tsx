@@ -9,9 +9,19 @@ import { siteConfig } from "@/config/site";
 
 interface Props {
   deudaTotal: number;
+  /**
+   * true cuando un ADMIN está impersonando a este cliente. El paywall se
+   * sigue mostrando (el admin ve exactamente lo que ve el cliente), pero NO
+   * puede cerrar la sesión REAL del admin desde acá — eso dejaría la cookie
+   * `ei_impersonar` viva hasta por 45 min (re-login dentro de esa ventana
+   * reingresaría en silencio a la identidad del cliente). El
+   * `ImpersonacionBanner` (z-60, por encima de este modal z-50) ya expone
+   * "Salir de la vista" de forma permanente, así que acá solo lo señalamos.
+   */
+  impersonando?: boolean;
 }
 
-export function PagoRequeridoModal({ deudaTotal }: Props) {
+export function PagoRequeridoModal({ deudaTotal, impersonando = false }: Props) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -75,15 +85,21 @@ export function PagoRequeridoModal({ deudaTotal }: Props) {
           WhatsApp
         </a>
 
-        {/* Cerrar sesión */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-300 font-semibold py-2.5 px-3 rounded-xl min-h-[44px] transition-colors text-sm"
-        >
-          <LogOut aria-hidden="true" className="w-4 h-4 flex-shrink-0" strokeWidth={1.8} />
-          Cerrar sesión
-        </button>
+        {/* Cerrar sesión — oculto durante impersonación, ver nota en Props */}
+        {impersonando ? (
+          <p className="flex items-center justify-center text-center text-xs text-slate-500 px-2">
+            Usá &quot;Salir de la vista&quot; en el banner superior
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-300 font-semibold py-2.5 px-3 rounded-xl min-h-[44px] transition-colors text-sm"
+          >
+            <LogOut aria-hidden="true" className="w-4 h-4 flex-shrink-0" strokeWidth={1.8} />
+            Cerrar sesión
+          </button>
+        )}
       </div>
 
       <p className="text-xs text-slate-500 text-center mt-4">

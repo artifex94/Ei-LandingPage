@@ -5,7 +5,7 @@ import { clasificarCodigo, PRIORIDAD, type TipoDia } from "@/lib/eventos-clasifi
 import { AccionEventoRapida } from "@/components/monitoreo/AccionEventoRapida";
 import { calcularMetricasDia, formatDuracion } from "@/lib/metricas-monitoreo";
 import { TZ_OFFSET_AR_MS } from "@/lib/fecha-ar";
-import { getSesion } from "@/lib/auth/session";
+import { getSesionReal } from "@/lib/auth/session";
 import { FRANJA_META } from "@/lib/ui/turno-ui";
 import { ShieldCheck, Gauge, Clock } from "lucide-react";
 
@@ -88,7 +88,7 @@ async function turnoDeHoyEmpleado(perfilId: string): Promise<{ franja: FranjaTur
 
 export default async function MonitoreoColaPage() {
   const { desde: desdeHoy, hasta: hastaHoy } = limitesHoyAR();
-  const sesion = await getSesion();
+  const sesion = await getSesionReal();
 
   const [eventos, eventosHoy, turnoHoy] = await Promise.all([
     prisma.eventoAlarma.findMany({
