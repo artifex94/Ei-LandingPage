@@ -11,6 +11,7 @@ import type { TipoOT, EstadoOT, Prioridad } from "@/generated/prisma/client";
 import { UUID_RE } from "@/lib/constants/validation";
 import { registrarAuditTx } from "@/lib/audit";
 import { construirDatosOTDesdeSolicitud, type OverridesOT } from "@/lib/ot-desde-solicitud";
+import { evaluarConflictosAgenda } from "@/lib/agenda-conflictos";
 
 const MESES_ES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const ESTADOS_OT_VALIDOS = new Set(["SOLICITADA","ASIGNADA","EN_RUTA","EN_SITIO","COMPLETADA","CANCELADA"]);
@@ -159,13 +160,54 @@ export async function asignarTecnico(
   ot_id: string,
   tecnico_id: string,
   fecha_visita: Date,
-  reservar_vehiculo = true
+  reservar_vehiculo = true,
+  confirmarConflictos = false
 ) {
   if (!UUID_RE.test(ot_id) || !UUID_RE.test(tecnico_id)) throw new Error("ID inválido.");
   const admin = await requireAdmin();
 
   const otAntes = await prisma.ordenTrabajo.findUnique({ where: { id: ot_id } });
   if (!otAntes) throw new Error("OT no encontrada");
+
+  // ── Validación de agenda — evita doble-booking silencioso ──────────────────
+  // Consulta disponibilidad + tareas del técnico ese día y evalúa conflictos
+  // antes de escribir. Si hay conflicto y no vino confirmación explícita,
+  // se devuelve el warning sin tocar la OT.
+  // OrdenTrabajo.tecnico_id referencia Empleado.id, pero TareaAgendada y
+  // DisponibilidadTecnico cuelgan de Perfil.id — hay que resolver el puente.
+  const empleado = await prisma.empleado.findUnique({
+    where: { id: tecnico_id },
+    select: { perfil_id: true },
+  });
+  if (!empleado) throw new Error("Técnico no encontrado.");
+  const perfil_id = empleado.perfil_id;
+
+  const inicioDia = new Date(fecha_visita);
+  inicioDia.setHours(0, 0, 0, 0);
+  const finDia = new Date(inicioDia);
+  finDia.setDate(finDia.getDate() + 1);
+
+  const [disponibilidadRows, tareasDelDiaRaw] = await Promise.all([
+    prisma.disponibilidadTecnico.findMany({
+      where: { tecnico_id: perfil_id, fecha: { gte: inicioDia, lt: finDia } },
+      select: { desde: true, hasta: true },
+    }),
+    prisma.tareaAgendada.findMany({
+      where: { tecnico_id: perfil_id, fecha: { gte: inicioDia, lt: finDia }, estado: { not: "CANCELADA" } },
+      select: { id: true, titulo: true, hora_inicio: true, hora_fin: true, ot_id: true },
+    }),
+  ]);
+
+  const conflictos = evaluarConflictosAgenda({
+    fechaVisita: fecha_visita,
+    disponibilidad: disponibilidadRows,
+    // Excluye la tarea vinculada a esta misma OT (relevante al reasignar).
+    tareasDelDia: tareasDelDiaRaw.filter((t) => t.ot_id !== ot_id),
+  });
+
+  if (conflictos.nivel !== "libre" && !confirmarConflictos) {
+    return { warning: true as const, conflictos: conflictos.detalles };
+  }
 
   const ot = await prisma.ordenTrabajo.update({
     where: { id: ot_id },
@@ -212,6 +254,9 @@ export async function asignarTecnico(
     entidad_id:   ot_id,
     detalle:      { tecnico_id, fecha_visita: fecha_visita.toISOString() },
     state_transition: { prior_state: otAntes.estado, new_state: "ASIGNADA" },
+    justification: conflictos.nivel !== "libre"
+      ? `Asignado con conflictos de agenda aceptados: ${conflictos.detalles.join(" | ")}`
+      : undefined,
   });
 
   // WhatsApp al cliente con fecha confirmada
