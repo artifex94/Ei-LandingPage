@@ -45,6 +45,11 @@ export interface EventoLive {
   prioridad: number | null;
   fecha: string; // ISO
   procesado: boolean;
+  // ── Identificación de la cuenta para titulares multi-cuenta ──
+  cuentaDescripcion: string | null; // descripcion de la Cuenta en el portal ("Casa", "Local Centro")
+  cuentaCalle: string | null;
+  /** true si el perfil dueño de la cuenta tiene 2+ cuentas activas (hay que aclarar cuál sonó). */
+  titularMultiCuenta: boolean;
 }
 
 export interface EventosLiveResponse {
@@ -60,17 +65,65 @@ const ESTADOS_ABIERTOS = new Set([
   "NUEVO", "EN_PROCESO", "EN_ESPERA", "EN_PROCESO_DESDE_ESPERA", "EN_PROCESO_MULTIPLE",
 ]);
 
+/**
+ * Perfiles con 2+ cuentas ACTIVAS (una query batch por request, nada de N+1).
+ * Para esos titulares el mensaje/board debe aclarar de QUÉ cuenta es el evento.
+ */
+async function perfilesMultiCuenta(perfilIds: string[]): Promise<Set<string>> {
+  if (perfilIds.length === 0) return new Set();
+  const conteos = await prisma.cuenta.groupBy({
+    by: ["perfil_id"],
+    where: { perfil_id: { in: perfilIds }, estado: "ACTIVA" },
+    _count: { _all: true },
+  });
+  return new Set(conteos.filter((c) => c._count._all >= 2).map((c) => c.perfil_id));
+}
+
+/** Datos de identificación de cuenta por `softguard_ref` (camino live: cruce en memoria). */
+interface CuentaLiveInfo {
+  descripcion: string | null;
+  calle: string | null;
+  multiCuenta: boolean;
+}
+
+async function cuentasPorRef(refs: string[]): Promise<Map<string, CuentaLiveInfo>> {
+  if (refs.length === 0) return new Map();
+  const cuentas = await prisma.cuenta.findMany({
+    where: { softguard_ref: { in: refs } },
+    select: { softguard_ref: true, descripcion: true, calle: true, perfil_id: true },
+  });
+  const multi = await perfilesMultiCuenta([...new Set(cuentas.map((c) => c.perfil_id))]);
+  return new Map(
+    cuentas.map((c) => [
+      c.softguard_ref,
+      { descripcion: c.descripcion, calle: c.calle, multiCuenta: multi.has(c.perfil_id) },
+    ]),
+  );
+}
+
 async function eventosDesdeDb(limit: number): Promise<EventoLive[]> {
   const rows = await prisma.eventoAlarma.findMany({
     orderBy: { fecha_evento: "desc" },
     take: limit,
-    include: { cuenta: { select: { descripcion: true } } },
+    include: {
+      cuenta: {
+        select: {
+          descripcion: true,
+          calle: true,
+          perfil_id: true,
+          perfil: { select: { nombre: true } },
+        },
+      },
+    },
   });
+  const multi = await perfilesMultiCuenta([
+    ...new Set(rows.flatMap((e) => (e.cuenta ? [e.cuenta.perfil_id] : []))),
+  ]);
   return rows.map((e) => ({
     id: e.id,
     iid_cuenta: 0, // EventoAlarma no guarda el iid de la central → el wizard cae a fallback por ref
     softguard_ref: e.softguard_ref,
-    titular: e.cuenta?.descripcion ?? e.softguard_ref,
+    titular: e.cuenta?.perfil.nombre ?? e.softguard_ref,
     codigo: e.codigo,
     descripcion: e.descripcion,
     zona: e.zona,
@@ -78,6 +131,9 @@ async function eventosDesdeDb(limit: number): Promise<EventoLive[]> {
     prioridad: e.prioridad,
     fecha: e.fecha_evento.toISOString(),
     procesado: !ESTADOS_ABIERTOS.has(e.estado),
+    cuentaDescripcion: e.cuenta?.descripcion ?? null,
+    cuentaCalle: e.cuenta?.calle ?? null,
+    titularMultiCuenta: e.cuenta ? multi.has(e.cuenta.perfil_id) : false,
   }));
 }
 
@@ -105,21 +161,36 @@ export async function GET(req: NextRequest) {
       // pendientes trae el NOMBRE (zon_cdescripcion). Para los eventos sin atender —
       // los que se notifican — tomamos el nombre cruzando por id de evento.
       const zonaPorId = new Map(pendientes.filter((p) => p.zona).map((p) => [p.id_evento, p.zona]));
+      // Los eventos de SoftGuard no traen relación con Cuenta del portal: se cruza en
+      // memoria por softguard_ref con UNA query batch. Si la DB local falla, el feed
+      // live sigue saliendo (sin identificación de cuenta) en vez de tirar el request.
+      const infoPorRef = await cuentasPorRef([...new Set(recientes.map((e) => e.softguard_ref))]).catch(
+        (err): Map<string, CuentaLiveInfo> => {
+          console.error("[eventos-live] no se pudo cruzar cuentas del portal:", err);
+          return new Map();
+        },
+      );
       const eventos: EventoLive[] = recientes
         .sort((a, b) => b.fecha_evento.getTime() - a.fecha_evento.getTime())
-        .map((e) => ({
-          id: e.id_evento,
-          iid_cuenta: e.iid_cuenta,
-          softguard_ref: e.softguard_ref,
-          titular: e.titular,
-          codigo: e.codigo,
-          descripcion: e.descripcion,
-          zona: zonaPorId.get(e.id_evento) ?? e.zona,
-          zonaNumero: e.zonaNumero,
-          prioridad: e.prioridad,
-          fecha: e.fecha_evento.toISOString(),
-          procesado: !sinAtender.has(e.id_evento),
-        }));
+        .map((e) => {
+          const info = infoPorRef.get(e.softguard_ref);
+          return {
+            id: e.id_evento,
+            iid_cuenta: e.iid_cuenta,
+            softguard_ref: e.softguard_ref,
+            titular: e.titular,
+            codigo: e.codigo,
+            descripcion: e.descripcion,
+            zona: zonaPorId.get(e.id_evento) ?? e.zona,
+            zonaNumero: e.zonaNumero,
+            prioridad: e.prioridad,
+            fecha: e.fecha_evento.toISOString(),
+            procesado: !sinAtender.has(e.id_evento),
+            cuentaDescripcion: info?.descripcion ?? null,
+            cuentaCalle: info?.calle ?? null,
+            titularMultiCuenta: info?.multiCuenta ?? false,
+          };
+        });
       return NextResponse.json({ fuente: "live", degradado: false, at, eventos } satisfies EventosLiveResponse);
     } catch (err) {
       console.error("[eventos-live] API web falló, fallback a DB:", err);

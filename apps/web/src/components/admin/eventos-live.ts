@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EventosLiveResponse, EventoLive } from "@/app/api/admin/eventos-live/route";
 import { horaAR, diaMesAR, esHoyAR } from "@/lib/fecha-ar";
+import { etiquetaCuenta } from "@/lib/whatsapp";
 
 export const POLL_MS = 10_000;
 const FLASH_MS = 4_000;
@@ -101,6 +102,23 @@ export function hora(iso: string): string {
 export function horaConDia(iso: string): string {
   if (esHoyAR(iso)) return horaAR(iso);
   return `${diaMesAR(iso)} ${horaAR(iso)}`;
+}
+
+/**
+ * Etiqueta de cuenta para mostrar en la UI ("Casa (Rawson 255)"), SOLO cuando el titular
+ * tiene 2+ cuentas activas (si no, "" — el operador no necesita la aclaración). Reusa
+ * `etiquetaCuenta` de wa.me quitando la negrita `*` que en pantalla no aplica.
+ */
+export function etiquetaCuentaUi(e: EventoLive): string {
+  if (!e.titularMultiCuenta) return "";
+  return etiquetaCuenta(
+    {
+      descripcion: e.cuentaDescripcion,
+      calle: e.cuentaCalle,
+      softguardRef: e.softguard_ref,
+    },
+    "plano",
+  );
 }
 
 /** Prioridad SoftGuard: 1 = crítica. Sin prioridad → neutro. */

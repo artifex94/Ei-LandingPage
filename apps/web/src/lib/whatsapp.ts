@@ -65,6 +65,46 @@ function normalizarDescripcion(descripcion: string): string {
 
 const capitalizar = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
+/** Datos mínimos de una cuenta para identificarla en el mensaje (multi-cuenta). */
+export interface CuentaIdentificacion {
+  descripcion?: string | null;
+  calle?: string | null;
+  localidad?: string | null;
+  softguardRef?: string | null;
+}
+
+/** Formato de salida de `etiquetaCuenta`: "wa" = con `*negrita*` wa.me, "plano" = sin asteriscos de formato. */
+export type FormatoEtiquetaCuenta = "wa" | "plano";
+
+/**
+ * Etiqueta humana de cuenta: `*Casa* (Rawson 255)` en formato "wa" (default, para mensajes
+ * wa.me), o `Casa (Rawson 255)` en formato "plano" (para UI, sin negrita).
+ * Cadena de fallbacks (descripción útil + calle → descripción → calle → ref → nada).
+ * "Descripción útil" descarta la `descripcion` cuando está vacía tras trim o cuando
+ * es igual a la `softguardRef` (hay cuentas donde `descripcion` es la ref cruda).
+ * Devuelve "" si no hay ningún dato — el caller decide si la usa (mono-cuenta no la pasa).
+ * En "plano" NO se agregan asteriscos de formato, pero los que ya trae el contenido (p. ej.
+ * una `descripcion` con `*` legítimo) se preservan tal cual.
+ */
+export function etiquetaCuenta(
+  c: CuentaIdentificacion | null | undefined,
+  formato: FormatoEtiquetaCuenta = "wa",
+): string {
+  if (!c) return "";
+  const descripcion = (c.descripcion ?? "").trim();
+  const ref = (c.softguardRef ?? "").trim();
+  const calle = (c.calle ?? "").trim();
+  const descripcionUtil = descripcion && descripcion !== ref ? descripcion : "";
+
+  const destacar = (s: string): string => (formato === "wa" ? `*${s}*` : s);
+
+  if (descripcionUtil && calle) return `${destacar(descripcionUtil)} (${calle})`;
+  if (descripcionUtil) return destacar(descripcionUtil);
+  if (calle) return destacar(calle);
+  if (ref) return destacar(ref);
+  return "";
+}
+
 /**
  * ¿El evento es una restauración? SoftGuard manda en el código (rec_calarma) "RES" para
  * la restauración y "BUR" para el robo. Exigimos que "RES" no sea parte de otra palabra
@@ -138,14 +178,24 @@ export function categoriaEvento(prioridad: number | null): CategoriaEvento {
  * Sin emojis a propósito: WhatsApp Desktop mangla los emojis del texto pre-cargado de wa.me
  * (los muestra como "?"). La jerarquía la da la negrita + mayúsculas del título, no un emoji.
  */
-const CONFIG_CATEGORIA: Record<CategoriaEvento, { titulo: string; intro: string; cierre: string }> = {
-  critica: { titulo: "Alerta de seguridad", intro: "Tu alarma reportó", cierre: "¿Está todo bien? Si necesitás ayuda, respondé este mensaje." },
-  media: { titulo: "Aviso", intro: "Tu sistema reportó", cierre: "Ya lo estamos revisando." },
-  otra: { titulo: "Registro", intro: "Tu alarma registró", cierre: "" },
+const CONFIG_CATEGORIA: Record<CategoriaEvento, { titulo: string; sujeto: string; verbo: string; cierre: string }> = {
+  critica: { titulo: "Alerta de seguridad", sujeto: "Tu alarma", verbo: "reportó", cierre: "¿Está todo bien? Si necesitás ayuda, respondé este mensaje." },
+  media: { titulo: "Aviso", sujeto: "Tu sistema", verbo: "reportó", cierre: "Ya lo estamos revisando." },
+  otra: { titulo: "Registro", sujeto: "Tu alarma", verbo: "registró", cierre: "" },
 };
 
 /** Copy del aviso ameno cuando la(s) alarma(s) ya se restauraron (robo seguido de su restauración). */
-const CONFIG_RESTAURADA = { titulo: "Alarma restaurada", intro: "Tu alarma se restauró", cierre: "¿Todo bien?" };
+const CONFIG_RESTAURADA = { titulo: "Alarma restaurada", sujeto: "Tu alarma", verbo: "se restauró", cierre: "¿Todo bien?" };
+
+/**
+ * Arma la intro ("Tu alarma reportó" / "Tu alarma de *Casa* (Rawson 255) reportó") insertando
+ * la etiqueta de cuenta entre el sujeto y el verbo cuando se pasa (multi-cuenta). Sin etiqueta,
+ * queda idéntica al copy fijo original.
+ */
+function construirIntro(sujeto: string, verbo: string, cuentaEtiqueta?: string): string {
+  const conEtiqueta = cuentaEtiqueta ? `${sujeto} de ${cuentaEtiqueta}` : sujeto;
+  return `${conEtiqueta} ${verbo}`;
+}
 
 /** Ítem de evento para construir el mensaje. `codigo`/`zonaNumero`/`fecha` son opcionales (defaults seguros). */
 export interface EventoMensajeItem {
@@ -174,6 +224,8 @@ export function mensajeEvento(input: {
   nombreContacto: string;
   eventos: EventoMensajeItem[];
   fechaISO: string;
+  /** Etiqueta de cuenta ya formateada (ver `etiquetaCuenta`) para titulares con 2+ cuentas. Opcional: sin ella, el mensaje sale igual que hoy. */
+  cuentaEtiqueta?: string;
 }): string {
   const primerNombre = (input.nombreContacto ?? "").trim().split(/\s+/)[0] ?? "";
   const saludo = (fechaISO: string): string => {
@@ -214,10 +266,11 @@ export function mensajeEvento(input: {
     const fechaH = ultimaFechaISO(restauraciones.length > 0 ? restauraciones : restauradas, input.fechaISO);
     const zonas = [...new Set(fuenteZonas.map((e) => e.etiquetaZona).filter(Boolean))];
     const encabezado = `*${CONFIG_RESTAURADA.titulo}*${headerHora(fechaH)}`;
+    const introRestaurada = construirIntro(CONFIG_RESTAURADA.sujeto, CONFIG_RESTAURADA.verbo, input.cuentaEtiqueta);
     const cuerpo =
       zonas.length <= 1
-        ? `${saludo(fechaH)} ${CONFIG_RESTAURADA.intro}${zonas[0] ? ` en la zona ${zonas[0]}` : ""}.`
-        : `${saludo(fechaH)} ${CONFIG_RESTAURADA.intro} en las zonas:\n${zonas.map((z) => `· ${z}`).join("\n")}`;
+        ? `${saludo(fechaH)} ${introRestaurada}${zonas[0] ? ` en la zona ${zonas[0]}` : ""}.`
+        : `${saludo(fechaH)} ${introRestaurada} en las zonas:\n${zonas.map((z) => `· ${z}`).join("\n")}`;
     return [`${encabezado}\n${cuerpo}`, CONFIG_RESTAURADA.cierre].join("\n\n");
   }
 
@@ -227,10 +280,11 @@ export function mensajeEvento(input: {
   const fechaH = ultimaFechaISO(base, input.fechaISO);
   const lineas = [...new Set(base.map((e) => lineaEvento(e.descripcion, e.etiquetaZona)))];
   const encabezado = `*${cfg.titulo}*${headerHora(fechaH)}`;
+  const introAlerta = construirIntro(cfg.sujeto, cfg.verbo, input.cuentaEtiqueta);
   const cuerpo =
     lineas.length <= 1
-      ? `${saludo(fechaH)} ${cfg.intro} ${lineas[0] ?? "un evento"}.`
-      : `${saludo(fechaH)} ${cfg.intro}:\n${lineas.map((l) => `· ${capitalizar(l)}`).join("\n")}`;
+      ? `${saludo(fechaH)} ${introAlerta} ${lineas[0] ?? "un evento"}.`
+      : `${saludo(fechaH)} ${introAlerta}:\n${lineas.map((l) => `· ${capitalizar(l)}`).join("\n")}`;
 
   const bloques = [`${encabezado}\n${cuerpo}`];
   if (cfg.cierre) bloques.push(cfg.cierre);
@@ -242,6 +296,7 @@ export function mensajeEventosP1(input: {
   nombreContacto: string;
   eventos: EventoMensajeItem[];
   fechaISO: string;
+  cuentaEtiqueta?: string;
 }): string {
   return mensajeEvento({ prioridad: 1, ...input });
 }
@@ -255,10 +310,12 @@ export function mensajeEventoP1(input: {
   codigo?: string | null;
   zonaNumero?: string | null;
   fechaISO: string;
+  cuentaEtiqueta?: string;
 }): string {
   return mensajeEventosP1({
     nombreContacto: input.nombreContacto,
     eventos: [{ descripcion: input.descripcionEvento, zona: input.zona, codigo: input.codigo, zonaNumero: input.zonaNumero }],
     fechaISO: input.fechaISO,
+    cuentaEtiqueta: input.cuentaEtiqueta,
   });
 }

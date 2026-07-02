@@ -22,10 +22,12 @@ import type { EventoLive } from "@/app/api/admin/eventos-live/route";
 import type { CuentaContextoResponse } from "@/app/api/admin/cuenta-contexto/route";
 import { BarraVidaUtil, EstadoConexion, EstadoEvento } from "./MultiMonitorLive";
 import { NotificarWhatsAppModal } from "./NotificarWhatsAppModal";
+import { Badge } from "@/components/ui/Badge";
 import {
   useEventosLive,
   filtrarEventos,
   eventosAgrupadosCuenta,
+  etiquetaCuentaUi,
   hora,
   horaConDia,
   prioridadStyle,
@@ -330,6 +332,12 @@ function FilaOperador({
             <span className="text-slate-700"> · #{evento.softguard_ref}</span>
             {evento.zona && <span className="text-slate-600"> · {evento.zona}</span>}
           </p>
+          {/* Titular con varias cuentas activas: aclarar de QUÉ propiedad es el evento. */}
+          {evento.titularMultiCuenta && (
+            <Badge variant="info" className="mt-1 max-w-full truncate text-[10px]">
+              {etiquetaCuentaUi(evento)}
+            </Badge>
+          )}
         </div>
         {!evento.procesado && <EstadoEvento procesado={false} />}
         <BarraVidaUtil evento={evento} refMs={refMs} />

@@ -7,6 +7,7 @@ import {
   mensajeEvento,
   categoriaEvento,
   esRestauracion,
+  etiquetaCuenta,
 } from "./whatsapp";
 
 describe("normalizarTelefono", () => {
@@ -299,5 +300,151 @@ describe("mensajeEvento — robo / restauración (pairing por zona + tiempo)", (
     });
     expect(msg).toContain("*Alerta de seguridad*");
     expect(msg).toContain("robo - zona (3) patio");
+  });
+});
+
+describe("etiquetaCuenta (identificación de cuenta para titulares multi-cuenta)", () => {
+  it("descripción útil + calle → *descripción* (calle)", () => {
+    expect(etiquetaCuenta({ descripcion: "Casa", calle: "Rawson 255", softguardRef: "ESI-0175" })).toBe(
+      "*Casa* (Rawson 255)",
+    );
+  });
+  it("solo descripción útil → *descripción*", () => {
+    expect(etiquetaCuenta({ descripcion: "Casa", softguardRef: "ESI-0175" })).toBe("*Casa*");
+  });
+  it("solo calle → *calle*", () => {
+    expect(etiquetaCuenta({ descripcion: null, calle: "Rawson 255", softguardRef: null })).toBe("*Rawson 255*");
+  });
+  it("solo ref → *ref*", () => {
+    expect(etiquetaCuenta({ descripcion: null, calle: null, softguardRef: "ESI-0175" })).toBe("*ESI-0175*");
+  });
+  it("sin datos → cadena vacía (el mensaje sale sin etiqueta)", () => {
+    expect(etiquetaCuenta({ descripcion: null, calle: null, softguardRef: null })).toBe("");
+    expect(etiquetaCuenta({})).toBe("");
+    expect(etiquetaCuenta(null)).toBe("");
+    expect(etiquetaCuenta(undefined)).toBe("");
+  });
+  it("descripción igual a la ref se descarta (cae al siguiente fallback)", () => {
+    expect(etiquetaCuenta({ descripcion: "ESI-0175", calle: "Rawson 255", softguardRef: "ESI-0175" })).toBe(
+      "*Rawson 255*",
+    );
+    expect(etiquetaCuenta({ descripcion: "ESI-0175", calle: null, softguardRef: "ESI-0175" })).toBe("*ESI-0175*");
+  });
+  it("descripción de solo espacios se descarta tras trim", () => {
+    expect(etiquetaCuenta({ descripcion: "   ", calle: "Rawson 255", softguardRef: null })).toBe("*Rawson 255*");
+  });
+
+  it("formato por defecto es 'wa' (con negrita) — retrocompatibilidad", () => {
+    expect(etiquetaCuenta({ descripcion: "Casa", calle: "Rawson 255", softguardRef: "ESI-0175" })).toBe(
+      etiquetaCuenta({ descripcion: "Casa", calle: "Rawson 255", softguardRef: "ESI-0175" }, "wa"),
+    );
+  });
+
+  it("formato 'plano' no agrega asteriscos de negrita", () => {
+    expect(etiquetaCuenta({ descripcion: "Casa", calle: "Rawson 255", softguardRef: "ESI-0175" }, "plano")).toBe(
+      "Casa (Rawson 255)",
+    );
+    expect(etiquetaCuenta({ descripcion: "Casa", softguardRef: "ESI-0175" }, "plano")).toBe("Casa");
+    expect(etiquetaCuenta({ descripcion: null, calle: "Rawson 255", softguardRef: null }, "plano")).toBe(
+      "Rawson 255",
+    );
+    expect(etiquetaCuenta({ descripcion: null, calle: null, softguardRef: "ESI-0175" }, "plano")).toBe("ESI-0175");
+  });
+
+  it("formato 'plano' preserva asteriscos que ya trae el contenido (no los agrega, no los saca)", () => {
+    expect(etiquetaCuenta({ descripcion: "Casa*VIP*", softguardRef: "ESI-0175" }, "plano")).toBe("Casa*VIP*");
+  });
+
+  it("sin datos, 'plano' también devuelve cadena vacía", () => {
+    expect(etiquetaCuenta({ descripcion: null, calle: null, softguardRef: null }, "plano")).toBe("");
+  });
+});
+
+describe("mensajeEvento con cuentaEtiqueta (titular multi-cuenta)", () => {
+  const fechaISO = "2026-06-19T01:14:00.000Z"; // = 22:14 AR
+  const cuentaEtiqueta = "*Casa* (Rawson 255)";
+
+  it("alerta de una línea: la etiqueta va entre el sujeto y el verbo", () => {
+    const msg = mensajeEvento({
+      prioridad: 1,
+      nombreContacto: "Juan",
+      eventos: [{ descripcion: "ROBO", zona: "2" }],
+      fechaISO,
+      cuentaEtiqueta,
+    });
+    expect(msg).toBe(
+      "*Alerta de seguridad* · 22:14\nBuenas noches, Juan. Tu alarma de *Casa* (Rawson 255) reportó robo - zona (2).\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.",
+    );
+  });
+
+  it("alerta multi-línea: la etiqueta va en la intro, las viñetas no cambian", () => {
+    const msg = mensajeEvento({
+      prioridad: 1,
+      nombreContacto: "Juan",
+      eventos: [
+        { descripcion: "ROBO", zona: "2" },
+        { descripcion: "FUEGO", zona: "Cocina" },
+      ],
+      fechaISO,
+      cuentaEtiqueta,
+    });
+    expect(msg).toBe(
+      "*Alerta de seguridad* · 22:14\nBuenas noches, Juan. Tu alarma de *Casa* (Rawson 255) reportó:\n· Robo - zona (2)\n· Fuego - zona cocina\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.",
+    );
+  });
+
+  it("restaurada: la etiqueta va antes de 'se restauró'", () => {
+    const tRobo = "2026-06-19T01:14:00.000Z";
+    const tRest = "2026-06-19T01:20:00.000Z"; // 22:20 AR
+    const msg = mensajeEvento({
+      prioridad: 1,
+      nombreContacto: "Agustín",
+      eventos: [
+        { codigo: "BUR130", descripcion: "ROBO", zona: "Patio", zonaNumero: "003", fecha: tRobo },
+        { codigo: "RES130", descripcion: "RESTAURACION ROBO", zona: "Patio", zonaNumero: "003", fecha: tRest },
+      ],
+      fechaISO: tRest,
+      cuentaEtiqueta,
+    });
+    expect(msg).toBe(
+      "*Alarma restaurada* · 22:20\nBuenas noches, Agustín. Tu alarma de *Casa* (Rawson 255) se restauró en la zona (3) patio.\n\n¿Todo bien?",
+    );
+  });
+
+  it("P2 (media): 'Tu sistema de *...* reportó'", () => {
+    const msg = mensajeEvento({
+      prioridad: 2,
+      nombreContacto: "Ana",
+      eventos: [{ descripcion: "CORTE 220V", zona: null }],
+      fechaISO,
+      cuentaEtiqueta: "*Local*",
+    });
+    expect(msg).toBe("*Aviso* · 22:14\nBuenas noches, Ana. Tu sistema de *Local* reportó corte 220V.\n\nYa lo estamos revisando.");
+  });
+
+  it("sin cuentaEtiqueta la salida es idéntica a la de siempre (retrocompatibilidad)", () => {
+    const input = { prioridad: 1, nombreContacto: "Juan", eventos: [{ descripcion: "ROBO", zona: "2" }], fechaISO };
+    expect(mensajeEvento(input)).toBe(
+      "*Alerta de seguridad* · 22:14\nBuenas noches, Juan. Tu alarma reportó robo - zona (2).\n\n¿Está todo bien? Si necesitás ayuda, respondé este mensaje.",
+    );
+    expect(mensajeEvento({ ...input, cuentaEtiqueta: undefined })).toBe(mensajeEvento(input));
+    expect(mensajeEvento({ ...input, cuentaEtiqueta: "" })).toBe(mensajeEvento(input));
+  });
+
+  it("los wrappers P1 propagan la etiqueta", () => {
+    const eventos = [{ descripcion: "ROBO", zona: "2" }];
+    expect(mensajeEventosP1({ nombreContacto: "Juan", eventos, fechaISO, cuentaEtiqueta })).toBe(
+      mensajeEvento({ prioridad: 1, nombreContacto: "Juan", eventos, fechaISO, cuentaEtiqueta }),
+    );
+    expect(
+      mensajeEventoP1({
+        nombreContacto: "Juan",
+        descripcionEvento: "ROBO",
+        softguardRef: "ESI-0175",
+        zona: "2",
+        fechaISO,
+        cuentaEtiqueta,
+      }),
+    ).toContain("Tu alarma de *Casa* (Rawson 255) reportó");
   });
 });

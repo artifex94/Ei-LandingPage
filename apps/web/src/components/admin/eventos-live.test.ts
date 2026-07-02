@@ -23,6 +23,9 @@ function ev(over: Partial<EventoLive>): EventoLive {
     prioridad: 1,
     fecha: new Date().toISOString(),
     procesado: false,
+    cuentaDescripcion: null,
+    cuentaCalle: null,
+    titularMultiCuenta: false,
     ...over,
   };
 }
