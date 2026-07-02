@@ -8,6 +8,7 @@
 
 import { siteConfig } from "@/config/site";
 import { resumenDeudaCuentas } from "./billing-deuda";
+import { etiquetaCuenta } from "./whatsapp";
 import {
   ETIQUETA_MOTIVO,
   mensajeRecordatorioPago,
@@ -23,6 +24,7 @@ import {
   mensajeActualizarDatos,
   mensajeAvisoGeneral,
   type MotivoMensaje,
+  type DeudaPorCuenta,
 } from "./whatsapp-templates";
 
 // Una confirmación de pago solo tiene sentido si el pago se acreditó hace poco.
@@ -45,6 +47,34 @@ export interface MotivoOpcion {
   mensaje: string; // texto pre-construido (editable luego en el preview)
 }
 
+/** Pagos de UNA cuenta, ya agrupados, para armar el desglose por cuenta (titulares con 2+ cuentas). */
+export interface PagosPorCuenta {
+  etiqueta: string;
+  pagos: PagoParaMotivos[];
+}
+
+/** Cuenta con sus pagos ya proyectados a `PagoParaMotivos`, insumo de `agruparPagosPorCuenta`. */
+export interface CuentaParaAgrupar {
+  descripcion?: string | null;
+  calle?: string | null;
+  softguard_ref?: string | null;
+  pagos: PagoParaMotivos[];
+}
+
+/**
+ * Agrupa los pagos de un titular por cuenta para el desglose de mensajería. SIN gate: agrupa
+ * SIEMPRE, sea cual sea la cantidad de cuentas — la decisión de si el desglose se MUESTRA queda
+ * en un solo lugar: `motivosDeCobranza` descarta las cuentas sin deuda y el template colapsa al
+ * formato clásico (sin viñetas) cuando queda una sola cuenta con deuda. Así todos los callers
+ * (cobros, morosidad, mensajería, ficha de cliente) comparten la MISMA política.
+ */
+export function agruparPagosPorCuenta(cuentas: CuentaParaAgrupar[]): PagosPorCuenta[] {
+  return cuentas.map((c) => ({
+    etiqueta: etiquetaCuenta({ descripcion: c.descripcion, calle: c.calle, softguardRef: c.softguard_ref }),
+    pagos: c.pagos,
+  }));
+}
+
 /**
  * Motivos disponibles según los pagos del cliente:
  *   - RECORDATORIO_PAGO   si hay deuda (PENDIENTE/VENCIDO)
@@ -54,10 +84,31 @@ export interface MotivoOpcion {
  *
  * IMPORTANTE: pasá los pagos COMPLETOS (toda la deuda impaga + pagos recientes), no un
  * subconjunto paginado, o el monto/los meses del recordatorio saldrán mal.
+ *
+ * `pagosPorCuenta` es opcional (ver `agruparPagosPorCuenta`): cuando viene, acá se arma el
+ * desglose (`resumenDeudaCuentas` por grupo) que viaja a
+ * `mensajeRecordatorioPago`/`mensajeMoraSuspension`, Y el agregado (total/meses adeudados) se
+ * DERIVA del mismo desglose (flatten pre-filtro de $0) en vez del parámetro `pagos` — así total
+ * y desglose salen de la MISMA fuente por construcción y no pueden desincronizarse. Sin
+ * `pagosPorCuenta`, el agregado sigue saliendo de `pagos` como siempre (retrocompatible).
  */
-export function motivosDeCobranza(nombreContacto: string, pagos: PagoParaMotivos[]): MotivoOpcion[] {
+export function motivosDeCobranza(
+  nombreContacto: string,
+  pagos: PagoParaMotivos[],
+  pagosPorCuenta?: PagosPorCuenta[],
+): MotivoOpcion[] {
   const opciones: MotivoOpcion[] = [];
-  const resumen = resumenDeudaCuentas(pagos);
+  const resumen = pagosPorCuenta
+    ? resumenDeudaCuentas(pagosPorCuenta.flatMap((g) => g.pagos))
+    : resumenDeudaCuentas(pagos);
+  // Solo cuentas CON deuda: en la ficha de cliente los grupos traen también pagos
+  // acreditados recientes, y una cuenta al día no debe aparecer como "· *Local*: $0".
+  const desglose: DeudaPorCuenta[] | undefined = pagosPorCuenta
+    ?.map((g) => {
+      const r = resumenDeudaCuentas(g.pagos);
+      return { etiqueta: g.etiqueta, monto: r.deudaTotal, meses: r.mesesAdeudados };
+    })
+    .filter((d) => d.monto > 0);
 
   if (resumen.deudaTotal > 0) {
     opciones.push({
@@ -67,6 +118,7 @@ export function motivosDeCobranza(nombreContacto: string, pagos: PagoParaMotivos
         nombreContacto,
         deudaTotal: resumen.deudaTotal,
         mesesAdeudados: resumen.mesesAdeudados,
+        desglose,
       }),
     });
 
@@ -80,6 +132,7 @@ export function motivosDeCobranza(nombreContacto: string, pagos: PagoParaMotivos
           nombreContacto,
           deudaTotal: resumen.deudaTotal,
           mesesAdeudados: resumen.mesesAdeudados,
+          desglose,
         }),
       });
     }

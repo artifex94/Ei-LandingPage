@@ -3,6 +3,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 import { PagoManualForm } from "@/components/admin/PagoManualForm";
 import { EditarClienteForm } from "@/components/admin/EditarClienteForm";
 import { NuevaCuentaForm } from "@/components/admin/NuevaCuentaForm";
@@ -10,7 +11,7 @@ import { EliminarClienteForm } from "@/components/admin/EliminarClienteForm";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "@/app/admin/solicitudes-cambio/AccionesForm";
 import { UUID_RE } from "@/lib/constants/validation";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza, motivosGenerales } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, motivosGenerales, agruparPagosPorCuenta } from "@/lib/mensajeria-motivos";
 
 const getClientePerfil = cache(async (id: string) => {
   return prisma.perfil.findUnique({
@@ -93,30 +94,50 @@ export default async function ClienteDetallePage({
 
   // Motivos de WhatsApp sobre la deuda COMPLETA del cliente (todas sus cuentas, cualquier
   // año) + pagos acreditados recientemente — no el subconjunto del año corriente que
-  // muestra la ficha.
+  // muestra la ficha. Se consulta por cuenta (pagos anidados) para poder armar el desglose
+  // por cuenta y el agregado desde la MISMA fuente, sin proyectar el pago dos veces.
   const hace30dias = new Date();
   hace30dias.setDate(hace30dias.getDate() - 30);
-  const pagosMotivos = await prisma.pago.findMany({
-    where: {
-      cuenta: { perfil_id: perfil.id },
-      OR: [
-        { estado: { in: ["PENDIENTE", "VENCIDO"] } },
-        { estado: "PAGADO", acreditado_en: { gte: hace30dias } },
-      ],
+  const filtroPagosMotivos: Prisma.PagoWhereInput = {
+    OR: [
+      { estado: { in: ["PENDIENTE", "VENCIDO"] } },
+      { estado: "PAGADO", acreditado_en: { gte: hace30dias } },
+    ],
+  };
+  const cuentasConDeuda = await prisma.cuenta.findMany({
+    where: { perfil_id: perfil.id, pagos: { some: filtroPagosMotivos } },
+    select: {
+      descripcion: true,
+      calle: true,
+      softguard_ref: true,
+      pagos: {
+        where: filtroPagosMotivos,
+        select: { mes: true, anio: true, importe: true, estado: true, acreditado_en: true },
+      },
     },
-    select: { mes: true, anio: true, importe: true, estado: true, acreditado_en: true },
   });
-  const motivosWA = [
-    ...motivosDeCobranza(
-      perfil.nombre,
-      pagosMotivos.map((p) => ({
+
+  // El desglose por cuenta se arma siempre (sin gate): motivosDeCobranza descarta las
+  // cuentas sin deuda y el template colapsa al formato clásico si queda 1 sola con deuda.
+  const pagosPorCuenta = agruparPagosPorCuenta(
+    cuentasConDeuda.map((c) => ({
+      descripcion: c.descripcion,
+      calle: c.calle,
+      softguard_ref: c.softguard_ref,
+      pagos: c.pagos.map((p) => ({
         mes: p.mes,
         anio: p.anio,
         importe: Number(p.importe),
         estado: p.estado,
         acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
       })),
-    ),
+    })),
+  );
+  // Agregado derivado del mismo desglose (una sola proyección de pago → PagoParaMotivos).
+  const pagosMotivos = pagosPorCuenta.flatMap((g) => g.pagos);
+
+  const motivosWA = [
+    ...motivosDeCobranza(perfil.nombre, pagosMotivos, pagosPorCuenta),
     ...motivosGenerales(perfil.nombre),
   ];
 

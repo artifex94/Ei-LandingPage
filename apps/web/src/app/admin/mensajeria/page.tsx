@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, agruparPagosPorCuenta } from "@/lib/mensajeria-motivos";
 import { resumenDeudaCuentas } from "@/lib/billing-deuda";
 
 export const metadata: Metadata = { title: "Mensajería" };
@@ -62,7 +62,22 @@ export default async function MensajeriaPage() {
       const pagos = cuentas.flatMap((c) => c.pagos).map((p) => ({
         mes: p.mes, anio: p.anio, importe: Number(p.importe), estado: p.estado,
       }));
-      return { perfil, resumen: resumenDeudaCuentas(pagos), motivos: motivosDeCobranza(perfil.nombre, pagos), contactado: contactados.has(perfil.id) };
+      // El desglose por cuenta se arma siempre (sin gate): motivosDeCobranza descarta las
+      // cuentas sin deuda y el template colapsa al formato clásico si queda 1 sola.
+      const pagosPorCuenta = agruparPagosPorCuenta(
+        cuentas.map((c) => ({
+          descripcion: c.descripcion,
+          calle: c.calle,
+          softguard_ref: c.softguard_ref,
+          pagos: c.pagos.map((p) => ({ mes: p.mes, anio: p.anio, importe: Number(p.importe), estado: p.estado })),
+        })),
+      );
+      return {
+        perfil,
+        resumen: resumenDeudaCuentas(pagos),
+        motivos: motivosDeCobranza(perfil.nombre, pagos, pagosPorCuenta),
+        contactado: contactados.has(perfil.id),
+      };
     })
     .sort((a, b) =>
       // pendientes de contactar primero, luego por mayor deuda

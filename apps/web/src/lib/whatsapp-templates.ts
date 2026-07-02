@@ -82,18 +82,43 @@ const LINK_PORTAL_HOME = `${siteConfig.url}/portal`;
 // Formato wa.me: `*texto*` = negrita. Título en negrita + cuerpo en bloques separados por
 // línea en blanco. Sin emojis (WhatsApp Desktop los rompe en el texto pre-cargado).
 
+/** Deuda de UNA cuenta, para el desglose de titulares con 2+ cuentas activas. */
+export interface DeudaPorCuenta {
+  etiqueta: string;
+  monto: number;
+  meses: { mes: number; anio: number }[];
+}
+
+/** Línea de desglose: "· *Casa* (Rawson 255): $30.000 (marzo 2026, abril 2026)". */
+function lineaDesglose(d: DeudaPorCuenta): string {
+  const meses = d.meses.map((m) => periodo(m.mes, m.anio)).join(", ");
+  const detalle = meses ? ` (${meses})` : "";
+  return `· ${d.etiqueta}: ${pesos(d.monto)}${detalle}`;
+}
+
 /** Recordatorio de deuda actual ("ponete al día"). */
 export function mensajeRecordatorioPago(input: {
   nombreContacto: string;
   deudaTotal: number;
   mesesAdeudados: { mes: number; anio: number }[];
+  /** Desglose opcional por cuenta (titulares con 2+ cuentas activas). Con 2+ ítems, el mensaje detalla cada cuenta; si no, sale igual que siempre (retrocompatible). */
+  desglose?: DeudaPorCuenta[];
   ahora?: Date;
 }): string {
+  const saludoLinea = saludo(input.nombreContacto, input.ahora);
+  if (input.desglose && input.desglose.length > 1) {
+    const lineas = input.desglose.map(lineaDesglose).join("\n");
+    return (
+      `*Recordatorio de pago*\n\n` +
+      `${saludoLinea} Tenés pagos pendientes por *${pesos(input.deudaTotal)}*:\n${lineas}\n\n` +
+      `Ponete al día desde tu portal:\n${LINK_PORTAL}`
+    );
+  }
   const meses = input.mesesAdeudados.map((m) => periodo(m.mes, m.anio)).join(", ");
   const detalle = meses ? ` (${meses})` : "";
   return (
     `*Recordatorio de pago*\n\n` +
-    `${saludo(input.nombreContacto, input.ahora)} Tenés pagos pendientes por *${pesos(input.deudaTotal)}*${detalle}.\n\n` +
+    `${saludoLinea} Tenés pagos pendientes por *${pesos(input.deudaTotal)}*${detalle}.\n\n` +
     `Ponete al día desde tu portal:\n${LINK_PORTAL}`
   );
 }
@@ -140,13 +165,25 @@ export function mensajeMoraSuspension(input: {
   nombreContacto: string;
   deudaTotal: number;
   mesesAdeudados: { mes: number; anio: number }[];
+  /** Desglose opcional por cuenta (titulares con 2+ cuentas activas). Con 2+ ítems, el mensaje detalla cada cuenta; si no, sale igual que siempre (retrocompatible). */
+  desglose?: DeudaPorCuenta[];
   ahora?: Date;
 }): string {
+  const saludoLinea = saludo(input.nombreContacto, input.ahora);
+  if (input.desglose && input.desglose.length > 1) {
+    const lineas = input.desglose.map(lineaDesglose).join("\n");
+    return (
+      `*Aviso de pago pendiente*\n\n` +
+      `${saludoLinea} Registramos una deuda de *${pesos(input.deudaTotal)}*:\n${lineas}\n` +
+      `Para no interrumpir el servicio de monitoreo, te pedimos regularizarla a la brevedad.\n\n` +
+      `Podés abonar desde tu portal:\n${LINK_PORTAL}`
+    );
+  }
   const meses = input.mesesAdeudados.map((m) => periodo(m.mes, m.anio)).join(", ");
   const detalle = meses ? ` (${meses})` : "";
   return (
     `*Aviso de pago pendiente*\n\n` +
-    `${saludo(input.nombreContacto, input.ahora)} Registramos una deuda de *${pesos(input.deudaTotal)}*${detalle}.\n` +
+    `${saludoLinea} Registramos una deuda de *${pesos(input.deudaTotal)}*${detalle}.\n` +
     `Para no interrumpir el servicio de monitoreo, te pedimos regularizarla a la brevedad.\n\n` +
     `Podés abonar desde tu portal:\n${LINK_PORTAL}`
   );

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma/client";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, agruparPagosPorCuenta } from "@/lib/mensajeria-motivos";
 
 export const metadata: Metadata = { title: "Morosidad" };
 
@@ -94,6 +94,8 @@ export default async function CobrosMorosidadPage() {
               (s, c) => s + c.pagos.reduce((ps, p) => ps + Number(p.importe), 0),
               0
             );
+            // El desglose por cuenta se arma siempre (sin gate): motivosDeCobranza descarta
+            // las cuentas sin deuda y el template colapsa al formato clásico si queda 1 sola.
             const motivos = motivosDeCobranza(
               perfil.nombre,
               cuentas.flatMap((c) => c.pagos).map((p) => ({
@@ -102,6 +104,19 @@ export default async function CobrosMorosidadPage() {
                 importe: Number(p.importe),
                 estado: p.estado,
               })),
+              agruparPagosPorCuenta(
+                cuentas.map((c) => ({
+                  descripcion: c.descripcion,
+                  calle: c.calle,
+                  softguard_ref: c.softguard_ref,
+                  pagos: c.pagos.map((p) => ({
+                    mes: p.mes,
+                    anio: p.anio,
+                    importe: Number(p.importe),
+                    estado: p.estado,
+                  })),
+                })),
+              ),
             );
 
             return (

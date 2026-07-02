@@ -13,6 +13,7 @@ import {
   mensajeActualizarDatos,
   mensajeAvisoGeneral,
   ETIQUETA_MOTIVO,
+  type DeudaPorCuenta,
 } from "./whatsapp-templates";
 
 // Fechas de referencia (UTC) → hora AR (UTC-3) → saludo esperado, para asertar determinísticamente.
@@ -142,5 +143,62 @@ describe("ETIQUETA_MOTIVO", () => {
     expect(ETIQUETA_MOTIVO.MORA_SUSPENSION).toBe("Aviso de mora");
     expect(ETIQUETA_MOTIVO.BIENVENIDA).toBe("Bienvenida");
     expect(ETIQUETA_MOTIVO.VISITA_TECNICA).toBe("Visita técnica");
+  });
+});
+
+describe("desglose por cuenta (titulares multi-cuenta)", () => {
+  const desglose: DeudaPorCuenta[] = [
+    { etiqueta: "*Casa* (Rawson 255)", monto: 30000, meses: [{ mes: 3, anio: 2026 }, { mes: 4, anio: 2026 }] },
+    { etiqueta: "*Local*", monto: 30000, meses: [{ mes: 4, anio: 2026 }] },
+  ];
+  const base = {
+    nombreContacto: "Juan",
+    deudaTotal: 60000,
+    mesesAdeudados: [
+      { mes: 3, anio: 2026 },
+      { mes: 4, anio: 2026 },
+      { mes: 4, anio: 2026 },
+    ],
+    ahora: TARDE,
+  };
+
+  it("recordatorio con 2 cuentas: total agregado + una viñeta por cuenta con su monto y meses", () => {
+    const msg = mensajeRecordatorioPago({ ...base, desglose });
+    expect(msg).toContain("Buenas tardes, Juan. Tenés pagos pendientes por *$60.000*:");
+    expect(msg).toContain("· *Casa* (Rawson 255): $30.000 (marzo 2026, abril 2026)");
+    expect(msg).toContain("· *Local*: $30.000 (abril 2026)");
+    expect(msg).toContain("/portal/pagos");
+  });
+
+  it("recordatorio con desglose de 1 cuenta o sin desglose → formato clásico idéntico", () => {
+    const clasico = mensajeRecordatorioPago(base);
+    expect(mensajeRecordatorioPago({ ...base, desglose: [desglose[0]] })).toBe(clasico);
+    expect(mensajeRecordatorioPago({ ...base, desglose: [] })).toBe(clasico);
+    expect(mensajeRecordatorioPago({ ...base, desglose: undefined })).toBe(clasico);
+    expect(clasico).not.toContain("·"); // sin viñetas
+  });
+
+  it("mora con 2 cuentas: total + viñetas + aviso de servicio + portal", () => {
+    const msg = mensajeMoraSuspension({ ...base, desglose });
+    expect(msg).toContain("Registramos una deuda de *$60.000*:");
+    expect(msg).toContain("· *Casa* (Rawson 255): $30.000 (marzo 2026, abril 2026)");
+    expect(msg).toContain("· *Local*: $30.000 (abril 2026)");
+    expect(msg).toContain("interrumpir el servicio de monitoreo");
+    expect(msg).toContain("/portal/pagos");
+  });
+
+  it("mora con desglose de 1 cuenta o sin desglose → formato clásico idéntico", () => {
+    const clasico = mensajeMoraSuspension(base);
+    expect(mensajeMoraSuspension({ ...base, desglose: [desglose[1]] })).toBe(clasico);
+    expect(mensajeMoraSuspension({ ...base, desglose: undefined })).toBe(clasico);
+  });
+
+  it("cuenta sin meses informados no deja paréntesis vacíos en la viñeta", () => {
+    const msg = mensajeRecordatorioPago({
+      ...base,
+      desglose: [desglose[0], { etiqueta: "*Local*", monto: 30000, meses: [] }],
+    });
+    expect(msg).toContain("· *Local*: $30.000");
+    expect(msg).not.toContain("()");
   });
 });
