@@ -2,12 +2,30 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
-import { cambiarEstadoOT, registrarGPS, subirFotosOT, guardarFirmaCliente } from "@/lib/actions/ot";
+import {
+  cambiarEstadoOT, registrarGPS, subirFotosOT, guardarFirmaCliente,
+  agregarMaterialOT, quitarMaterialOT,
+} from "@/lib/actions/ot";
+import { validarCantidadMaterial, aplicarPresetNota, calcularCostoTotalMateriales } from "@/lib/ot-materiales";
 import type { EstadoOT } from "@/generated/prisma/client";
 
 const TIPO_LABEL: Record<string, string> = {
   INSTALACION: "Instalación", CORRECTIVO: "Correctivo",
   PREVENTIVO: "Preventivo",   RETIRO: "Retiro",
+};
+
+const NOTA_PRESETS = [
+  "Cliente ausente",
+  "Batería reemplazada",
+  "Falso contacto",
+  "Se probó con el cliente",
+  "Queda pendiente revisión",
+];
+
+const MOTIVO_NO_FIRMA_LABEL: Record<string, string> = {
+  AUSENTE: "Cliente ausente",
+  RECHAZO: "Cliente rechazó firmar",
+  OTRO: "Otro motivo",
 };
 
 type OTData = {
@@ -16,15 +34,41 @@ type OTData = {
   hora_salida: string | null; hora_llegada: string | null; hora_fin: string | null;
   conformidad_firmada: boolean; firma_cliente_url: string | null; fotos: string[];
   clienteNombre: string; clienteTelefono: string | null; direccion: string | null;
+  motivo_no_firma?: string | null;
 };
 
-export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
+type MaterialCatalogoItem = { id: string; nombre: string; unidad: string };
+type MaterialUsadoItem = {
+  id: string; material_id: string; nombre: string; unidad: string;
+  cantidad: number; costo_unitario: number | null;
+};
+
+export function OTCampoClient({
+  ot: otInicial,
+  catalogo = [],
+  materialesInicial = [],
+}: {
+  ot: OTData;
+  catalogo?: MaterialCatalogoItem[];
+  materialesInicial?: MaterialUsadoItem[];
+}) {
   const [ot, setOt] = useState(otInicial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [firmando, setFirmando] = useState(false);
   const [notasTecnico, setNotasTecnico] = useState("");
   const [kmFinal, setKmFinal] = useState("");
+
+  // Materiales del catálogo — Fase 9
+  const [materiales, setMateriales] = useState<MaterialUsadoItem[]>(materialesInicial);
+  const [busquedaMaterial, setBusquedaMaterial] = useState("");
+  const [cantidadesPendientes, setCantidadesPendientes] = useState<Record<string, string>>({});
+  const [materialPending, setMaterialPending] = useState<string | null>(null);
+
+  // Cliente ausente / rechazó firmar — Fase 9
+  const [clienteAusente, setClienteAusente] = useState(false);
+  const [motivoTipo, setMotivoTipo] = useState<"AUSENTE" | "RECHAZO" | "OTRO">("AUSENTE");
+  const [motivoTexto, setMotivoTexto] = useState("");
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dibujando = useRef(false);
@@ -55,6 +99,20 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
 
   function avanzarEstado(nuevoEstado: EstadoOT) {
     setError(null);
+
+    // Sin firma y "cliente ausente / rechazó" tildado: el motivo es obligatorio.
+    let motivoNoFirma: string | undefined;
+    if (nuevoEstado === "COMPLETADA" && clienteAusente && !ot.firma_cliente_url) {
+      if (motivoTipo === "OTRO" && !motivoTexto.trim()) {
+        setError("Contá brevemente el motivo por el que no se pudo firmar.");
+        return;
+      }
+      const detalle = motivoTexto.trim();
+      motivoNoFirma = detalle
+        ? `${MOTIVO_NO_FIRMA_LABEL[motivoTipo]}: ${detalle}`
+        : MOTIVO_NO_FIRMA_LABEL[motivoTipo];
+    }
+
     startTransition(async () => {
       try {
         // Capturar GPS antes de cambiar estado si aplica
@@ -73,11 +131,13 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
         await cambiarEstadoOT(ot.id, nuevoEstado, {
           notas_tecnico: notasTecnico || undefined,
           km_final: kmFinal ? parseInt(kmFinal, 10) : undefined,
+          motivo_no_firma: motivoNoFirma,
         });
 
         setOt((prev) => ({
           ...prev,
           estado: nuevoEstado,
+          motivo_no_firma: motivoNoFirma ?? prev.motivo_no_firma,
           hora_salida:   nuevoEstado === "EN_RUTA"    ? new Date().toISOString() : prev.hora_salida,
           hora_llegada:  nuevoEstado === "EN_SITIO"   ? new Date().toISOString() : prev.hora_llegada,
           hora_fin:      nuevoEstado === "COMPLETADA" ? new Date().toISOString() : prev.hora_fin,
@@ -103,6 +163,75 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
     });
     e.target.value = "";
   }
+
+  // Materiales del catálogo — Fase 9
+  function cantidadPendiente(materialId: string, unidad: string): string {
+    return cantidadesPendientes[materialId] ?? (unidad.toLowerCase() === "metros" ? "1" : "1");
+  }
+
+  function ajustarCantidadPendiente(materialId: string, unidad: string, delta: number) {
+    const actual = parseFloat(cantidadPendiente(materialId, unidad)) || 0;
+    const paso = unidad.toLowerCase() === "metros" ? 0.5 : 1;
+    const nueva = Math.max(paso, actual + delta * paso);
+    setCantidadesPendientes((prev) => ({ ...prev, [materialId]: String(nueva) }));
+  }
+
+  function handleAgregarMaterial(item: MaterialCatalogoItem) {
+    const cantidad = parseFloat(cantidadPendiente(item.id, item.unidad));
+    const validacion = validarCantidadMaterial(cantidad, item.unidad);
+    if (!validacion.valido) {
+      setError(validacion.error ?? "Cantidad inválida.");
+      return;
+    }
+    setError(null);
+    setMaterialPending(item.id);
+    startTransition(async () => {
+      try {
+        const registro = await agregarMaterialOT(ot.id, item.id, cantidad);
+        setMateriales((prev) => [
+          ...prev,
+          {
+            id: registro.id,
+            material_id: item.id,
+            nombre: item.nombre,
+            unidad: item.unidad,
+            cantidad: Number(registro.cantidad),
+            costo_unitario: registro.costo_unitario !== null ? Number(registro.costo_unitario) : null,
+          },
+        ]);
+        setCantidadesPendientes((prev) => ({ ...prev, [item.id]: "1" }));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Error agregando material");
+      } finally {
+        setMaterialPending(null);
+      }
+    });
+  }
+
+  function handleQuitarMaterial(id: string) {
+    setMaterialPending(id);
+    startTransition(async () => {
+      try {
+        await quitarMaterialOT(id);
+        setMateriales((prev) => prev.filter((m) => m.id !== id));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Error quitando material");
+      } finally {
+        setMaterialPending(null);
+      }
+    });
+  }
+
+  function agregarPresetNota(preset: string) {
+    setNotasTecnico((prev) => aplicarPresetNota(prev, preset));
+  }
+
+  const materialesFiltrados = catalogo.filter((m) =>
+    m.nombre.toLowerCase().includes(busquedaMaterial.trim().toLowerCase())
+  );
+  const costoTotalMateriales = calcularCostoTotalMateriales(
+    materiales.map((m) => ({ cantidad: m.cantidad, costo_unitario: m.costo_unitario }))
+  );
 
   // Canvas firma
   function iniciarTrazo(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -232,6 +361,14 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
             <div className="space-y-3">
               <div>
                 <label htmlFor="notas-tec" className="block text-xs text-slate-400 mb-1">Notas del trabajo (opcional)</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {NOTA_PRESETS.map((preset) => (
+                    <button key={preset} type="button" onClick={() => agregarPresetNota(preset)}
+                      className="min-h-[36px] px-3 rounded-full border border-slate-600 text-slate-300 text-xs hover:bg-slate-700 active:bg-slate-600 transition-colors">
+                      {preset}
+                    </button>
+                  ))}
+                </div>
                 <textarea id="notas-tec" value={notasTecnico} onChange={(e) => setNotasTecnico(e.target.value)}
                   rows={3} placeholder="Materiales usados, observaciones…"
                   className="w-full rounded-lg border border-slate-600 bg-slate-800 text-white px-3 py-2 text-sm resize-none focus:outline-none focus:outline-2 focus:outline-orange-500" />
@@ -258,6 +395,84 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
             <p className="text-xs text-emerald-600 mt-1">
               {new Date(ot.hora_fin).toLocaleString("es-AR")}
             </p>
+          )}
+        </div>
+      )}
+
+      {/* Materiales */}
+      {(ot.estado === "EN_SITIO" || completada) && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-slate-300">Materiales ({materiales.length})</p>
+            {materiales.length > 0 && (
+              <p className="text-xs text-slate-500">Total: ${costoTotalMateriales.toLocaleString("es-AR")}</p>
+            )}
+          </div>
+
+          {!completada && catalogo.length === 0 && (
+            <p className="text-xs text-slate-500 bg-slate-800/50 rounded-lg px-3 py-2">
+              Catálogo no disponible todavía — anotá los materiales en las notas del trabajo.
+            </p>
+          )}
+
+          {!completada && catalogo.length > 0 && (
+            <div className="rounded-xl bg-slate-800 border border-slate-700 p-3 space-y-2">
+              <input type="search" value={busquedaMaterial} onChange={(e) => setBusquedaMaterial(e.target.value)}
+                placeholder="Buscar material…" aria-label="Buscar material en el catálogo"
+                className="w-full rounded-lg border border-slate-600 bg-slate-900 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500" />
+              <div className="max-h-56 overflow-y-auto space-y-2">
+                {materialesFiltrados.length === 0 && (
+                  <p className="text-xs text-slate-500 py-2 text-center">Sin resultados.</p>
+                )}
+                {materialesFiltrados.map((item) => {
+                  const cantidadActual = cantidadPendiente(item.id, item.unidad);
+                  return (
+                    <div key={item.id} className="flex items-center gap-2 bg-slate-900 rounded-lg px-2 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white truncate">{item.nombre}</p>
+                        <p className="text-xs text-slate-500">{item.unidad}</p>
+                      </div>
+                      <button type="button" onClick={() => ajustarCantidadPendiente(item.id, item.unidad, -1)}
+                        aria-label={`Restar cantidad de ${item.nombre}`}
+                        className="w-9 h-9 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-lg leading-none">−</button>
+                      <span className="w-10 text-center text-sm text-white tabular-nums">{cantidadActual}</span>
+                      <button type="button" onClick={() => ajustarCantidadPendiente(item.id, item.unidad, 1)}
+                        aria-label={`Sumar cantidad de ${item.nombre}`}
+                        className="w-9 h-9 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-lg leading-none">+</button>
+                      <button type="button" onClick={() => handleAgregarMaterial(item)}
+                        disabled={materialPending === item.id}
+                        className="px-3 h-9 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium disabled:opacity-50">
+                        Agregar
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {materiales.length > 0 && (
+            <ul className="space-y-1.5">
+              {materiales.map((m) => (
+                <li key={m.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-800 border border-slate-700 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white truncate">{m.nombre}</p>
+                    <p className="text-xs text-slate-500">
+                      {m.cantidad} {m.unidad}
+                      {m.costo_unitario !== null && ` — $${(m.cantidad * m.costo_unitario).toLocaleString("es-AR")}`}
+                    </p>
+                  </div>
+                  {!completada && (
+                    <button type="button" onClick={() => handleQuitarMaterial(m.id)}
+                      disabled={materialPending === m.id}
+                      aria-label={`Quitar ${m.nombre}`}
+                      className="min-h-[36px] px-3 rounded-lg border border-red-800 text-red-400 text-xs hover:bg-red-900/30 disabled:opacity-50">
+                      Quitar
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}
@@ -332,7 +547,37 @@ export function OTCampoClient({ ot: otInicial }: { ot: OTData }) {
               ✍ Tomar firma del cliente
             </button>
           ) : (
-            <p className="text-xs text-slate-500">Sin firma registrada</p>
+            <div className="text-xs text-slate-500">
+              <p>Sin firma registrada</p>
+              {ot.motivo_no_firma && <p className="text-amber-400 mt-1">Motivo: {ot.motivo_no_firma}</p>}
+            </div>
+          )}
+
+          {/* Cliente ausente / rechazó firmar — habilita completar sin firma con motivo */}
+          {!completada && !ot.firma_cliente_url && (
+            <div className="rounded-xl bg-slate-800 border border-slate-700 p-3 space-y-2">
+              <label className="flex items-center gap-2 min-h-[44px] cursor-pointer">
+                <input type="checkbox" checked={clienteAusente}
+                  onChange={(e) => setClienteAusente(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-600 bg-slate-900 accent-orange-500" />
+                <span className="text-sm text-slate-300">Cliente ausente / rechazó firmar</span>
+              </label>
+              {clienteAusente && (
+                <div className="space-y-2 pl-1">
+                  <select value={motivoTipo} onChange={(e) => setMotivoTipo(e.target.value as typeof motivoTipo)}
+                    aria-label="Motivo por el que no se pudo firmar"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500">
+                    <option value="AUSENTE">Cliente ausente</option>
+                    <option value="RECHAZO">Cliente rechazó firmar</option>
+                    <option value="OTRO">Otro motivo</option>
+                  </select>
+                  <input type="text" value={motivoTexto} onChange={(e) => setMotivoTexto(e.target.value)}
+                    placeholder={motivoTipo === "OTRO" ? "Contá qué pasó (obligatorio)" : "Detalle adicional (opcional)"}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 text-white px-3 py-2 text-sm focus:outline-none focus:outline-2 focus:outline-orange-500" />
+                  <p className="text-xs text-slate-500">Vas a poder completar la OT sin firma con este motivo.</p>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

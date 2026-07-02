@@ -324,3 +324,102 @@ BEGIN
       ON DELETE RESTRICT ON UPDATE CASCADE;
   END IF;
 END$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Fase 9: catálogo de materiales + cierre de OT en campo
+--
+-- `ordenes_trabajo.materiales_usados` era un textarea libre (JSON no
+-- tipado) tipeado a mano desde el celular — sin catálogo ni costos. Este
+-- catálogo tipado (`materiales_catalogo` + `materiales_usados_ot`) permite
+-- elegir de una lista con costo de referencia; el campo legacy NO se borra,
+-- sigue siendo el fallback si el catálogo está vacío (ver OTCampoClient.tsx).
+--
+-- `motivo_no_firma` registra por qué se completó una OT sin firma (cliente
+-- ausente / rechazó firmar) — `conformidad_firmada` sigue en false en ese
+-- caso, este campo documenta el motivo, no reemplaza la firma.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+ALTER TABLE "ordenes_trabajo"
+  ADD COLUMN IF NOT EXISTS "motivo_no_firma" TEXT;
+
+CREATE TABLE IF NOT EXISTS "materiales_catalogo" (
+  "id"                TEXT NOT NULL,
+  "nombre"            TEXT NOT NULL,
+  "unidad"            TEXT NOT NULL DEFAULT 'unidad',
+  "costo_referencia"  DECIMAL(10,2),
+  "activo"            BOOLEAN NOT NULL DEFAULT true,
+
+  CONSTRAINT "materiales_catalogo_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "materiales_usados_ot" (
+  "id"             TEXT NOT NULL,
+  "ot_id"          TEXT NOT NULL,
+  "material_id"    TEXT NOT NULL,
+  "cantidad"       DECIMAL(10,2) NOT NULL,
+  "costo_unitario" DECIMAL(10,2),
+  "created_at"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT "materiales_usados_ot_pkey" PRIMARY KEY ("id")
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'materiales_usados_ot' AND indexname = 'materiales_usados_ot_ot_id_idx'
+  ) THEN
+    CREATE INDEX "materiales_usados_ot_ot_id_idx" ON "materiales_usados_ot"("ot_id");
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'materiales_usados_ot_ot_id_fkey'
+  ) THEN
+    ALTER TABLE "materiales_usados_ot"
+      ADD CONSTRAINT "materiales_usados_ot_ot_id_fkey"
+      FOREIGN KEY ("ot_id") REFERENCES "ordenes_trabajo"("id")
+      ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'materiales_usados_ot_material_id_fkey'
+  ) THEN
+    ALTER TABLE "materiales_usados_ot"
+      ADD CONSTRAINT "materiales_usados_ot_material_id_fkey"
+      FOREIGN KEY ("material_id") REFERENCES "materiales_catalogo"("id")
+      ON DELETE RESTRICT ON UPDATE CASCADE;
+  END IF;
+END$$;
+
+-- Seed: materiales típicos de una instalación de alarma. Idempotente por
+-- nombre (WHERE NOT EXISTS) — correr este script más de una vez no duplica
+-- filas ni pisa ediciones manuales de costo hechas después desde /admin.
+INSERT INTO "materiales_catalogo" ("id", "nombre", "unidad")
+SELECT gen_random_uuid(), v.nombre, v.unidad
+FROM (VALUES
+  ('Sensor PIR',             'unidad'),
+  ('Contacto magnético',     'unidad'),
+  ('Sirena interior',        'unidad'),
+  ('Sirena exterior',        'unidad'),
+  ('Batería 12V 7Ah',        'unidad'),
+  ('Transformador',          'unidad'),
+  ('Gabinete',               'unidad'),
+  ('Teclado',                'unidad'),
+  ('Cable 2x0.75',           'metros'),
+  ('Cable UTP',              'metros'),
+  ('Canaleta',               'metros'),
+  ('Tornillos/tarugos',      'juego'),
+  ('Módulo GPRS',            'unidad'),
+  ('Control remoto',         'unidad'),
+  ('Cámara IP',              'unidad'),
+  ('Fuente 12V',             'unidad')
+) AS v(nombre, unidad)
+WHERE NOT EXISTS (
+  SELECT 1 FROM "materiales_catalogo" mc WHERE mc.nombre = v.nombre
+);

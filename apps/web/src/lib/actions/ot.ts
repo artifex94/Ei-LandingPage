@@ -12,6 +12,8 @@ import { UUID_RE } from "@/lib/constants/validation";
 import { registrarAuditTx } from "@/lib/audit";
 import { construirDatosOTDesdeSolicitud, type OverridesOT } from "@/lib/ot-desde-solicitud";
 import { evaluarConflictosAgenda } from "@/lib/agenda-conflictos";
+import { validarCantidadMaterial } from "@/lib/ot-materiales";
+import type { Perfil } from "@/generated/prisma/client";
 
 const MESES_ES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const ESTADOS_OT_VALIDOS = new Set(["SOLICITADA","ASIGNADA","EN_RUTA","EN_SITIO","COMPLETADA","CANCELADA"]);
@@ -42,6 +44,19 @@ async function getUsuario() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   return prisma.perfil.findUnique({ where: { id: user.id } });
+}
+
+// El técnico solo opera sus propias OTs; ADMIN opera cualquiera. Mismo
+// criterio que `esTecnicoAsignado` en /tecnico/ot/[id]/page.tsx, aplicado acá
+// del lado del servidor (la action no puede confiar en el guard de la page).
+async function verificarOwnershipOT(ot_id: string, usuario: Perfil) {
+  if (usuario.rol === "ADMIN") return;
+  const ot = await prisma.ordenTrabajo.findUnique({
+    where: { id: ot_id },
+    select: { tecnico: { select: { perfil_id: true } } },
+  });
+  if (!ot) throw new Error("OT no encontrada");
+  if (ot.tecnico?.perfil_id !== usuario.id) throw new Error("No autorizado: esta OT no es tuya.");
 }
 
 // ── Crear OT (admin o cliente) ────────────────────────────────────────────────
@@ -285,6 +300,7 @@ export async function cambiarEstadoOT(
     km_final?: number;
     satisfaccion?: number;
     satisfaccion_comentario?: string;
+    motivo_no_firma?: string;
   }
 ) {
   if (!UUID_RE.test(ot_id)) throw new Error("ID de OT inválido.");
@@ -300,6 +316,9 @@ export async function cambiarEstadoOT(
   }
   if (extra?.notas_tecnico && extra.notas_tecnico.length > 2000) {
     throw new Error("Las notas no pueden superar los 2000 caracteres.");
+  }
+  if (extra?.motivo_no_firma && extra.motivo_no_firma.length > 500) {
+    throw new Error("El motivo de no firma no puede superar los 500 caracteres.");
   }
 
   const otAntes = await prisma.ordenTrabajo.findUnique({ where: { id: ot_id } });
@@ -328,6 +347,11 @@ export async function cambiarEstadoOT(
       updateData.satisfaccion_cliente    = extra.satisfaccion;
       updateData.satisfaccion_comentario = extra.satisfaccion_comentario?.trim() ?? null;
     }
+    // Cliente ausente / rechazó firmar: se completa igual, dejando registrado
+    // el motivo. conformidad_firmada queda tal cual esté (false si nunca se
+    // tomó firma) — este campo no la reemplaza, documenta por qué falta.
+    const motivoTrimmed = extra?.motivo_no_firma?.trim();
+    if (motivoTrimmed) updateData.motivo_no_firma = motivoTrimmed;
   }
 
   const ot = await prisma.ordenTrabajo.update({
@@ -531,4 +555,57 @@ export async function actualizarOT(
   revalidatePath("/admin/ot");
   revalidatePath(`/admin/ot/${ot_id}`);
   return ot;
+}
+
+// ── Materiales desde catálogo (técnico o admin) — Fase 9 ─────────────────────
+// Complementa (no reemplaza) el textarea legacy `materiales_usados`.
+
+export async function agregarMaterialOT(ot_id: string, material_id: string, cantidad: number) {
+  if (!UUID_RE.test(ot_id)) throw new Error("ID de OT inválido.");
+  if (!UUID_RE.test(material_id)) throw new Error("ID de material inválido.");
+  const usuario = await getUsuario();
+  if (!usuario) throw new Error("No autorizado");
+
+  await verificarOwnershipOT(ot_id, usuario);
+
+  const material = await prisma.materialCatalogo.findUnique({ where: { id: material_id } });
+  if (!material || !material.activo) throw new Error("Material no disponible en el catálogo.");
+
+  const validacion = validarCantidadMaterial(cantidad, material.unidad);
+  if (!validacion.valido) throw new Error(validacion.error);
+
+  const registro = await prisma.materialUsadoOT.create({
+    data: {
+      ot_id,
+      material_id,
+      cantidad,
+      // Snapshot: si el costo de referencia cambia después, esta línea no se ve afectada.
+      costo_unitario: material.costo_referencia ?? null,
+    },
+    include: { material: true },
+  });
+
+  revalidatePath(`/tecnico/ot/${ot_id}`);
+  revalidatePath(`/admin/ot/${ot_id}`);
+  return registro;
+}
+
+export async function quitarMaterialOT(id: string) {
+  if (!UUID_RE.test(id)) throw new Error("ID inválido.");
+  const usuario = await getUsuario();
+  if (!usuario) throw new Error("No autorizado");
+
+  const registro = await prisma.materialUsadoOT.findUnique({
+    where: { id },
+    select: { ot_id: true },
+  });
+  if (!registro) throw new Error("Registro no encontrado.");
+
+  await verificarOwnershipOT(registro.ot_id, usuario);
+
+  await prisma.materialUsadoOT.delete({ where: { id } });
+
+  revalidatePath(`/tecnico/ot/${registro.ot_id}`);
+  revalidatePath(`/admin/ot/${registro.ot_id}`);
+  return { ot_id: registro.ot_id };
 }

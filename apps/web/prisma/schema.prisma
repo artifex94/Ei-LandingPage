@@ -723,6 +723,7 @@ model OrdenTrabajo {
   fotos_urls              String?    // JSON array de URLs
   notas_admin             String?
   notas_tecnico           String?
+  motivo_no_firma         String?    // Fase 9: por qué se completó sin firma (AUSENTE | RECHAZO | OTRO + texto), cuando conformidad_firmada queda en false
   st_softguard_numero     Int?       // espejo del Nº en SoftGuard ST si se promovió
   gps_salida_lat          Decimal?   @db.Decimal(9, 6)
   gps_salida_lng          Decimal?   @db.Decimal(9, 6)
@@ -738,12 +739,52 @@ model OrdenTrabajo {
   reservas_vehiculo ReservaVehiculo[]
   tarea             TareaAgendada?    @relation("OTTarea")
   solicitud         SolicitudMantenimiento? // back-relation Fase 2: solicitud que originó esta OT (si vino de una conversión)
+  materiales        MaterialUsadoOT[] // Fase 9: catálogo tipado — complementa (no reemplaza) `materiales_usados`
 
   @@index([estado])
   @@index([tecnico_id, fecha_visita])
   @@index([cuenta_id])
   @@index([perfil_id])
   @@map("ordenes_trabajo")
+}
+
+// ─────────────────────────────────────────────────────────────
+// FASE 9 — CATÁLOGO DE MATERIALES (cierre de OT en campo)
+// ─────────────────────────────────────────────────────────────
+// `OrdenTrabajo.materiales_usados` era un textarea libre (JSON no tipado)
+// tipeado a mano desde el celular — sin catálogo ni costos, imposible de
+// agregar para reportes. Este catálogo permite elegir de una lista con
+// costo de referencia. El campo legacy NO se borra: sigue siendo el
+// fallback si el catálogo todavía está vacío (p.ej. antes de correr el
+// seed) — ver `OTCampoClient.tsx`.
+
+model MaterialCatalogo {
+  id               String   @id @default(uuid())
+  nombre           String
+  unidad           String   @default("unidad") // "unidad" | "metros" | "juego" — determina si la cantidad admite decimales
+  costo_referencia Decimal? @db.Decimal(10, 2)
+  activo           Boolean  @default(true)
+
+  usos MaterialUsadoOT[]
+
+  @@map("materiales_catalogo")
+}
+
+// Snapshot de costo al momento de usar el material: `costo_unitario` se
+// copia de `MaterialCatalogo.costo_referencia` al agregar, así si el precio
+// de referencia cambia después el histórico de esta OT no se ve afectado.
+model MaterialUsadoOT {
+  id             String           @id @default(uuid())
+  ot_id          String
+  ot             OrdenTrabajo     @relation(fields: [ot_id], references: [id], onDelete: Cascade)
+  material_id    String
+  material       MaterialCatalogo @relation(fields: [material_id], references: [id])
+  cantidad       Decimal          @db.Decimal(10, 2)
+  costo_unitario Decimal?         @db.Decimal(10, 2)
+  created_at     DateTime         @default(now())
+
+  @@index([ot_id])
+  @@map("materiales_usados_ot")
 }
 
 // ─────────────────────────────────────────────────────────────

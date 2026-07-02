@@ -48,6 +48,22 @@ export default async function TecnicoOTPage({
 
   const fotos: string[] = ot.fotos_urls ? JSON.parse(ot.fotos_urls) : [];
 
+  // Catálogo de materiales — pre-migración (tablas nuevas todavía no
+  // aplicadas en producción) la query falla; se degrada a [] y el cliente
+  // cae al textarea legacy `materiales_usados`.
+  const [catalogo, materialesUsados] = await Promise.all([
+    prisma.materialCatalogo.findMany({
+      where: { activo: true },
+      orderBy: { nombre: "asc" },
+      select: { id: true, nombre: true, unidad: true },
+    }).catch(() => []),
+    prisma.materialUsadoOT.findMany({
+      where: { ot_id: id },
+      orderBy: { created_at: "asc" },
+      include: { material: { select: { nombre: true, unidad: true } } },
+    }).catch(() => []),
+  ]);
+
   return (
     <OTCampoClient
       ot={{
@@ -70,6 +86,15 @@ export default async function TecnicoOTPage({
           ? `${ot.cuenta.calle}, ${ot.cuenta.localidad ?? ""}`
           : null,
       }}
+      catalogo={catalogo}
+      materialesInicial={materialesUsados.map((m) => ({
+        id: m.id,
+        material_id: m.material_id,
+        nombre: m.material.nombre,
+        unidad: m.material.unidad,
+        cantidad: Number(m.cantidad),
+        costo_unitario: m.costo_unitario !== null ? Number(m.costo_unitario) : null,
+      }))}
     />
   );
 }

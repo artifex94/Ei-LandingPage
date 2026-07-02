@@ -8,6 +8,7 @@ import { CambiarEstadoOTButtons } from "@/components/admin/ot/CambiarEstadoOTBut
 import { EstadoSerTecCard } from "@/components/admin/ot/EstadoSerTecCard";
 
 import { UUID_RE } from "@/lib/constants/validation";
+import { calcularCostoTotalMateriales } from "@/lib/ot-materiales";
 
 export const metadata: Metadata = { title: "Detalle de OT" };
 
@@ -32,7 +33,7 @@ export default async function OTDetallePage({
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const [ot, tecnicos] = await Promise.all([
+  const [ot, tecnicos, materialesUsados] = await Promise.all([
     prisma.ordenTrabajo.findUnique({
       where: { id },
       include: {
@@ -46,6 +47,13 @@ export default async function OTDetallePage({
       where: { activo: true, puede_instalar: true },
       include: { perfil: { select: { nombre: true } } },
     }),
+    // Pre-migración (tabla nueva todavía no aplicada) la query falla — se
+    // degrada a [] y la vista cae al campo legacy `materiales_usados`.
+    prisma.materialUsadoOT.findMany({
+      where: { ot_id: id },
+      orderBy: { created_at: "asc" },
+      include: { material: { select: { nombre: true, unidad: true } } },
+    }).catch(() => []),
   ]);
 
   if (!ot) notFound();
@@ -54,6 +62,12 @@ export default async function OTDetallePage({
   const clienteTelefono = ot.cuenta?.perfil.telefono ?? ot.perfil?.telefono ?? null;
   const fotos: string[] = ot.fotos_urls ? JSON.parse(ot.fotos_urls) : [];
   const reserva = ot.reservas_vehiculo[0] ?? null;
+  const costoTotalMateriales = calcularCostoTotalMateriales(
+    materialesUsados.map((m) => ({
+      cantidad: Number(m.cantidad),
+      costo_unitario: m.costo_unitario !== null ? Number(m.costo_unitario) : null,
+    }))
+  );
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -225,7 +239,7 @@ export default async function OTDetallePage({
       )}
 
       {/* Firma */}
-      {ot.firma_cliente_url && (
+      {ot.firma_cliente_url ? (
         <Card titulo="Firma del cliente">
           <div className="bg-white rounded-lg p-2 inline-block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -233,7 +247,55 @@ export default async function OTDetallePage({
           </div>
           <p className="text-xs text-emerald-400 mt-2">Conformidad firmada</p>
         </Card>
-      )}
+      ) : ot.motivo_no_firma ? (
+        <Card titulo="Firma del cliente">
+          <p className="text-sm text-amber-400">Sin firma — {ot.motivo_no_firma}</p>
+        </Card>
+      ) : null}
+
+      {/* Materiales */}
+      {materialesUsados.length > 0 ? (
+        <Card titulo={`Materiales (${materialesUsados.length})`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-slate-500">
+                  <th className="pb-1 pr-2 font-medium">Material</th>
+                  <th className="pb-1 pr-2 font-medium">Cantidad</th>
+                  <th className="pb-1 font-medium text-right">Costo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {materialesUsados.map((m) => {
+                  const cantidad = Number(m.cantidad);
+                  const costoUnitario = m.costo_unitario !== null ? Number(m.costo_unitario) : null;
+                  return (
+                    <tr key={m.id} className="border-t border-slate-800">
+                      <td className="py-1.5 pr-2 text-white">{m.material.nombre}</td>
+                      <td className="py-1.5 pr-2 text-slate-300">{cantidad} {m.material.unidad}</td>
+                      <td className="py-1.5 text-right text-slate-300">
+                        {costoUnitario !== null ? `$${(cantidad * costoUnitario).toLocaleString("es-AR")}` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-slate-700">
+                  <td colSpan={2} className="pt-1.5 text-xs text-slate-400">Total</td>
+                  <td className="pt-1.5 text-right text-sm font-semibold text-white">
+                    ${costoTotalMateriales.toLocaleString("es-AR")}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+      ) : ot.materiales_usados ? (
+        <Card titulo="Materiales (legacy)">
+          <p className="text-sm text-slate-300 whitespace-pre-wrap">{ot.materiales_usados}</p>
+        </Card>
+      ) : null}
 
       {/* Notas */}
       {(ot.notas_admin || ot.notas_tecnico) && (
