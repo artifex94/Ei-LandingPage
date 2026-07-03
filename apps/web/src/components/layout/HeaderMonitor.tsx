@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MousePointer2, Pointer, TextCursor } from "lucide-react";
+import {
+  CursorFlechaWin,
+  CursorManitoWin,
+  CursorTextoWin,
+} from "@/components/layout/CursoresWindows";
 import {
   MONITOR,
   calcularDesvioCursor,
@@ -260,9 +264,9 @@ export default function HeaderMonitor() {
             data-cctv-cursor
             data-tipo="default"
           >
-            <MousePointer2 className="cctv-cursor-default" />
-            <Pointer className="cctv-cursor-pointer" />
-            <TextCursor className="cctv-cursor-text" />
+            <CursorFlechaWin className="cctv-cursor-default" />
+            <CursorManitoWin className="cctv-cursor-pointer" />
+            <CursorTextoWin className="cctv-cursor-text" />
           </div>
           <div className="cctv-overlay cctv-hud font-mono">
             <span className="cctv-rec">REC</span>

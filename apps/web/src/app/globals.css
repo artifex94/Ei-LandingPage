@@ -407,17 +407,15 @@
    HeaderMonitor con el cursor computado del elemento bajo el mouse). El
    hotspot de cada forma coincide con el punto rastreado: punta de la flecha,
    yema del dedo, centro del I-beam. */
+/* Los colores viven en los SVG (CursoresWindows: cuerpo blanco + contorno
+   oscuro, esquema del set clásico) — acá solo tamaño/posición/visibilidad. */
 .cctv-cursor svg {
   position: absolute;
   left: 50%;
   top: 50%;
   display: none;
-  width: 10px;
-  height: 10px;
-  color: #f8fafc;
-  fill: #f8fafc;
-  stroke: #0f172a;
-  stroke-width: 1.5;
+  width: 11px;
+  height: 11px;
   filter: drop-shadow(0 1px 1px rgba(2, 6, 23, 0.9));
 }
 
@@ -433,7 +431,6 @@
 
 .cctv-cursor .cctv-cursor-text {
   transform: translate(-50%, -50%);
-  fill: none;
 }
 
 .cctv-hud {
