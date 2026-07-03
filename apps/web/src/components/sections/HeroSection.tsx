@@ -1,19 +1,15 @@
 import Link from "next/link";
 import { ChevronRight, ShieldCheck } from "lucide-react";
 import HeroServiceMonitor from "./HeroServiceMonitor";
-
-const stats = [
-  { value: "26 años", label: "en el sector" },
-  { value: "+100", label: "clientes y creciendo" },
-  { value: "Respuesta", label: "inmediata ante el evento" },
-];
+import StatCounter from "@/components/ui/StatCounter";
+import { landingStats } from "@/config/landing";
 
 export default function HeroSection() {
   return (
     <section
       id="inicio"
       aria-labelledby="hero-heading"
-      className="relative flex items-center overflow-hidden bg-slate-950 pt-20 text-white lg:min-h-screen lg:pt-24"
+      className="relative flex items-center overflow-clip bg-slate-950 pt-20 text-white lg:min-h-screen lg:pt-24"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,#020617_0%,#0f172a_54%,#111827_100%)]" />
@@ -69,9 +65,15 @@ export default function HeroSection() {
           </div>
 
           <dl className="hero-enter hero-enter-delay-3 mx-auto mt-9 grid max-w-md grid-cols-3 divide-x divide-white/10 border-y border-white/10 py-4 lg:mx-0">
-            {stats.map((item) => (
+            {landingStats.map((item) => (
               <div key={item.label} className="px-3 text-center sm:px-4 lg:text-left">
-                <dd className="text-xl font-black text-white sm:text-2xl">{item.value}</dd>
+                <dd className="text-xl font-black text-white sm:text-2xl">
+                  {item.kind === "count" ? (
+                    <StatCounter to={item.to} prefix={item.prefix} suffix={item.suffix} />
+                  ) : (
+                    item.value
+                  )}
+                </dd>
                 <dd className="mt-1 text-xs leading-4 text-slate-400">{item.label}</dd>
               </div>
             ))}

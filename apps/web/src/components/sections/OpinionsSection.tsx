@@ -22,7 +22,7 @@ export default function OpinionsSection() {
     <section
       id="opiniones"
       aria-labelledby="opinions-heading"
-      className="relative scroll-mt-24 overflow-hidden bg-slate-950 py-16 text-white sm:py-20"
+      className="relative scroll-mt-24 overflow-clip bg-slate-950 py-16 text-white sm:py-20"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(241,119,32,0.10),transparent_32%)]" />
       <div
@@ -34,7 +34,7 @@ export default function OpinionsSection() {
           <p className="mb-3 text-sm font-black uppercase tracking-[0.25em] text-orange-400">Opiniones</p>
           <h2
             id="opinions-heading"
-            className="text-balance text-2xl font-black tracking-tight sm:text-3xl md:text-4xl"
+            className="hud-title text-balance text-2xl font-black tracking-tight sm:text-3xl md:text-4xl"
           >
             Lo que dicen quienes ya nos eligen
           </h2>

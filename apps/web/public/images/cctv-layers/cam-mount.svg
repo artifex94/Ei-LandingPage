@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#64748b"/>
+      <stop offset="0.28" stop-color="#475569"/>
+      <stop offset="1" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#64748b"/>
+      <stop offset="0.45" stop-color="#334155"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <radialGradient id="bolt" cx="35%" cy="28%" r="70%">
+      <stop offset="0" stop-color="#94a3b8"/>
+      <stop offset="0.35" stop-color="#64748b"/>
+      <stop offset="1" stop-color="#334155"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Static retro ceiling mount only. Hinge rotation center is exactly (409.6, 307.2). -->
+  <g>
+    <!-- top plate, flush to canvas top edge -->
+    <path d="M308 0 H532 Q548 0 548 16 V70 Q548 86 532 86 H308 Q292 86 292 70 V16 Q292 0 308 0 Z" fill="url(#plate)"/>
+    <path d="M315 15 H525" stroke="#94a3b8" stroke-width="8" stroke-linecap="round" opacity="0.45"/>
+    <path d="M315 72 H525" stroke="#1e293b" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+    <circle cx="342" cy="45" r="15" fill="#334155" stroke="#64748b" stroke-width="7"/>
+    <circle cx="506" cy="45" r="15" fill="#334155" stroke="#64748b" stroke-width="7"/>
+
+    <!-- short straight arm -->
+    <rect x="384" y="72" width="52" height="174" rx="22" fill="url(#side)"/>
+    <path d="M399 88 V225" stroke="#94a3b8" stroke-width="8" stroke-linecap="round" opacity="0.34"/>
+    <path d="M429 96 V225" stroke="#1e293b" stroke-width="8" stroke-linecap="round" opacity="0.42"/>
+
+    <!-- lower fork around the hinge -->
+    <path d="M356 224 H464 Q482 224 482 242 V297 Q482 315 464 315 H442 V282 H459 V260 H360 V282 H377 V315 H356 Q338 315 338 297 V242 Q338 224 356 224 Z" fill="url(#side)"/>
+    <path d="M356 242 H462" stroke="#94a3b8" stroke-width="7" stroke-linecap="round" opacity="0.3"/>
+
+    <!-- chunky 70s industrial hinge/knuckle, not a ball joint -->
+    <circle cx="409.6" cy="307.2" r="64" fill="#334155" stroke="#64748b" stroke-width="12"/>
+    <circle cx="409.6" cy="307.2" r="39" fill="url(#bolt)" stroke="#1e293b" stroke-width="9"/>
+    <!-- big flat screw head slot -->
+    <path d="M378 307.2 H441" stroke="#1e293b" stroke-width="11" stroke-linecap="round"/>
+    <path d="M382 288 Q409 270 438 286" stroke="#94a3b8" stroke-width="8" stroke-linecap="round" opacity="0.35" fill="none"/>
+    <!-- single orange accent washer on hinge side -->
+    <path d="M356 326 Q410 370 464 326" stroke="#f17720" stroke-width="8" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

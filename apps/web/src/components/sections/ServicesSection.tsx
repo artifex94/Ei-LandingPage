@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   Bell,
   Camera,
@@ -82,7 +82,7 @@ export default function ServicesSection() {
     <section
       id="servicios"
       aria-labelledby="services-heading"
-      className="relative overflow-hidden bg-slate-950 py-16 text-white sm:py-20"
+      className="relative overflow-clip bg-slate-950 py-16 text-white sm:py-20"
     >
       <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-orange-500/8 to-transparent" />
       <div
@@ -97,7 +97,7 @@ export default function ServicesSection() {
             </p>
             <h2
               id="services-heading"
-              className="text-balance text-3xl font-black tracking-tight md:text-4xl"
+              className="hud-title text-balance text-3xl font-black tracking-tight md:text-4xl"
             >
               Qué instalamos y monitoreamos
             </h2>
@@ -117,10 +117,11 @@ export default function ServicesSection() {
 
         {/* Desktop: grilla completa, todo a la vista */}
         <div className="hidden gap-5 md:grid md:grid-cols-2 lg:grid-cols-3">
-          {services.map(({ title, desc, image, imageAlt, icon: Icon, features }) => (
+          {services.map(({ title, desc, image, imageAlt, icon: Icon, features }, index) => (
             <article
               key={title}
-              className="reveal-on-scroll group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65 transition duration-200 hover:border-orange-400/35 hover:bg-slate-900"
+              className="reveal-item group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65 transition duration-200 hover:border-orange-400/35 hover:bg-slate-900"
+              style={{ "--i": index } as CSSProperties}
             >
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-orange-400/70 to-transparent opacity-0 transition group-hover:opacity-100" />
               <div className="relative h-36 overflow-hidden border-b border-white/10">
@@ -161,7 +162,8 @@ export default function ServicesSection() {
               type="button"
               onClick={() => setActive(index)}
               aria-haspopup="dialog"
-              className="reveal-on-scroll group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65 p-4 text-left transition duration-200 hover:border-orange-400/35 hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              className="reveal-item group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65 p-4 text-left transition duration-200 hover:border-orange-400/35 hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              style={{ "--i": index } as CSSProperties}
             >
               <span className="pointer-events-none absolute inset-0 opacity-15">
                 <Image src={image} alt="" fill unoptimized sizes="100vw" className="object-cover" />

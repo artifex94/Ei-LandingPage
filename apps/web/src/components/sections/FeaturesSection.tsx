@@ -1,11 +1,8 @@
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import { Activity, Eye, Headphones, MapPin, ShieldCheck } from "lucide-react";
-
-const proof = [
-  { value: "26 años", label: "en el sector" },
-  { value: "+100", label: "clientes y creciendo" },
-  { value: "Respuesta", label: "inmediata ante el evento" },
-];
+import StatCounter from "@/components/ui/StatCounter";
+import { landingStats } from "@/config/landing";
 
 const capabilities = [
   {
@@ -35,7 +32,7 @@ export default function FeaturesSection() {
     <section
       id="nosotros"
       aria-labelledby="features-heading"
-      className="relative overflow-hidden bg-slate-900 py-12 sm:py-20"
+      className="relative overflow-clip bg-slate-900 py-12 sm:py-20"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_12%,rgba(241,119,32,0.10),transparent_32%)]" />
       <div
@@ -49,7 +46,7 @@ export default function FeaturesSection() {
           </p>
           <h2
             id="features-heading"
-            className="text-balance text-2xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl"
+            className="hud-title text-balance text-2xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl"
           >
             De la evaluación al soporte
           </h2>
@@ -58,13 +55,20 @@ export default function FeaturesSection() {
           </p>
         </div>
 
-        <dl className="reveal-on-scroll mb-4 grid grid-cols-3 gap-3 sm:max-w-2xl">
-          {proof.map((item) => (
+        <dl className="mb-4 grid grid-cols-3 gap-3 sm:max-w-2xl">
+          {landingStats.map((item, index) => (
             <div
               key={item.label}
-              className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-center sm:text-left"
+              className="reveal-item rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-center sm:text-left"
+              style={{ "--i": index } as CSSProperties}
             >
-              <dt className="text-2xl font-black text-white sm:text-3xl">{item.value}</dt>
+              <dt className="text-2xl font-black text-white sm:text-3xl">
+                {item.kind === "count" ? (
+                  <StatCounter to={item.to} prefix={item.prefix} suffix={item.suffix} />
+                ) : (
+                  item.value
+                )}
+              </dt>
               <dd className="mt-1 text-xs leading-4 text-slate-400">{item.label}</dd>
             </div>
           ))}
@@ -113,11 +117,12 @@ export default function FeaturesSection() {
             </figcaption>
           </figure>
 
-          <div className="reveal-on-scroll grid overflow-hidden rounded-2xl border border-white/10 bg-slate-950/35 sm:grid-cols-2">
-            {capabilities.map(({ icon: Icon, title, desc }) => (
+          <div className="grid overflow-clip rounded-2xl border border-white/10 bg-slate-950/35 sm:grid-cols-2">
+            {capabilities.map(({ icon: Icon, title, desc }, index) => (
               <article
                 key={title}
-                className="border-b border-white/10 p-4 last:border-b-0 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(n+3)]:border-b-0"
+                className="reveal-item border-b border-white/10 p-4 last:border-b-0 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(n+3)]:border-b-0"
+                style={{ "--i": index } as CSSProperties}
               >
                 <Icon className="h-5 w-5 text-orange-300" aria-hidden="true" />
                 <h3 className="mt-3 text-sm font-bold text-white">{title}</h3>

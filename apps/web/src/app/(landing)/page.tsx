@@ -9,6 +9,7 @@ import EmpezaSection from "@/components/sections/EmpezaSection";
 import ContactSection from "@/components/sections/ContactSection";
 import Footer from "@/components/layout/Footer";
 import FloatingWhatsApp from "@/components/layout/FloatingWhatsApp";
+import ScrollRevealFallback from "@/components/layout/ScrollRevealFallback";
 import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
@@ -112,9 +113,12 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="font-sans text-slate-800 bg-slate-900 min-h-screen overflow-x-hidden selection:bg-orange-500 selection:text-white">
+      {/* overflow-x-clip (no hidden): hidden crea un scroll container y las
+          view timelines de los reveals quedarían medidas contra él (congeladas). */}
+      <div className="font-sans text-slate-800 bg-slate-900 min-h-screen overflow-x-clip selection:bg-orange-500 selection:text-white">
         <Navbar />
-        <main>
+        {/* data-cctv-source: el HeaderMonitor del navbar clona este árbol */}
+        <main data-cctv-source>
           <HeroSection />
           <PortalSection />
           <ServicesSection />
@@ -125,6 +129,7 @@ export default function Home() {
           <Footer />
         </main>
         <FloatingWhatsApp />
+        <ScrollRevealFallback />
       </div>
     </>
   );

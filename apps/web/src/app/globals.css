@@ -247,13 +247,216 @@
 }
 
 @keyframes editorial-reveal {
-  from { opacity: 0.35; transform: translateY(32px); }
+  from { opacity: 0; transform: translateY(40px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes image-reveal {
-  from { opacity: 0.5; clip-path: inset(8% 0 8% 0 round 1rem); transform: scale(0.985); }
+  from { opacity: 0.4; clip-path: inset(14% 0 14% 0 round 1rem); transform: scale(0.965); }
   to { opacity: 1; clip-path: inset(0 0 0 0 round 1rem); transform: scale(1); }
+}
+
+/* Barrido de scanline bajo los títulos de sección: el panel "dibuja" la línea
+   una sola vez al entrar en vista. */
+@keyframes hud-underline {
+  from { transform: scaleX(0); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: scaleX(1); opacity: 0.9; }
+}
+
+/* Cierre del count-up de stats: micro-pop con destello naranja que se apaga,
+   como un readout que fija señal. */
+@keyframes stat-settle {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.06); text-shadow: 0 0 14px rgba(241, 119, 32, 0.55); }
+  100% { transform: scale(1); text-shadow: 0 0 0 rgba(241, 119, 32, 0); }
+}
+
+/* Layout del counter (no es motion, va fuera de los media queries): dos copias
+   apiladas en la misma celda — la invisible reserva el ancho del valor final. */
+.stat-figure { display: inline-grid; white-space: nowrap; }
+.stat-figure > * { grid-area: 1 / 1; }
+
+/* ── Cámara de vigilancia del header (HeaderCamera) ──────────────────────── */
+
+/* Haz de luz cónico: círculo centrado en la punta del lente del que solo se
+   ve la porción (torta conic) que apunta en la dirección del barril
+   (--cam-beam-dir, la setea el componente desde A0: 90deg + inclinación).
+   La máscara radial atenúa la luz con la distancia, como una linterna. */
+.cam-flash {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from calc(var(--cam-beam-dir, 120deg) - 20deg),
+    transparent 0deg,
+    rgba(241, 119, 32, 0.7) 10deg,
+    rgba(255, 236, 200, 0.95) 20deg,
+    rgba(241, 119, 32, 0.7) 30deg,
+    transparent 40deg
+  );
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.55) 42%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.55) 42%, transparent 72%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 320ms ease-out;
+}
+
+.cam-led {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #ffe4c4;
+  box-shadow: 0 0 12px 4px rgba(241, 119, 32, 0.9);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 320ms ease-out;
+}
+
+/* Presionado: encendido instantáneo (sin transición de entrada); al soltar,
+   la regla base retoma y la luz se desvanece en 320ms. */
+.cam-on {
+  opacity: 1;
+  transition: none;
+}
+
+/* ── Monitor CCTV del navbar (HeaderMonitor) ─────────────────────────────── */
+
+.cctv-monitor {
+  position: relative;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #020617;
+  padding: 3px;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.8);
+}
+
+.cctv-screen {
+  position: relative;
+  overflow: clip;
+  border-radius: 0.3rem;
+  background: #0f172a;
+  /* Look de cámara de seguridad: desaturado, algo quemado */
+  filter: saturate(0.35) contrast(1.15) brightness(0.85);
+}
+
+.cctv-clone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Congelar toda vida dentro del clon: es una señal, no una página. */
+.cctv-clone *,
+.cctv-clone *::before,
+.cctv-clone *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Los reveals de scroll arrancan en opacity 0 / desplazados — dentro del clon
+   deben verse asentados. */
+.cctv-clone .reveal-on-scroll,
+.cctv-clone .reveal-item,
+.cctv-clone .image-reveal,
+.cctv-clone .hero-enter,
+.cctv-clone .hero-enter-delay-1,
+.cctv-clone .hero-enter-delay-2,
+.cctv-clone .hero-enter-delay-3 {
+  opacity: 1 !important;
+  transform: none !important;
+  clip-path: none !important;
+}
+
+/* Los overlays de estática/scan del hero viven invisibles gracias al fill de
+   su animación: al congelar animaciones reaparecerían tapando el feed. */
+.cctv-clone .tv-static,
+.cctv-clone .monitor-scan,
+.cctv-clone .tv-tuning {
+  opacity: 0 !important;
+}
+
+.cctv-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cctv-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.28) 0px,
+    rgba(0, 0, 0, 0.28) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+}
+
+.cctv-vignette {
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(2, 6, 23, 0.75) 100%);
+}
+
+/* El cursor "grabado": la punta de la flecha (esquina superior izquierda del
+   ícono) coincide con el punto de la página que el paneo mantiene centrado. */
+.cctv-cursor svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  color: #f8fafc;
+  fill: #f8fafc;
+  stroke: #0f172a;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 1px 1px rgba(2, 6, 23, 0.9));
+}
+
+.cctv-hud {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 2px 3px;
+}
+
+.cctv-rec {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 7px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: #f8fafc;
+}
+
+.cctv-rec::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: #ef4444;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cctv-rec::before {
+    animation: cctv-rec-blink 1.2s steps(1) infinite;
+  }
+}
+
+@keyframes cctv-rec-blink {
+  50% { opacity: 0.15; }
+}
+
+.cctv-clock {
+  font-size: 7px;
+  line-height: 1;
+  color: #cbd5e1;
 }
 
 @keyframes portal-page-enter {
@@ -274,6 +477,10 @@
     animation: portal-page-enter 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  .stat-settled {
+    animation: stat-settle 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   @supports (animation-timeline: view()) {
     .reveal-on-scroll {
       animation: editorial-reveal linear both;
@@ -281,10 +488,60 @@
       animation-range: entry 4% cover 28%;
     }
 
+    /* Variante con stagger para hijos de grillas: cada card define --i y su
+       rango de entrada se corre en cascada, ligado al scroll (un delay
+       temporal no aplica a scroll-timelines). */
+    .reveal-item {
+      animation: editorial-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry calc(2% + (var(--i, 0) * 6%)) cover 30%;
+    }
+
     .image-reveal {
       animation: image-reveal linear both;
       animation-timeline: view();
       animation-range: entry 2% cover 34%;
+    }
+
+    /* La timeline vive en el h2 (elemento real) y el ::after anima contra
+       ella por nombre: Chromium no resuelve view() declarado en el propio
+       pseudo-elemento (queda inactiva y salta al estado final). */
+    .hud-title {
+      position: relative;
+      view-timeline: --hud-title block;
+    }
+    .hud-title::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -0.35rem;
+      height: 2px;
+      width: 100%;
+      transform-origin: left;
+      transform: scaleX(0);
+      background: linear-gradient(90deg, var(--color-tactical-500), transparent);
+      animation: hud-underline linear both;
+      animation-timeline: --hud-title;
+      animation-range: cover 8% cover 42%;
+    }
+  }
+
+  /* Fallback sin scroll-driven animations (Firefox/Safari viejos): el
+     IntersectionObserver de ScrollRevealFallback agrega .in-view. Bajo
+     prefers-reduced-motion este bloque no aplica y nada queda invisible. */
+  @supports not (animation-timeline: view()) {
+    .reveal-on-scroll,
+    .reveal-item {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      transition-delay: calc(var(--i, 0) * 80ms);
+    }
+
+    .reveal-on-scroll.in-view,
+    .reveal-item.in-view {
+      opacity: 1;
+      transform: none;
     }
   }
 }
