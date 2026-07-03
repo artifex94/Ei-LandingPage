@@ -60,11 +60,33 @@ const services = [
 export default function ServicesSection() {
   const [active, setActive] = useState<number | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // Botón que abrió el modal, para devolverle el foco al cerrar (WCAG 2.4.3).
+  const triggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (active === null) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setActive(null);
+      if (e.key === "Escape") {
+        setActive(null);
+        return;
+      }
+      // Focus trap: Tab/Shift+Tab circulan dentro del diálogo (WCAG 2.1.2).
+      // Navegación explícita por índice — el backdrop es el primer focusable
+      // del DOM, así que la detección por bordes no basta.
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusables = Array.from(
+          dialogRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          )
+        );
+        if (focusables.length === 0) return;
+        e.preventDefault();
+        const idx = focusables.indexOf(document.activeElement as HTMLElement);
+        const paso = e.shiftKey ? -1 : 1;
+        const next = (idx + paso + focusables.length) % focusables.length;
+        focusables[next].focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -72,6 +94,8 @@ export default function ServicesSection() {
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
+      // Al cerrar, devolver el foco al disparador.
+      triggerRef.current?.focus();
     };
   }, [active]);
 
@@ -160,7 +184,10 @@ export default function ServicesSection() {
             <button
               key={title}
               type="button"
-              onClick={() => setActive(index)}
+              onClick={(e) => {
+                triggerRef.current = e.currentTarget;
+                setActive(index);
+              }}
               aria-haspopup="dialog"
               className="reveal-item group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/65 p-4 text-left transition duration-200 hover:border-orange-400/35 hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               style={{ "--i": index } as CSSProperties}
@@ -183,6 +210,7 @@ export default function ServicesSection() {
 
       {open && OpenIcon && (
         <div
+          ref={dialogRef}
           className="fixed inset-0 z-[60] flex items-end justify-center md:hidden"
           role="dialog"
           aria-modal="true"
