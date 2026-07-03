@@ -22,6 +22,30 @@ export const MONITOR = {
   CURSOR_DESVIO_MAX: { x: 14, y: 9 },
 } as const;
 
+export type TipoCursor = "default" | "pointer" | "text";
+
+const TAGS_DE_TEXTO = new Set([
+  "P", "SPAN", "H1", "H2", "H3", "H4", "H5", "H6", "LI", "DD", "DT",
+  "BLOCKQUOTE", "FIGCAPTION", "LABEL", "TD", "TH", "EM", "STRONG", "B", "I",
+]);
+
+/**
+ * Clasifica la forma que el cursor real tendría sobre un elemento, para que
+ * el cursor dibujado en el monitor la espeje: manito sobre interactivos,
+ * I-beam sobre texto (cursor:auto sobre tags de texto seleccionable, la
+ * heurística del navegador), flecha para el resto.
+ */
+export function clasificarCursor(
+  cursorCss: string,
+  tagName: string,
+  enCampoDeTexto: boolean
+): TipoCursor {
+  if (cursorCss === "pointer") return "pointer";
+  if (cursorCss === "text" || cursorCss === "vertical-text") return "text";
+  if (cursorCss === "auto" && (enCampoDeTexto || TAGS_DE_TEXTO.has(tagName))) return "text";
+  return "default";
+}
+
 /**
  * Posición del cursor dibujado, relativa al centro de la pantalla: el error
  * de seguimiento del paneo (cur − target), acotado. Es la proyección exacta

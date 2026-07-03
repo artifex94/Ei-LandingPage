@@ -403,12 +403,15 @@
   background: radial-gradient(ellipse at center, transparent 55%, rgba(2, 6, 23, 0.75) 100%);
 }
 
-/* El cursor "grabado": la punta de la flecha (esquina superior izquierda del
-   ícono) coincide con el punto de la página que el paneo mantiene centrado. */
+/* El cursor "grabado": espeja la forma del cursor real (data-tipo la setea
+   HeaderMonitor con el cursor computado del elemento bajo el mouse). El
+   hotspot de cada forma coincide con el punto rastreado: punta de la flecha,
+   yema del dedo, centro del I-beam. */
 .cctv-cursor svg {
   position: absolute;
   left: 50%;
   top: 50%;
+  display: none;
   width: 10px;
   height: 10px;
   color: #f8fafc;
@@ -416,6 +419,21 @@
   stroke: #0f172a;
   stroke-width: 1.5;
   filter: drop-shadow(0 1px 1px rgba(2, 6, 23, 0.9));
+}
+
+.cctv-cursor[data-tipo="default"] .cctv-cursor-default,
+.cctv-cursor[data-tipo="pointer"] .cctv-cursor-pointer,
+.cctv-cursor[data-tipo="text"] .cctv-cursor-text {
+  display: block;
+}
+
+.cctv-cursor .cctv-cursor-pointer {
+  transform: translate(-35%, -15%);
+}
+
+.cctv-cursor .cctv-cursor-text {
+  transform: translate(-50%, -50%);
+  fill: none;
 }
 
 .cctv-hud {
