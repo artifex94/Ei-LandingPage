@@ -68,53 +68,63 @@ export default function Navbar() {
         aria-hidden="true"
       />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 2xl:max-w-[1600px] 2xl:px-12">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-16 items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-5">
             <HeaderMonitor />
             <a
               href="#inicio"
-              className="group flex items-center gap-3"
+              className="group flex min-w-0 items-center gap-3 lg:shrink-0"
               aria-label="Escobar Instalaciones - inicio"
             >
               <BrandLockup context="Seguridad electrónica" />
             </a>
           </div>
 
-          <div className="hidden items-center gap-5 md:flex">
+          {/* El set completo de links + 2 CTAs no entra entre 768 y 1023px:
+              el nav de escritorio arranca en lg y el burger cubre hasta ahí. */}
+          <div className="hidden items-center gap-3 lg:flex xl:gap-5">
             {navLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.href}
                 aria-current={activeHref === link.href ? "location" : undefined}
-                className={`relative text-sm font-semibold transition after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:bg-orange-400 after:transition-all ${
+                className={`relative whitespace-nowrap text-sm font-semibold transition after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:bg-orange-400 after:transition-all ${
                   activeHref === link.href
                     ? "text-white after:w-full"
                     : "text-slate-400 after:w-0 hover:text-white hover:after:w-full"
+                } ${
+                  // En lg no entra todo: este link es redundante con el pill
+                  // "Mi Central" de al lado; reaparece en xl.
+                  link.href === "#portal" ? "hidden xl:inline-block" : ""
                 }`}
               >
                 {link.name}
               </a>
             ))}
-            <div className="flex items-center gap-2 pl-1">
+            <div className="flex items-center gap-2 xl:pl-1">
               <Link
                 href="/portal/dashboard"
-                className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2.5 text-sm font-black text-emerald-100 transition hover:-translate-y-0.5 hover:border-emerald-200/60 hover:bg-emerald-300/15"
+                className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-2.5 text-sm font-black text-emerald-100 transition hover:-translate-y-0.5 hover:border-emerald-200/60 hover:bg-emerald-300/15 xl:px-4"
               >
-                <LogIn className="h-4 w-4" /> Entrar a Mi Central
+                <LogIn className="h-4 w-4" />
+                <span className="hidden xl:inline">Entrar a Mi Central</span>
+                <span className="xl:hidden">Mi Central</span>
               </Link>
               <a
                 href="#contacto"
-                className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:-translate-y-0.5 hover:bg-orange-400 hover:shadow-lg hover:shadow-orange-500/25"
+                className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-orange-500 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:-translate-y-0.5 hover:bg-orange-400 hover:shadow-lg hover:shadow-orange-500/25 xl:px-5"
               >
                 <FileText className="h-4 w-4" /> Presupuesto
               </a>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
+            {/* Debajo de 400px el atajo no entra sin pisar la marca; el burger
+                ya ofrece "Entrar a Mi Central" en un tap. */}
             <Link
               href="/portal/dashboard"
-              className="inline-flex min-h-[40px] items-center rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-3 text-xs font-black text-emerald-100"
+              className="hidden min-h-[40px] shrink-0 items-center whitespace-nowrap rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-3 text-xs font-black text-emerald-100 min-[400px]:inline-flex"
             >
               Mi Central
             </Link>
@@ -136,7 +146,7 @@ export default function Navbar() {
         id="mobile-menu"
         aria-hidden={!isMenuOpen}
         inert={isMenuOpen ? undefined : true}
-        className={`overflow-hidden border-t border-white/10 bg-slate-950/95 backdrop-blur-xl transition-all duration-300 md:hidden ${isMenuOpen ? "max-h-[520px] opacity-100" : "pointer-events-none max-h-0 opacity-0"}`}
+        className={`overflow-hidden border-t border-white/10 bg-slate-950/95 backdrop-blur-xl transition-all duration-300 lg:hidden ${isMenuOpen ? "max-h-[520px] opacity-100" : "pointer-events-none max-h-0 opacity-0"}`}
       >
         <div className="space-y-1 px-4 py-4">
           {navLinks.map((link) => (

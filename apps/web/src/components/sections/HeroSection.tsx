@@ -47,7 +47,7 @@ export default function HeroSection() {
           <div className="hero-enter hero-enter-delay-3 mt-7 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-5 lg:justify-start">
             <a
               href="#contacto"
-              className="group inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-7 py-3 text-base font-bold text-slate-950 shadow-[0_12px_30px_rgba(241,119,32,0.2)] transition hover:-translate-y-0.5 hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 focus:ring-offset-slate-950 sm:w-auto"
+              className="group inline-flex min-h-[52px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-orange-500 px-5 py-3 text-base font-bold text-slate-950 shadow-[0_12px_30px_rgba(241,119,32,0.2)] transition hover:-translate-y-0.5 hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 focus:ring-offset-slate-950 sm:w-auto sm:px-7"
             >
               Solicitar presupuesto
               <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />

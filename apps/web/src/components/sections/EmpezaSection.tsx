@@ -44,7 +44,7 @@ export default function EmpezaSection() {
             </p>
             <a
               href="#contacto"
-              className="group mt-6 inline-flex min-h-[52px] items-center justify-center gap-2 rounded-xl bg-orange-500 px-7 py-3 text-base font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+              className="group mt-6 inline-flex min-h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-orange-500 px-5 py-3 text-base font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 focus:ring-offset-slate-950 sm:px-7"
             >
               Solicitar presupuesto
               <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
@@ -74,7 +74,7 @@ export default function EmpezaSection() {
             </div>
             <Link
               href="/solicitud-alta"
-              className="group mt-6 inline-flex min-h-[52px] items-center justify-center gap-2 rounded-xl bg-emerald-300 px-7 py-3 text-base font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:ring-offset-2 focus:ring-offset-slate-950"
+              className="group mt-6 inline-flex min-h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-300 px-5 py-3 text-base font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:ring-offset-2 focus:ring-offset-slate-950 sm:px-7"
             >
               Crear mi acceso
               <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
