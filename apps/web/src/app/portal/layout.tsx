@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { calcularEstadoFinanciero, peorEstadoFinanciero } from "@/lib/billing-state";
+import { DIAS_GRACIA, DIAS_SUSPENSION } from "@/lib/constants/billing";
+import { getParam } from "@/lib/parametros";
+import { construirFeedNotificaciones } from "@/lib/notificaciones-feed";
 import { PagoRequeridoGuard } from "@/components/portal/PagoRequeridoGuard";
 import { PortalNav } from "@/components/portal/PortalNav";
+import { ImpersonacionBanner } from "@/components/portal/ImpersonacionBanner";
 import "./portal.css";
 import { siteConfig } from "@/config/site";
 
@@ -22,11 +25,14 @@ export default async function PortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { userId, perfil } = await requireSesion();
+  const { userId, perfil, impersonacion } = await requireSesion();
 
   // Segunda línea de defensa: el middleware ya debería haber redirigido,
   // pero si por algún motivo llega un ADMIN o TECNICO aquí, los enviamos
-  // a su área correspondiente sin ejecutar la lógica de cliente.
+  // a su área correspondiente sin ejecutar la lógica de cliente. Nótese que
+  // `perfil.rol` acá ya refleja la impersonación (getSesion() resuelve el
+  // perfil del CLIENTE impersonado), así que un ADMIN impersonando pasa este
+  // check con normalidad; solo un ADMIN SIN cookie válida cae en el redirect.
   if (perfil.rol === "ADMIN")   redirect("/admin/dashboard");
   if (perfil.rol === "TECNICO") redirect("/tecnico/mi-dia");
 
@@ -50,10 +56,16 @@ export default async function PortalLayout({
     prisma.empleado.findFirst({ where: { perfil_id: userId }, select: { id: true } }),
   ]);
 
+  const [diasGracia, diasSuspension] = await Promise.all([
+    getParam("DIAS_GRACIA", DIAS_GRACIA),
+    getParam("DIAS_SUSPENSION", DIAS_SUSPENSION),
+  ]);
   const estados = cuentas.map((c) =>
-    calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira)
+    calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira, { diasGracia, diasSuspension })
   );
   const peorEstado = peorEstadoFinanciero(estados);
+
+  const feed = await construirFeedNotificaciones({ userId, peorEstado });
 
   const deudaTotal =
     peorEstado.tipo === "SUSPENDED"
@@ -71,46 +83,22 @@ export default async function PortalLayout({
     <>
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-white focus:text-slate-900 focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:text-lg focus:font-medium"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-4 focus-visible:left-4 focus-visible:z-50 focus-visible:bg-white focus-visible:text-slate-900 focus-visible:px-4 focus-visible:py-2 focus-visible:rounded-lg focus-visible:shadow-lg focus-visible:text-lg focus-visible:font-medium"
       >
         Ir al contenido principal
       </a>
 
+      {/* Vista admin: el modal de PagoRequeridoGuard sigue mostrándose (el
+          admin ve exactamente lo que ve el cliente), pero el banner corre
+          por encima (z-60 > z-50 del modal) para que "Salir" siga accesible. */}
+      {impersonacion && <ImpersonacionBanner clienteNombre={perfil.nombre} />}
+
       {peorEstado.tipo === "SUSPENDED" && (
-        <PagoRequeridoGuard deudaTotal={deudaTotal} />
+        <PagoRequeridoGuard deudaTotal={deudaTotal} impersonando={!!impersonacion} />
       )}
 
-      <div className="portal-shell min-h-screen bg-industrial-900 flex flex-col">
-        <PortalNav isEmpleado={!!empleado} />
-
-        {/* Banner mora — naranja táctico */}
-        {peorEstado.tipo === "GRACE_PERIOD" && (
-          <div
-            role="alert"
-            className="bg-tactical-500/10 border-b border-tactical-500/30 px-4 py-2.5 text-center text-sm text-tactical-400
-                       lg:mt-0 mt-14"
-          >
-            <span aria-hidden="true" className="mr-1">▲</span>
-            Tenés un pago vencido hace{" "}
-            <strong>{peorEstado.dias_mora} día{peorEstado.dias_mora !== 1 ? "s" : ""}</strong>.
-            Tu servicio puede suspenderse.{" "}
-            <Link href="/portal/pagos" className="underline font-semibold hover:text-tactical-300 transition-colors">
-              Regularizá ahora →
-            </Link>
-          </div>
-        )}
-
-        {/* Banner pago en revisión — azul estructural */}
-        {peorEstado.tipo === "PAYMENT_IN_REVIEW" && (
-          <div
-            role="status"
-            className="bg-blue-500/10 border-b border-blue-500/30 px-4 py-2.5 text-center text-sm text-blue-400
-                       lg:mt-0 mt-14"
-          >
-            <span aria-hidden="true" className="mr-1">●</span>
-            Tu pago está siendo verificado. En breve se actualizará el estado de tu servicio.
-          </div>
-        )}
+      <div className={`portal-shell min-h-screen bg-industrial-900 flex flex-col ${impersonacion ? "pt-10" : ""}`}>
+        <PortalNav isEmpleado={!!empleado} feed={feed} impersonando={!!impersonacion} />
 
         <main
           id="main-content"

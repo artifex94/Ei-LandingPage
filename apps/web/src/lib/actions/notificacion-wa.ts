@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdminWithName } from "@/lib/auth/session";
+import { requireCapacidad } from "@/lib/auth/session";
 import { registrarAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma/client";
 import { ETIQUETA_MOTIVO, type MotivoMensaje } from "@/lib/whatsapp-templates";
@@ -14,7 +14,16 @@ const ORIGEN_POR_MOTIVO: Record<MotivoMensaje, "SOFTGUARD" | "PORTAL" | "COBRANZ
   EVENTO_OTRO: "SOFTGUARD",
   RECORDATORIO_PAGO: "COBRANZA",
   VENCIMIENTO_PROXIMO: "COBRANZA",
+  MORA_SUSPENSION: "COBRANZA",
   CONFIRMACION_PAGO: "PORTAL",
+  CAMBIO_TARIFA: "PORTAL",
+  REACTIVACION_SERVICIO: "PORTAL",
+  BIENVENIDA: "PORTAL",
+  VISITA_TECNICA: "PORTAL",
+  PRUEBA_ALARMA: "PORTAL",
+  SIN_COMUNICACION: "PORTAL",
+  ACTUALIZAR_DATOS: "PORTAL",
+  AVISO_GENERAL: "PORTAL",
   LIBRE: "PORTAL",
 };
 
@@ -38,7 +47,8 @@ export async function registrarNotificacionWA(input: {
   detalle?: Record<string, unknown>;
   historial?: { perfilId: string; cuentaId?: string | null };
 }): Promise<void> {
-  const admin = await requireAdminWithName();
+  // Genérico: lo usan cobranza (puede_facturar) y avisos de eventos (puede_monitorear).
+  const admin = await requireCapacidad("puede_facturar", "puede_monitorear");
 
   await registrarAudit({
     admin_id: admin.id,

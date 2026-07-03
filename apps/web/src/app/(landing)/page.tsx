@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import HeroSection from "@/components/sections/HeroSection";
-import FeaturesSection from "@/components/sections/FeaturesSection";
-import ServicesSection from "@/components/sections/ServicesSection";
 import PortalSection from "@/components/sections/PortalSection";
+import ServicesSection from "@/components/sections/ServicesSection";
+import FeaturesSection from "@/components/sections/FeaturesSection";
+import OpinionsSection from "@/components/sections/OpinionsSection";
+import EmpezaSection from "@/components/sections/EmpezaSection";
 import ContactSection from "@/components/sections/ContactSection";
 import Footer from "@/components/layout/Footer";
 import FloatingWhatsApp from "@/components/layout/FloatingWhatsApp";
@@ -114,9 +116,11 @@ export default function Home() {
         <Navbar />
         <main>
           <HeroSection />
-          <FeaturesSection />
-          <ServicesSection />
           <PortalSection />
+          <ServicesSection />
+          <FeaturesSection />
+          <OpinionsSection />
+          <EmpezaSection />
           <ContactSection />
           <Footer />
         </main>

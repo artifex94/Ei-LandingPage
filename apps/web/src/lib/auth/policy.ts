@@ -40,3 +40,36 @@ export function rutaInicio(rol: Rol | null | undefined): string {
   if (!rol) return "/login";
   return RUTA_INICIO_POR_ROL[rol] ?? "/login";
 }
+
+// ── Áreas operativas por capacidad (flags de Empleado) ──────────────────────
+//
+// Los "Agentes" (Monitoreo, Cobros, Servicio Técnico) no son roles nuevos:
+// son empleados internos (rol TECNICO) diferenciados por sus flags `puede_*`.
+// Cada flag desbloquea un área enfocada. ADMIN entra a todas.
+export const RUTA_MONITOREO = "/monitoreo";
+export const RUTA_COBROS = "/cobros";
+
+/** Capacidades de un empleado, tal como viven en la tabla `Empleado`. */
+export type FlagsEmpleado = {
+  puede_monitorear?: boolean | null;
+  puede_facturar?: boolean | null;
+  puede_instalar?: boolean | null;
+};
+
+/**
+ * Ruta de aterrizaje post-login considerando las capacidades del empleado.
+ * Prioridad cuando hay varios flags: monitoreo → cobros → técnico. ADMIN
+ * siempre va a su dashboard; sin flags ni rol de empleado cae al portal.
+ * Lógica PURA: recibe los flags ya leídos de la DB (no toca Prisma).
+ */
+export function rutaInicioEmpleado(
+  rol: Rol | null | undefined,
+  flags?: FlagsEmpleado | null,
+): string {
+  if (!rol) return "/login";
+  if (rol === "ADMIN") return RUTA_INICIO_POR_ROL.ADMIN;
+  if (flags?.puede_monitorear) return RUTA_MONITOREO;
+  if (flags?.puede_facturar) return RUTA_COBROS;
+  if (rol === "TECNICO" || flags?.puede_instalar) return RUTA_INICIO_POR_ROL.TECNICO;
+  return RUTA_INICIO_POR_ROL.CLIENTE;
+}

@@ -5,8 +5,7 @@
  * Se puede usar en Server Components, layouts y scripts de cron.
  */
 
-const DIAS_GRACIA = 1;
-const DIAS_SUSPENSION = 15;
+import { DIAS_GRACIA, DIAS_SUSPENSION } from "./constants/billing";
 
 export type EstadoFinanciero =
   | { tipo: "ACTIVE" }
@@ -20,6 +19,12 @@ export interface PagoParaEstado {
   anio: number;
 }
 
+/** Umbrales configurables (`ParametroNegocio` DIAS_GRACIA/DIAS_SUSPENSION); sin config = default actual. */
+export interface EstadoFinancieroConfig {
+  diasGracia?: number;
+  diasSuspension?: number;
+}
+
 /**
  * Calcula el estado financiero de una cuenta a partir de su estado en BD
  * y sus pagos pendientes/vencidos/procesando.
@@ -28,13 +33,18 @@ export interface PagoParaEstado {
  * @param pagos         - Pagos con estado PENDIENTE | VENCIDO | PROCESANDO
  * @param overrideActivo - Si hay un override de suspensión activo
  * @param overrideExpira - Fecha de expiración del override
+ * @param config        - Umbrales opcionales (ver `ParametroNegocio`); sin config = default actual
  */
 export function calcularEstadoFinanciero(
   estadoCuenta: string,
   pagos: PagoParaEstado[],
   overrideActivo = false,
-  overrideExpira: Date | null = null
+  overrideExpira: Date | null = null,
+  config: EstadoFinancieroConfig = {}
 ): EstadoFinanciero {
+  const diasGracia = config.diasGracia ?? DIAS_GRACIA;
+  const diasSuspension = config.diasSuspension ?? DIAS_SUSPENSION;
+
   // Override activo y vigente → forzar ACTIVE temporalmente
   if (overrideActivo && overrideExpira && overrideExpira > new Date()) {
     return { tipo: "ACTIVE" };
@@ -51,8 +61,8 @@ export function calcularEstadoFinanciero(
   }
 
   const dpd = calcDPD(pagos);
-  if (dpd >= DIAS_SUSPENSION) return { tipo: "SUSPENDED", dias_mora: dpd };
-  if (dpd >= DIAS_GRACIA)     return { tipo: "GRACE_PERIOD", dias_mora: dpd };
+  if (dpd >= diasSuspension) return { tipo: "SUSPENDED", dias_mora: dpd };
+  if (dpd >= diasGracia)     return { tipo: "GRACE_PERIOD", dias_mora: dpd };
   return { tipo: "ACTIVE" };
 }
 

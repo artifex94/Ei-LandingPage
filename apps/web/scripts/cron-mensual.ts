@@ -28,6 +28,10 @@ async function main() {
   console.log(`   Ya avisados (skip):   ${r.yaAvisados}`);
   console.log(`   Sin teléfono:         ${r.sinTelefono}`);
   console.log(`   Errores de envío:     ${r.erroresEnvio}`);
+  console.log(
+    `   Cola suspensión:      ${r.candidatosSuspensionCreados} nuevos, ` +
+      `${r.candidatosSuspensionActualizados} actualizados, ${r.candidatosSuspensionCerradosPago} cerrados por pago`,
+  );
   console.log(`   Borradores factura:   ${r.facturasBorradores} (omitidos ${r.facturasOmitidas})`);
   console.log(`${"─".repeat(50)}\n`);
 

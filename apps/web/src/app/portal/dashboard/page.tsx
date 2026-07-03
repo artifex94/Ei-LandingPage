@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   CreditCard, FileText, Zap, Wrench, ClipboardList, User,
-  MessageCircle, ChevronRight,
+  MessageCircle, ChevronRight, AlertTriangle, MessageSquareWarning,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
+import { calcularEstadoFinanciero, peorEstadoFinanciero } from "@/lib/billing-state";
+import { DIAS_GRACIA, DIAS_SUSPENSION } from "@/lib/constants/billing";
+import { getParam } from "@/lib/parametros";
 import { CuentaCard } from "@/components/portal/CuentaCard";
 import { EstadoSistemaCard } from "@/components/portal/EstadoSistemaCard";
 import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
@@ -35,6 +38,20 @@ export default async function DashboardPage() {
     },
     orderBy: { descripcion: "asc" },
   });
+
+  const [diasGracia, diasSuspension] = await Promise.all([
+    getParam("DIAS_GRACIA", DIAS_GRACIA),
+    getParam("DIAS_SUSPENSION", DIAS_SUSPENSION),
+  ]);
+  const configEstadoFinanciero = { diasGracia, diasSuspension };
+
+  // Estado financiero para el chip de mora (refuerza el CTA de cobranza que
+  // antes vivía en el banner del header). Reutiliza el query de cuentas/pagos.
+  const peorEstado = peorEstadoFinanciero(
+    cuentas.map((c) =>
+      calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira, configEstadoFinanciero)
+    )
+  );
 
   const estadoSistema = cuentas.map((c) => ({
     id: c.id,
@@ -80,6 +97,23 @@ export default async function DashboardPage() {
         </nav>
       </div>
 
+      {peorEstado.tipo === "GRACE_PERIOD" && (
+        <Link
+          href="/portal/pagos"
+          className="flex items-center gap-3 rounded-xl border border-tactical-500/30 bg-tactical-500/10 px-4 py-3 text-sm text-tactical-200 transition-colors hover:bg-tactical-500/15"
+        >
+          <AlertTriangle className="h-5 w-5 flex-shrink-0 text-tactical-400" strokeWidth={2} aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            Tenés un pago vencido hace{" "}
+            <strong className="font-bold">
+              {peorEstado.dias_mora} día{peorEstado.dias_mora !== 1 ? "s" : ""}
+            </strong>
+            . Tu servicio puede suspenderse.
+          </span>
+          <span className="flex-shrink-0 font-bold text-tactical-300">Regularizá →</span>
+        </Link>
+      )}
+
       <EstadoSistemaCard cuentas={estadoSistema} />
 
       <PortalSection title="Mis instalaciones" meta={cuentas.length || undefined}>
@@ -94,7 +128,7 @@ export default async function DashboardPage() {
           <ul className="grid gap-3 sm:grid-cols-2" role="list">
             {cuentas.map((cuenta) => (
               <li key={cuenta.id} className="min-w-0">
-                <CuentaCard cuenta={cuenta} />
+                <CuentaCard cuenta={cuenta} config={configEstadoFinanciero} />
               </li>
             ))}
           </ul>
@@ -109,6 +143,7 @@ export default async function DashboardPage() {
               { href: "/portal/documentos",  label: "Documentos",        icon: FileText },
               { href: "/portal/eventos",     label: "Eventos",           icon: Zap },
               { href: "/portal/solicitudes", label: "Mis solicitudes",   icon: ClipboardList },
+              { href: "/portal/feedback",    label: "Sugerencias",       icon: MessageSquareWarning },
               { href: "/portal/perfil",      label: "Mi perfil",         icon: User },
             ] satisfies { href: string; label: string; icon: LucideIcon }[]
           ).map(({ href, label, icon: Icon }) => (

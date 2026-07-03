@@ -9,11 +9,14 @@
  * Si la cuenta no tiene espejo en el portal (p. ej. líneas internas _SG),
  * responde { encontrada: false } — no es un error.
  *
- * Autenticación: sesión con rol ADMIN (mismo patrón que /api/admin/eventos-live).
+ * Autenticación: ADMIN o empleado con capacidad `puede_monitorear` — mismo
+ * criterio que /api/admin/patron-evento. Lo consume `MonitorOperadores`, que
+ * también se monta en /monitoreo/en-vivo (gateado por `puede_monitorear`)
+ * para operadores no-ADMIN.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSesion } from "@/lib/auth/session";
+import { getSesionReal } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -61,9 +64,18 @@ export interface CuentaContextoResponse {
 }
 
 export async function GET(req: NextRequest) {
-  const sesion = await getSesion();
-  if (!sesion || sesion.perfil.rol !== "ADMIN") {
+  const sesion = await getSesionReal();
+  if (!sesion) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+  if (sesion.perfil.rol !== "ADMIN") {
+    const empleado = await prisma.empleado.findFirst({
+      where: { perfil_id: sesion.userId },
+      select: { puede_monitorear: true },
+    });
+    if (!empleado?.puede_monitorear) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
   }
 
   const ref = (req.nextUrl.searchParams.get("ref") ?? "").trim();

@@ -95,6 +95,10 @@ const embedHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   reactCompiler: true,
+  // Deploy build-on-server: el type-check del build usa un tsconfig que excluye
+  // los tests/fixtures (importan dev-dependencies omitidas con npm ci --omit=dev).
+  // CI mantiene la cobertura completa con `tsc --noEmit` sobre tsconfig.json.
+  typescript: { tsconfigPath: "tsconfig.build.json" },
   experimental: {
     serverActions: {
       // 10MB para permitir uploads de CSV/XLS en admin.

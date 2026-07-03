@@ -91,6 +91,7 @@ export default async function EventoDetallePage({
                 year: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
+                timeZone: "America/Argentina/Buenos_Aires",
               })}
             </Row>
             <Row label="Código">

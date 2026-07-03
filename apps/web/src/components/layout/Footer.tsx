@@ -6,7 +6,7 @@ import { BrandLockup } from "./BrandLockup";
 export default function Footer() {
   return (
     <footer className="border-t border-white/10 bg-slate-950 py-9 text-slate-400">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 2xl:max-w-[1600px] 2xl:px-12">
         <div className="grid gap-8 md:grid-cols-[1.4fr_.8fr_.8fr]">
           <div>
             <BrandLockup context="Victoria · Entre Ríos" className="mb-4" />
@@ -14,7 +14,7 @@ export default function Footer() {
           </div>
           <div>
             <h3 className="mb-4 font-black text-white">Navegación</h3>
-            <ul className="space-y-2 text-sm"><li><a href="#servicios" className="hover:text-orange-300">Servicios</a></li><li><a href="#nosotros" className="hover:text-orange-300">Nosotros</a></li><li><a href="#portal" className="hover:text-orange-300">Mi Central</a></li><li><a href="#contacto" className="hover:text-orange-300">Contacto</a></li></ul>
+            <ul className="space-y-2 text-sm"><li><a href="#portal" className="hover:text-orange-300">Mi Central</a></li><li><a href="#servicios" className="hover:text-orange-300">Servicios</a></li><li><a href="#nosotros" className="hover:text-orange-300">Nosotros</a></li><li><a href="#opiniones" className="hover:text-orange-300">Opiniones</a></li><li><a href="#empeza" className="hover:text-orange-300">Empezá</a></li><li><a href="#contacto" className="hover:text-orange-300">Contacto</a></li></ul>
           </div>
           <div>
             <h3 className="mb-4 font-black text-white">Contacto</h3>

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "./AccionesForm";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
 import { EmptyStateSuccess } from "@/components/admin/EmptyStateSuccess";
+import { CAMPO_LABEL, CAMPO_ORDEN_AVISOS } from "@/lib/solicitudes-cambio";
 
 const TUTORIAL_CAMBIOS = [
   {
@@ -26,16 +27,13 @@ const TUTORIAL_CAMBIOS = [
 
 export const metadata: Metadata = { title: "Solicitudes de cambio" };
 
-const CAMPO_LABEL: Record<string, string> = {
-  nombre: "Nombre",
-  telefono: "Teléfono",
-  email: "Email",
-};
-
 export default async function SolicitudesCambioPage() {
   const solicitudes = await prisma.solicitudCambioInfo.findMany({
     where: { estado: "PENDIENTE" },
-    include: { perfil: { select: { id: true, nombre: true } } },
+    include: {
+      perfil: { select: { id: true, nombre: true } },
+      cuenta: { select: { softguard_ref: true, descripcion: true } },
+    },
     orderBy: { created_at: "asc" },
   });
 
@@ -88,30 +86,57 @@ export default async function SolicitudesCambioPage() {
               </div>
 
               {/* Detalle del cambio */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-                <div className="bg-slate-900/50 rounded-lg p-3">
-                  <p className="text-xs text-slate-500 mb-1">Campo</p>
-                  <p className="font-semibold text-slate-200">
-                    {CAMPO_LABEL[s.campo] ?? s.campo}
+              {s.campo === CAMPO_ORDEN_AVISOS ? (
+                <div className="space-y-4 mb-5">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-slate-500">Orden de avisos · cuenta</span>
+                    <span className="font-mono text-slate-200">{s.cuenta?.softguard_ref ?? "—"}</span>
+                    {s.cuenta?.descripcion && <span className="text-slate-500">· {s.cuenta.descripcion}</span>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-slate-900/50 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 mb-1">Orden actual</p>
+                      <p className="text-sm text-slate-300 whitespace-pre-line">
+                        {s.valor_actual ?? <span className="italic text-slate-500">Sin registrar</span>}
+                      </p>
+                    </div>
+                    <div className="bg-orange-900/20 border border-orange-800/40 rounded-lg p-3">
+                      <p className="text-xs text-orange-400 mb-1">Orden propuesto</p>
+                      <p className="text-sm font-medium text-white whitespace-pre-line">{s.valor_nuevo}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-amber-300/80">
+                    Aplicá este orden en SoftGuard y después tocá Aprobar.
                   </p>
                 </div>
-                <div className="bg-slate-900/50 rounded-lg p-3">
-                  <p className="text-xs text-slate-500 mb-1">Valor actual</p>
-                  <p className="font-medium text-slate-300 truncate">
-                    {s.valor_actual ?? <span className="italic text-slate-500">Sin registrar</span>}
-                  </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                  <div className="bg-slate-900/50 rounded-lg p-3">
+                    <p className="text-xs text-slate-500 mb-1">Campo</p>
+                    <p className="font-semibold text-slate-200">
+                      {CAMPO_LABEL[s.campo] ?? s.campo}
+                    </p>
+                  </div>
+                  <div className="bg-slate-900/50 rounded-lg p-3">
+                    <p className="text-xs text-slate-500 mb-1">Valor actual</p>
+                    <p className="font-medium text-slate-300 truncate">
+                      {s.valor_actual ?? <span className="italic text-slate-500">Sin registrar</span>}
+                    </p>
+                  </div>
+                  <div className="bg-orange-900/20 border border-orange-800/40 rounded-lg p-3">
+                    <p className="text-xs text-orange-400 mb-1">Valor propuesto</p>
+                    <p className="font-semibold text-white truncate">{s.valor_nuevo}</p>
+                  </div>
                 </div>
-                <div className="bg-orange-900/20 border border-orange-800/40 rounded-lg p-3">
-                  <p className="text-xs text-orange-400 mb-1">Valor propuesto</p>
-                  <p className="font-semibold text-white truncate">{s.valor_nuevo}</p>
-                </div>
-              </div>
+              )}
 
               {/* Acciones */}
               <div className="flex flex-wrap items-start gap-3 border-t border-slate-700 pt-4">
                 <AprobarButton id={s.id} />
                 <RechazarForm id={s.id} />
-                <EditarYAprobarForm id={s.id} valorPropuesto={s.valor_nuevo} />
+                {s.campo !== CAMPO_ORDEN_AVISOS && (
+                  <EditarYAprobarForm id={s.id} valorPropuesto={s.valor_nuevo} />
+                )}
               </div>
             </div>
           ))}

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { registrarAudit, registrarAuditTx } from "@/lib/audit";
-import { requireAdmin } from "@/lib/actions/auth";
+import { requireCapacidad } from "@/lib/auth/session";
 import { UUID_RE } from "@/lib/constants/validation";
 
 // Señaliza que el pago cambió de estado entre el snapshot y el borrado
@@ -32,7 +32,7 @@ export async function editarPago(
   prevState: PagoEditResult,
   formData: FormData
 ): Promise<PagoEditResult> {
-  const admin = await requireAdmin();
+  const admin = await requireCapacidad("puede_facturar");
   if (!admin) return { errores: ["Sin permisos de administrador."] };
 
   const parsed = editarPagoSchema.safeParse({
@@ -75,12 +75,13 @@ export async function editarPago(
   });
 
   revalidatePath("/admin/pagos");
+  revalidatePath("/cobros/pagos");
   return { ok: true };
 }
 
 export async function anularPago(pagoId: string): Promise<{ error?: string }> {
   if (!UUID_RE.test(pagoId)) return { error: "ID de pago inválido." };
-  const admin = await requireAdmin();
+  const admin = await requireCapacidad("puede_facturar");
   if (!admin) return { error: "Sin permisos de administrador." };
 
   // Snapshot COMPLETO antes de borrar: tras el delete, este registro de
@@ -127,6 +128,7 @@ export async function anularPago(pagoId: string): Promise<{ error?: string }> {
   }
 
   revalidatePath("/admin/pagos");
+  revalidatePath("/cobros/pagos");
   return {};
 }
 
@@ -134,7 +136,7 @@ export async function confirmarTransferencia(
   prevState: ConfirmarResult,
   formData: FormData
 ): Promise<ConfirmarResult> {
-  const admin = await requireAdmin();
+  const admin = await requireCapacidad("puede_facturar");
 
   const pagoId = (formData.get("pago_id") as string ?? "").trim();
   if (!UUID_RE.test(pagoId)) return { error: "ID de pago inválido." };
@@ -172,5 +174,6 @@ export async function confirmarTransferencia(
   }
 
   revalidatePath("/admin/pagos");
+  revalidatePath("/cobros/pagos");
   return { ok: true };
 }

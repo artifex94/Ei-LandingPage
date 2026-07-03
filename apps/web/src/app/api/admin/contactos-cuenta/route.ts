@@ -7,11 +7,14 @@
  * Mientras el endpoint real no esté capturado (ver crm.ts / Fase 0), o si la central
  * no responde, degrada al único teléfono del portal (Perfil.telefono) como "Titular".
  *
- * Autenticación: sesión con rol ADMIN (mismo patrón que /api/admin/cuenta-contexto).
+ * Autenticación: ADMIN o empleado con capacidad `puede_monitorear` — mismo
+ * criterio que /api/admin/patron-evento. Lo consume `MonitorOperadores`, que
+ * también se monta en /monitoreo/en-vivo (gateado por `puede_monitorear`)
+ * para operadores no-ADMIN.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSesion } from "@/lib/auth/session";
+import { getSesionReal } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import {
   softguardWebApiConfigured,
@@ -32,9 +35,18 @@ export interface ContactosCuentaResponse {
 }
 
 export async function GET(req: NextRequest) {
-  const sesion = await getSesion();
-  if (!sesion || sesion.perfil.rol !== "ADMIN") {
+  const sesion = await getSesionReal();
+  if (!sesion) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+  if (sesion.perfil.rol !== "ADMIN") {
+    const empleado = await prisma.empleado.findFirst({
+      where: { perfil_id: sesion.userId },
+      select: { puede_monitorear: true },
+    });
+    if (!empleado?.puede_monitorear) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
   }
 
   const ref = (req.nextUrl.searchParams.get("ref") ?? "").trim();

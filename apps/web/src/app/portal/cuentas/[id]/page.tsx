@@ -8,8 +8,21 @@ import { prisma } from "@/lib/prisma/client";
 import { SensorItem } from "@/components/portal/SensorItem";
 import { PortalSection } from "@/components/portal/PortalSection";
 import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
+import { ReordenarContactos } from "@/components/portal/ReordenarContactos";
 import { Badge } from "@/components/ui/Badge";
 import { UUID_RE } from "@/lib/constants/validation";
+import { softguardWebApiConfigured, fetchContactosCuenta } from "@/lib/softguard/api";
+import { CAMPO_ORDEN_AVISOS } from "@/lib/solicitudes-cambio";
+
+/** Contactos de aviso de la cuenta (de la central). `null` = aún no disponible (sin iid o sin respuesta). */
+async function getContactosAviso(iid: number | null) {
+  if (!iid || !softguardWebApiConfigured()) return null;
+  try {
+    return await fetchContactosCuenta(iid);
+  } catch {
+    return null;
+  }
+}
 
 const getCuenta = cache(async (id: string, userId: string) =>
   prisma.cuenta.findFirst({
@@ -148,6 +161,13 @@ export default async function CuentaPage({
     (p) => p.estado === "PENDIENTE" || p.estado === "VENCIDO"
   );
 
+  const contactos = await getContactosAviso(cuenta.iid_softguard);
+  const tienePendienteOrden =
+    (await prisma.solicitudCambioInfo.findFirst({
+      where: { perfil_id: userId, cuenta_id: cuenta.id, campo: CAMPO_ORDEN_AVISOS, estado: "PENDIENTE" },
+      select: { id: true },
+    })) !== null;
+
   return (
     <div className="space-y-7">
       {/* Breadcrumb */}
@@ -220,6 +240,31 @@ export default async function CuentaPage({
               <SensorItem key={sensor.id} sensor={sensor} />
             ))}
           </ul>
+        )}
+      </PortalSection>
+
+      {/* Contactos de aviso (prioridad) */}
+      <PortalSection title="Contactos de aviso" titleId="contactos-aviso-heading">
+        {contactos === null ? (
+          <p className="text-slate-400 text-sm">
+            Estamos sincronizando los contactos de esta cuenta con la central. Volvé a entrar en un rato.
+          </p>
+        ) : contactos.length === 0 ? (
+          <p className="text-slate-400 text-sm">
+            No hay contactos de aviso cargados en la central para esta cuenta.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-slate-400 mb-3">
+              Ante un evento te avisamos a estas personas en este orden de prioridad. Si querés cambiarlo,
+              reordenalas (arrastrá o usá las flechas ↑/↓) y pedinos el cambio: lo aplicamos en la central.
+            </p>
+            <ReordenarContactos
+              cuentaId={cuenta.id}
+              contactos={contactos.map((c) => ({ nombre: c.nombre, telefono: c.telefono, rol: c.rol }))}
+              tienePendiente={tienePendienteOrden}
+            />
+          </>
         )}
       </PortalSection>
 

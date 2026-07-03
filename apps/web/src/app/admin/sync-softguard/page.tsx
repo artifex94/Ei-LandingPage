@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { softguardWebApiConfigured } from "@/lib/softguard/api";
 import { SoftGuardModulosPanel } from "@/components/admin/SoftGuardModulosPanel";
+import { SaludCronsPanel } from "@/components/admin/SaludCronsPanel";
 import { prisma } from "@/lib/prisma/client";
+import { obtenerSaludCrons, obtenerUltimasCorridasCron } from "@/lib/cron-salud";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
 const TUTORIAL_SOFTGUARD = [
@@ -18,6 +20,10 @@ const TUTORIAL_SOFTGUARD = [
     titulo: "Sincronización automática",
     descripcion: "Un cron sincroniza cuentas, eventos y órdenes de servicio cada pocos minutos. Los eventos sin procesar aparecen arriba.",
   },
+  {
+    titulo: "Salud de crons",
+    descripcion: "Los 3 crons del portal (cierre mensual, sync SoftGuard, auto-turnos) quedan registrados acá. Naranja \"Atrasado\" significa que el cron dejó de correr — revisá el proveedor del cron (Vercel/cron-job.org).",
+  },
 ];
 
 export const metadata: Metadata = {
@@ -25,7 +31,11 @@ export const metadata: Metadata = {
 };
 
 export default async function SyncSoftGuardPage() {
-  const eventosNuevos = await prisma.eventoAlarma.count({ where: { estado: "NUEVO" } });
+  const [eventosNuevos, saludCrons, corridasCron] = await Promise.all([
+    prisma.eventoAlarma.count({ where: { estado: "NUEVO" } }),
+    obtenerSaludCrons(),
+    obtenerUltimasCorridasCron(10),
+  ]);
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -90,6 +100,8 @@ export default async function SyncSoftGuardPage() {
           <span className="text-emerald-400 text-sm font-medium">Al día</span>
         )}
       </Link>
+
+      <SaludCronsPanel crons={saludCrons} corridas={corridasCron} />
 
       <SoftGuardModulosPanel />
 

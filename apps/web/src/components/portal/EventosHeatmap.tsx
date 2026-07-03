@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { DiaEvento, TipoDia } from "@/lib/actions/eventos";
+import type { DiaEvento } from "@/lib/actions/eventos";
+import type { TipoDia } from "@/lib/eventos-clasificacion";
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
 

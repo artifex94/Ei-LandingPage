@@ -10,7 +10,8 @@ import { OverrideSuspensionForm } from "@/components/admin/OverrideSuspensionFor
 import { UUID_RE } from "@/lib/constants/validation";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, motivosGenerales, UMBRAL_MORA } from "@/lib/mensajeria-motivos";
+import { getParam } from "@/lib/parametros";
 
 const getCuenta = cache(async (id: string) => {
   return prisma.cuenta.findUnique({
@@ -97,7 +98,10 @@ export default async function CuentaAdminPage({
 }) {
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
-  const cuenta = await getCuenta(id);
+  const [cuenta, umbralMora] = await Promise.all([
+    getCuenta(id),
+    getParam("UMBRAL_MORA", UMBRAL_MORA),
+  ]);
   if (!cuenta) notFound();
 
   // Motivos de WhatsApp sobre la deuda COMPLETA de la cuenta (no los 12 pagos paginados
@@ -115,16 +119,21 @@ export default async function CuentaAdminPage({
     },
     select: { mes: true, anio: true, importe: true, estado: true, acreditado_en: true },
   });
-  const motivosWA = motivosDeCobranza(
-    cuenta.perfil.nombre,
-    pagosMotivos.map((p) => ({
-      mes: p.mes,
-      anio: p.anio,
-      importe: Number(p.importe),
-      estado: p.estado,
-      acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
-    })),
-  );
+  const motivosWA = [
+    ...motivosDeCobranza(
+      cuenta.perfil.nombre,
+      pagosMotivos.map((p) => ({
+        mes: p.mes,
+        anio: p.anio,
+        importe: Number(p.importe),
+        estado: p.estado,
+        acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
+      })),
+      undefined,
+      umbralMora,
+    ),
+    ...motivosGenerales(cuenta.perfil.nombre),
+  ];
 
   return (
     <div className="space-y-8 max-w-3xl">

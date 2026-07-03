@@ -11,7 +11,13 @@ import { PagoRequeridoModal } from "./PagoRequeridoModal";
  */
 const RUTAS_PERMITIDAS_SUSPENDIDO = ["/portal/pagos"];
 
-export function PagoRequeridoGuard({ deudaTotal }: { deudaTotal: number }) {
+export function PagoRequeridoGuard({
+  deudaTotal,
+  impersonando = false,
+}: {
+  deudaTotal: number;
+  impersonando?: boolean;
+}) {
   const pathname = usePathname();
 
   // En la página de pagos el usuario está haciendo exactamente lo que necesita:
@@ -20,5 +26,5 @@ export function PagoRequeridoGuard({ deudaTotal }: { deudaTotal: number }) {
     return null;
   }
 
-  return <PagoRequeridoModal deudaTotal={deudaTotal} />;
+  return <PagoRequeridoModal deudaTotal={deudaTotal} impersonando={impersonando} />;
 }

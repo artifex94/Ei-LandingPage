@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { IniciarButton, ResolverButton, ReopenButton } from "./AccionesForm";
+import { ConvertirOTButton, VerOTLink } from "./ConvertirOTButton";
 import { NuevaSolicitudAdminDialog } from "@/components/admin/NuevaSolicitudAdminDialog";
 import { KanbanBoard } from "./KanbanBoard";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
@@ -69,6 +70,7 @@ export default async function MantenimientoPage({
           perfil: { select: { id: true, nombre: true, telefono: true } },
         },
       },
+      ot: { select: { numero: true } },
     },
     orderBy: [
       { prioridad: "desc" },
@@ -263,7 +265,7 @@ export default async function MantenimientoPage({
                 </div>
 
                 {/* Acciones */}
-                <div className="flex flex-wrap gap-2 border-t border-slate-700 pt-4">
+                <div className="flex flex-wrap items-center gap-2 border-t border-slate-700 pt-4">
                   {s.estado === "PENDIENTE" && (
                     <>
                       <IniciarButton id={s.id} />
@@ -275,6 +277,16 @@ export default async function MantenimientoPage({
                   )}
                   {s.estado === "RESUELTA" && (
                     <ReopenButton id={s.id} />
+                  )}
+                  {s.ot_id && s.ot ? (
+                    <VerOTLink otId={s.ot_id} numero={s.ot.numero} />
+                  ) : (
+                    <ConvertirOTButton
+                      solicitudId={s.id}
+                      cuentaNombre={s.cuenta.perfil.nombre}
+                      descripcion={s.descripcion}
+                      prioridad={s.prioridad}
+                    />
                   )}
                 </div>
               </div>

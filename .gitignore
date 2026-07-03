@@ -59,3 +59,6 @@ infra/deploy/**/*.tar.gz
 
 # PDFs grandes de recursos (mantener referencia, no versionar binarios)
 recursos/**/*.pdf
+
+# Artefactos de debug locales (no versionar)
+.claude_diag.sh

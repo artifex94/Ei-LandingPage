@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ShieldCheck, CreditCard, Headphones, FolderOpen, User,
-  Bell, CalendarDays, Clock,
+  Bell, CalendarDays, Clock, MessageSquareWarning,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/components/ui/LogoutButton";
 import { BrandLockup } from "@/components/layout/BrandLockup";
+import { NotificationBell } from "@/components/portal/NotificationBell";
+import type { NotificacionItem } from "@/lib/notificaciones-feed";
 
 // ── Definición de ítems ───────────────────────────────────────────────────────
 
@@ -47,6 +49,12 @@ const NAV_CLIENTE: NavDef[] = [
     icon: FolderOpen,
   },
   {
+    href: "/portal/feedback",
+    label: "Sugerencias",
+    mobileLabel: "Sugerencias",
+    icon: MessageSquareWarning,
+  },
+  {
     href: "/portal/perfil",
     label: "Mi perfil",
     mobileLabel: "Perfil",
@@ -62,10 +70,12 @@ const ITEM_EVENTOS: NavDef = {
 };
 
 // En mobile, Eventos reemplaza a Documentos (consulta esporádica, accesible
-// desde los accesos rápidos del dashboard y el nav desktop).
-const NAV_CLIENTE_MOBILE: NavDef[] = NAV_CLIENTE.map((nav) =>
-  nav.href === "/portal/documentos" ? ITEM_EVENTOS : nav
-);
+// desde los accesos rápidos del dashboard y el nav desktop). Sugerencias
+// queda afuera del bottom nav (5 destinos máximo): se accede desde los
+// accesos rápidos del dashboard y el nav desktop.
+const NAV_CLIENTE_MOBILE: NavDef[] = NAV_CLIENTE
+  .filter((nav) => nav.href !== "/portal/feedback")
+  .map((nav) => (nav.href === "/portal/documentos" ? ITEM_EVENTOS : nav));
 
 const NAV_EMPLEADO_MOBILE: NavDef[] = [
   { href: "/portal/dashboard",   label: "Inicio",        mobileLabel: "Inicio",  icon: ShieldCheck },
@@ -149,9 +159,12 @@ function BottomNavItem({ nav, pathname }: { nav: NavDef; pathname: string }) {
 
 interface PortalNavProps {
   isEmpleado?: boolean;
+  feed?: NotificacionItem[];
+  /** true cuando un ADMIN está impersonando: corre la topbar mobile debajo del ImpersonacionBanner (h-10, fijo arriba de todo). */
+  impersonando?: boolean;
 }
 
-export function PortalNav({ isEmpleado = false }: PortalNavProps) {
+export function PortalNav({ isEmpleado = false, feed = [], impersonando = false }: PortalNavProps) {
   const pathname = usePathname();
 
   const desktopItems = isEmpleado ? NAV_EMPLEADO_DESKTOP : [...NAV_CLIENTE, ITEM_EVENTOS];
@@ -172,16 +185,26 @@ export function PortalNav({ isEmpleado = false }: PortalNavProps) {
             ))}
           </nav>
 
-          <LogoutButton />
+          <div className="flex items-center gap-2">
+            <NotificationBell items={feed} variant="desktop" />
+            <LogoutButton impersonando={impersonando} />
+          </div>
         </div>
       </header>
 
       {/* ── Topbar mobile ──────────────────────────────────────────────────── */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-industrial-950/95 backdrop-blur-xl border-b border-white/10 px-4 h-14 flex items-center justify-between">
+      <header
+        className={`lg:hidden fixed left-0 right-0 z-30 bg-industrial-950/95 backdrop-blur-xl border-b border-white/10 px-4 h-14 flex items-center justify-between ${
+          impersonando ? "top-10" : "top-0"
+        }`}
+      >
         <Link href="/portal/dashboard">
           <BrandLockup context="Mi Central" compact />
         </Link>
-        <LogoutButton />
+        <div className="flex items-center gap-1">
+          <NotificationBell items={feed} variant="mobile" />
+          <LogoutButton impersonando={impersonando} />
+        </div>
       </header>
 
       {/* ── Bottom nav mobile ──────────────────────────────────────────────── */}

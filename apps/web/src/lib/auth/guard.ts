@@ -1,7 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import { getSesion } from "@/lib/auth/session";
+import { getSesionReal } from "@/lib/auth/session";
 import { puedeAcceder, type Rol } from "@/lib/auth/policy";
 
 /**
@@ -39,7 +39,7 @@ export function accionConRol<A extends unknown[], R>(
   handler: (ctx: CtxAccion, ...args: A) => Promise<R>,
 ): (...args: A) => Promise<R | typeof SIN_PERMISO> {
   return async (...args: A) => {
-    const sesion = await getSesion();
+    const sesion = await getSesionReal();
     if (!sesion) redirect("/login");
     if (!puedeAcceder(sesion.perfil.rol, roles)) {
       return SIN_PERMISO;

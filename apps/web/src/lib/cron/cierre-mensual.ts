@@ -1,7 +1,10 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { enviarWhatsApp, enviarWhatsAppTemplate } from "@/lib/twilio";
 import { prepararBorradoresFactura } from "@/lib/facturacion/preparar-borradores";
-import { TARIFA_FALLBACK_PESOS } from "@/lib/constants/billing";
+import { TARIFA_FALLBACK_PESOS, DIAS_SUSPENSION } from "@/lib/constants/billing";
+import { calcDPD } from "@/lib/billing-state";
+import { decidirCandidatoSuspension } from "@/lib/candidato-suspension";
+import { getParam } from "@/lib/parametros";
 
 /**
  * Cierre mensual — fuente ÚNICA de verdad del proceso del día 1 de cada mes.
@@ -15,7 +18,9 @@ import { TARIFA_FALLBACK_PESOS } from "@/lib/constants/billing";
  *   1. Crea pagos PENDIENTE del mes para cada cuenta ACTIVA (idempotente).
  *   2. Marca VENCIDO los PENDIENTE de meses anteriores.
  *   3. Notifica por WhatsApp a morosos (idempotente: no re-avisa este mes).
- *   4. Prepara borradores de factura del período.
+ *   4. Genera/actualiza la cola "A suspender hoy" (CandidatoSuspension); la
+ *      suspensión real la decide siempre un humano desde /cobros.
+ *   5. Prepara borradores de factura del período.
  *
  * Recibe el cliente Prisma por parámetro para no acoplarse al entry point.
  */
@@ -39,6 +44,11 @@ export interface ResumenCierreMensual {
   yaAvisados: number;
   sinTelefono: number;
   erroresEnvio: number;
+  candidatosSuspensionCreados: number;
+  candidatosSuspensionActualizados: number;
+  candidatosSuspensionCerradosPago: number;
+  /** Mensaje si el paso 4 (cola de suspensión) falló y se omitió — best-effort, no aborta el cron. */
+  candidatosSuspensionError: string | null;
   facturasBorradores: number;
   facturasOmitidas: number;
 }
@@ -240,7 +250,87 @@ export async function ejecutarCierreMensual(
   }
   log(`💬 Notificados: ${notificados} | ya avisados: ${yaAvisados} | sin tel: ${sinTelefono} | errores: ${erroresEnvio}`);
 
-  // ── 4. Borradores de factura del período ──────────────────────────────────
+  // ── 4. Cola "A suspender hoy" (CandidatoSuspension) ────────────────────────
+  // Recorre cuentas ACTIVA con pagos impagos (o que ya tenían un candidato
+  // abierto, por si se saldó la deuda) y delega en `decidirCandidatoSuspension`
+  // (función pura) qué hacer. La suspensión real (Cuenta.estado =
+  // SUSPENDIDA_PAGO) es SIEMPRE decisión humana desde /cobros — acá solo se
+  // arma/actualiza la cola visible.
+  let candidatosSuspensionCreados = 0;
+  let candidatosSuspensionActualizados = 0;
+  let candidatosSuspensionCerradosPago = 0;
+  let candidatosSuspensionError: string | null = null;
+
+  // Best-effort: si `candidatos_suspension` todavía no existe en la DB (drift
+  // conocido del repo — el SQL manual de sync puede estar pendiente), este
+  // paso completo se omite SIN abortar el cron. Antes crasheaba acá y nunca
+  // llegaba al paso 5 (borradores de factura), aunque los pagos y avisos del
+  // paso 1-3 ya se hubieran generado/enviado — mismo espíritu best-effort que
+  // `conRegistroCronRun`.
+  try {
+    const diasSuspension = await getParam("DIAS_SUSPENSION", DIAS_SUSPENSION);
+
+    const cuentasParaEvaluar = await prisma.cuenta.findMany({
+      where: {
+        estado: "ACTIVA",
+        OR: [
+          { pagos: { some: { estado: { in: ["PENDIENTE", "VENCIDO"] } } } },
+          { candidatos_suspension: { some: { resuelto_en: null } } },
+        ],
+      },
+      select: {
+        id: true,
+        pagos: {
+          where: { estado: { in: ["PENDIENTE", "VENCIDO"] } },
+          select: { estado: true, mes: true, anio: true, importe: true },
+        },
+        candidatos_suspension: {
+          where: { resuelto_en: null },
+          select: { id: true, dpd: true, deuda_total: true },
+        },
+      },
+    });
+
+    for (const cuenta of cuentasParaEvaluar) {
+      const dpd = calcDPD(cuenta.pagos);
+      const deudaTotal = cuenta.pagos.reduce((s, p) => s + Number(p.importe), 0);
+      const [abierto] = cuenta.candidatos_suspension;
+      const decision = decidirCandidatoSuspension(
+        dpd,
+        deudaTotal,
+        diasSuspension,
+        abierto ? { id: abierto.id, dpd: abierto.dpd, deuda_total: Number(abierto.deuda_total) } : null,
+      );
+
+      if (decision.tipo === "CREAR") {
+        await prisma.candidatoSuspension.create({
+          data: { cuenta_id: cuenta.id, dpd: decision.dpd, deuda_total: decision.deuda_total },
+        });
+        candidatosSuspensionCreados++;
+      } else if (decision.tipo === "ACTUALIZAR") {
+        await prisma.candidatoSuspension.update({
+          where: { id: decision.id },
+          data: { dpd: decision.dpd, deuda_total: decision.deuda_total },
+        });
+        candidatosSuspensionActualizados++;
+      } else if (decision.tipo === "CERRAR_PAGO_RECIBIDO") {
+        await prisma.candidatoSuspension.update({
+          where: { id: decision.id },
+          data: { resuelto_en: new Date(), accion: "PAGO_RECIBIDO" },
+        });
+        candidatosSuspensionCerradosPago++;
+      }
+    }
+    log(
+      `🚫 Cola de suspensión: ${candidatosSuspensionCreados} nuevos, ${candidatosSuspensionActualizados} actualizados, ${candidatosSuspensionCerradosPago} cerrados por pago`,
+    );
+  } catch (err) {
+    candidatosSuspensionError = err instanceof Error ? err.message : String(err);
+    console.warn("[cierre-mensual] paso 4 (cola de suspensión) falló, se continúa con el paso 5:", err);
+    log(`⚠️  Cola de suspensión: paso omitido — ${candidatosSuspensionError}`);
+  }
+
+  // ── 5. Borradores de factura del período ──────────────────────────────────
   const periodoDesde = new Date(anio, mes - 1, 1);
   const periodoHasta = new Date(anio, mes, 0);
   const facturas = await prepararBorradoresFactura(periodoDesde, periodoHasta, "cron");
@@ -257,6 +347,10 @@ export async function ejecutarCierreMensual(
     yaAvisados,
     sinTelefono,
     erroresEnvio,
+    candidatosSuspensionCreados,
+    candidatosSuspensionActualizados,
+    candidatosSuspensionCerradosPago,
+    candidatosSuspensionError,
     facturasBorradores: facturas.creadas,
     facturasOmitidas: facturas.omitidas,
   };

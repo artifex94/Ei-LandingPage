@@ -10,6 +10,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EventosLiveResponse, EventoLive } from "@/app/api/admin/eventos-live/route";
+import { horaAR, diaMesAR, esHoyAR } from "@/lib/fecha-ar";
+import { etiquetaCuenta } from "@/lib/whatsapp";
 
 export const POLL_MS = 10_000;
 const FLASH_MS = 4_000;
@@ -89,26 +91,34 @@ export function useEventosLive(limit: number) {
 
 // ── Helpers de presentación ───────────────────────────────────────────────────
 
-// Formato fijo 24 h (HH:mm:ss), sin locale: toLocaleTimeString("es-AR") cambia
-// según el ICU del runtime (12 h en algunos Node) y una consola de monitoreo
-// necesita SIEMPRE el mismo formato.
-const p2 = (n: number) => String(n).padStart(2, "0");
-
+// Formato fijo 24 h en hora de Argentina, determinístico (no depende del
+// timezone del browser del operador ni del ICU del runtime): una consola de
+// monitoreo necesita SIEMPRE la misma hora local, sea quien sea que la mire.
 export function hora(iso: string): string {
-  const d = new Date(iso);
-  return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+  return horaAR(iso);
 }
 
 /** Hora para listas largas: si el evento no es de hoy, antepone dd/mm. */
 export function horaConDia(iso: string): string {
-  const d = new Date(iso);
-  const hoy = new Date();
-  const esHoy =
-    d.getDate() === hoy.getDate() &&
-    d.getMonth() === hoy.getMonth() &&
-    d.getFullYear() === hoy.getFullYear();
-  if (esHoy) return hora(iso);
-  return `${p2(d.getDate())}/${p2(d.getMonth() + 1)} ${hora(iso)}`;
+  if (esHoyAR(iso)) return horaAR(iso);
+  return `${diaMesAR(iso)} ${horaAR(iso)}`;
+}
+
+/**
+ * Etiqueta de cuenta para mostrar en la UI ("Casa (Rawson 255)"), SOLO cuando el titular
+ * tiene 2+ cuentas activas (si no, "" — el operador no necesita la aclaración). Reusa
+ * `etiquetaCuenta` de wa.me quitando la negrita `*` que en pantalla no aplica.
+ */
+export function etiquetaCuentaUi(e: EventoLive): string {
+  if (!e.titularMultiCuenta) return "";
+  return etiquetaCuenta(
+    {
+      descripcion: e.cuentaDescripcion,
+      calle: e.cuentaCalle,
+      softguardRef: e.softguard_ref,
+    },
+    "plano",
+  );
 }
 
 /** Prioridad SoftGuard: 1 = crítica. Sin prioridad → neutro. */
@@ -244,4 +254,65 @@ export function eventosAgrupadosCuenta(
         Math.abs(new Date(e.fecha).getTime() - t0) <= ventanaMs,
     )
     .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+}
+
+// ── Agrupación de eventos REPETIDOS (mismo aviso, varias veces) ──────────────
+//
+// Distinto de `eventosAgrupadosCuenta` (que junta zonas distintas de una misma
+// cuenta para un solo mensaje de WhatsApp): esto colapsa, SOLO para el render
+// del board, disparos consecutivos de la MISMA cuenta + zona + código dentro de
+// la ventana en una única fila con contador — el típico "se movió el sensor y
+// mandó 5 veces la misma alarma en 3 minutos". No cambia el feed que consumen
+// el resto de pantallas (`MultiMonitorLive`, el modal de WhatsApp): se aplica
+// en el cliente, justo antes de pintar cada columna del board de operadores.
+
+export interface EventoAgrupado extends EventoLive {
+  /** Cantidad de eventos colapsados en esta fila (1 = no se agrupó con nada). */
+  repeticiones: number;
+  /** Fecha (ISO) de cada evento del grupo, de más viejo a más nuevo (incluye el representante). */
+  fechasAgrupadas: string[];
+}
+
+/**
+ * Colapsa eventos consecutivos de la misma cuenta (`softguard_ref`) + `zona` +
+ * `codigo`, disparados dentro de `ventanaMs` uno del otro, en un solo item por
+ * grupo: se queda con los campos del más reciente y suma `repeticiones`. No
+ * asume el orden del input (lo ordena internamente por fecha descendente) —
+ * función pura, sin dependencia del reloj real.
+ *
+ * Ventana RODANTE: cada evento se compara contra el ÚLTIMO evento ya
+ * incorporado al grupo (no contra el más reciente / ancla fija). Con ancla
+ * fija, una ráfaga de gaps consistentes de 9 min (cada uno < 10 min de
+ * ventana) se cortaba apenas el span total contra el primer evento superaba
+ * los 10 min, aunque ningún gap individual la superara.
+ */
+export function agruparEventosRepetidos(
+  eventos: EventoLive[],
+  ventanaMs: number = VENTANA_AGRUPACION_MS,
+): EventoAgrupado[] {
+  const ordenados = [...eventos].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+  const out: EventoAgrupado[] = [];
+  let ultimoAgregadoMs = 0;
+
+  for (const e of ordenados) {
+    const grupo = out[out.length - 1];
+    const eMs = new Date(e.fecha).getTime();
+    const mismoAviso =
+      grupo &&
+      grupo.softguard_ref === e.softguard_ref &&
+      grupo.zona === e.zona &&
+      grupo.codigo === e.codigo &&
+      ultimoAgregadoMs - eMs <= ventanaMs;
+
+    if (mismoAviso) {
+      grupo.repeticiones += 1;
+      grupo.fechasAgrupadas.unshift(e.fecha); // e es más viejo que lo ya acumulado → va adelante
+      ultimoAgregadoMs = eMs;
+      continue;
+    }
+    out.push({ ...e, repeticiones: 1, fechasAgrupadas: [e.fecha] });
+    ultimoAgregadoMs = eMs;
+  }
+  return out;
 }

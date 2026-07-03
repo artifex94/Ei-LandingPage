@@ -3,6 +3,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 import { PagoManualForm } from "@/components/admin/PagoManualForm";
 import { EditarClienteForm } from "@/components/admin/EditarClienteForm";
 import { NuevaCuentaForm } from "@/components/admin/NuevaCuentaForm";
@@ -10,7 +11,8 @@ import { EliminarClienteForm } from "@/components/admin/EliminarClienteForm";
 import { AprobarButton, RechazarForm, EditarYAprobarForm } from "@/app/admin/solicitudes-cambio/AccionesForm";
 import { UUID_RE } from "@/lib/constants/validation";
 import { BotonEnviarWhatsApp } from "@/components/admin/BotonEnviarWhatsApp";
-import { motivosDeCobranza } from "@/lib/mensajeria-motivos";
+import { motivosDeCobranza, motivosGenerales, agruparPagosPorCuenta, UMBRAL_MORA } from "@/lib/mensajeria-motivos";
+import { getParam } from "@/lib/parametros";
 
 const getClientePerfil = cache(async (id: string) => {
   return prisma.perfil.findUnique({
@@ -80,9 +82,10 @@ export default async function ClienteDetallePage({
 }) {
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
-  const [perfil, tarifaActual] = await Promise.all([
+  const [perfil, tarifaActual, umbralMora] = await Promise.all([
     getClientePerfil(id),
     prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" }, select: { monto: true } }),
+    getParam("UMBRAL_MORA", UMBRAL_MORA),
   ]);
 
   if (!perfil || perfil.rol !== "CLIENTE") notFound();
@@ -93,29 +96,52 @@ export default async function ClienteDetallePage({
 
   // Motivos de WhatsApp sobre la deuda COMPLETA del cliente (todas sus cuentas, cualquier
   // año) + pagos acreditados recientemente — no el subconjunto del año corriente que
-  // muestra la ficha.
+  // muestra la ficha. Se consulta por cuenta (pagos anidados) para poder armar el desglose
+  // por cuenta y el agregado desde la MISMA fuente, sin proyectar el pago dos veces.
   const hace30dias = new Date();
   hace30dias.setDate(hace30dias.getDate() - 30);
-  const pagosMotivos = await prisma.pago.findMany({
-    where: {
-      cuenta: { perfil_id: perfil.id },
-      OR: [
-        { estado: { in: ["PENDIENTE", "VENCIDO"] } },
-        { estado: "PAGADO", acreditado_en: { gte: hace30dias } },
-      ],
+  const filtroPagosMotivos: Prisma.PagoWhereInput = {
+    OR: [
+      { estado: { in: ["PENDIENTE", "VENCIDO"] } },
+      { estado: "PAGADO", acreditado_en: { gte: hace30dias } },
+    ],
+  };
+  const cuentasConDeuda = await prisma.cuenta.findMany({
+    where: { perfil_id: perfil.id, pagos: { some: filtroPagosMotivos } },
+    select: {
+      descripcion: true,
+      calle: true,
+      softguard_ref: true,
+      pagos: {
+        where: filtroPagosMotivos,
+        select: { mes: true, anio: true, importe: true, estado: true, acreditado_en: true },
+      },
     },
-    select: { mes: true, anio: true, importe: true, estado: true, acreditado_en: true },
   });
-  const motivosWA = motivosDeCobranza(
-    perfil.nombre,
-    pagosMotivos.map((p) => ({
-      mes: p.mes,
-      anio: p.anio,
-      importe: Number(p.importe),
-      estado: p.estado,
-      acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
+
+  // El desglose por cuenta se arma siempre (sin gate): motivosDeCobranza descarta las
+  // cuentas sin deuda y el template colapsa al formato clásico si queda 1 sola con deuda.
+  const pagosPorCuenta = agruparPagosPorCuenta(
+    cuentasConDeuda.map((c) => ({
+      descripcion: c.descripcion,
+      calle: c.calle,
+      softguard_ref: c.softguard_ref,
+      pagos: c.pagos.map((p) => ({
+        mes: p.mes,
+        anio: p.anio,
+        importe: Number(p.importe),
+        estado: p.estado,
+        acreditadoEnISO: p.acreditado_en?.toISOString() ?? null,
+      })),
     })),
   );
+  // Agregado derivado del mismo desglose (una sola proyección de pago → PagoParaMotivos).
+  const pagosMotivos = pagosPorCuenta.flatMap((g) => g.pagos);
+
+  const motivosWA = [
+    ...motivosDeCobranza(perfil.nombre, pagosMotivos, pagosPorCuenta, umbralMora),
+    ...motivosGenerales(perfil.nombre),
+  ];
 
   return (
     <div className="space-y-8">
@@ -151,9 +177,9 @@ export default async function ClienteDetallePage({
             <Link
               href={`/admin/vista-cliente/${perfil.id}`}
               className="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-600 transition-colors"
-              aria-label="Ver portal del cliente (vista cliente)"
+              aria-label="Ver portal como este cliente (vista admin, solo lectura)"
             >
-              Ver portal
+              Ver portal como cliente
             </Link>
           </div>
         </div>

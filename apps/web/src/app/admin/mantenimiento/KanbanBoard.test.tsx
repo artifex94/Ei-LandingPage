@@ -17,6 +17,8 @@ const SOLICITUD = {
   prioridad: "ALTA",
   creada_en: new Date("2026-06-11T10:00:00"),
   resuelta_en: null,
+  ot_id: null,
+  ot: null,
   cuenta: {
     descripcion: "Casa centro",
     softguard_ref: "ESI-0175",

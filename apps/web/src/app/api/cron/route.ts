@@ -13,6 +13,7 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma/client";
 import { ejecutarCierreMensual } from "@/lib/cron/cierre-mensual";
+import { conRegistroCronRun } from "@/lib/cron-run";
 
 export async function POST(req: NextRequest) {
   // ── Autenticación — comparación timing-safe para evitar timing oracle ──────
@@ -30,11 +31,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const r = await ejecutarCierreMensual(prisma);
+  const r = await conRegistroCronRun("cierre-mensual", () => ejecutarCierreMensual(prisma));
 
   console.log(
     `[cron] mes=${r.mes}/${r.anio} pagosCreados=${r.pagosCreados} vencidos=${r.marcadosVencidos} ` +
       `notificados=${r.notificados} yaAvisados=${r.yaAvisados} errores=${r.erroresEnvio} ` +
+      `candidatosSuspension=${r.candidatosSuspensionCreados}/${r.candidatosSuspensionActualizados}/${r.candidatosSuspensionCerradosPago} ` +
       `facturasBorradores=${r.facturasBorradores} facturasOmitidas=${r.facturasOmitidas}`,
   );
 

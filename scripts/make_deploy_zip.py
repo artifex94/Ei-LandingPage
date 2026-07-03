@@ -1,3 +1,6 @@
+# OBSOLETO — flujo standalone (build local → zip de .next/standalone → node server.js).
+# El deploy actual es build-on-server: usar scripts/make_source_zip.py.
+# Se conserva como referencia del flujo anterior.
 import zipfile, os, sys, shutil
 from datetime import datetime
 

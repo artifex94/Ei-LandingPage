@@ -3,7 +3,9 @@
 import { useOptimistic } from "react";
 import Link from "next/link";
 import { IniciarButton, ResolverButton, ReopenButton } from "./AccionesForm";
+import { ConvertirOTButton, VerOTLink } from "./ConvertirOTButton";
 import { KanbanOptimisticContext, type AccionOptimista } from "./kanban-context";
+import type { Prioridad } from "@/generated/prisma/client";
 
 interface SolicitudKanban {
   id: string;
@@ -12,6 +14,8 @@ interface SolicitudKanban {
   prioridad: string;
   creada_en: Date;
   resuelta_en: Date | null;
+  ot_id: string | null;
+  ot: { numero: number } | null;
   cuenta: {
     descripcion: string;
     softguard_ref: string;
@@ -163,6 +167,16 @@ export function KanbanBoard({ solicitudes }: { solicitudes: SolicitudKanban[] })
                             )}
                             <ReopenButton id={s.id} />
                           </div>
+                        )}
+                        {s.ot_id && s.ot ? (
+                          <VerOTLink otId={s.ot_id} numero={s.ot.numero} />
+                        ) : (
+                          <ConvertirOTButton
+                            solicitudId={s.id}
+                            cuentaNombre={s.cuenta.perfil.nombre}
+                            descripcion={s.descripcion}
+                            prioridad={s.prioridad as Prioridad}
+                          />
                         )}
                       </div>
                     </div>

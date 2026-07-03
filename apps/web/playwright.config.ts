@@ -51,10 +51,14 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: true,
-    timeout: 60_000,
-  },
+  // Los tests de billing son unitarios (función pura) y no necesitan servidor.
+  // PW_SKIP_WEBSERVER=1 evita arrancar Next — útil en CI, donde no hay env de Supabase.
+  webServer: process.env.PW_SKIP_WEBSERVER
+    ? undefined
+    : {
+        command: "npm run dev",
+        url: "http://localhost:3000",
+        reuseExistingServer: true,
+        timeout: 60_000,
+      },
 });

@@ -16,7 +16,11 @@ export async function crearPreferenciaMercadoPago(
   if (!UUID_RE.test(cuentaId)) return { error: "Cuenta inválida." };
   if (!Number.isInteger(mes) || mes < 1 || mes > 12) return { error: "Mes inválido." };
   if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) return { error: "Año inválido." };
-  const { userId: user_id } = await requireSesion();
+  const sesionPago = await requireSesion();
+  if (sesionPago.impersonacion) {
+    return { error: "Vista de administrador: el portal está en solo lectura." };
+  }
+  const { userId: user_id } = sesionPago;
 
   const pago = await prisma.pago.findUnique({
     where: { cuenta_id_mes_anio: { cuenta_id: cuentaId, mes, anio } },
@@ -79,7 +83,11 @@ export async function crearIntencionTalo(
   if (!UUID_RE.test(cuentaId)) return { error: "Cuenta inválida." };
   if (!Number.isInteger(mes) || mes < 1 || mes > 12) return { error: "Mes inválido." };
   if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) return { error: "Año inválido." };
-  const { userId: user_id } = await requireSesion();
+  const sesionPago = await requireSesion();
+  if (sesionPago.impersonacion) {
+    return { error: "Vista de administrador: el portal está en solo lectura." };
+  }
+  const { userId: user_id } = sesionPago;
 
   const pago = await prisma.pago.findUnique({
     where: { cuenta_id_mes_anio: { cuenta_id: cuentaId, mes, anio } },
@@ -160,7 +168,11 @@ export async function avisarTransferencia(
   if (!UUID_RE.test(cuentaId)) return { error: "Cuenta inválida." };
   if (!Number.isInteger(mes) || mes < 1 || mes > 12) return { error: "Mes inválido." };
   if (!Number.isInteger(anio) || anio < 2020 || anio > 2100) return { error: "Año inválido." };
-  const { userId: user_id } = await requireSesion();
+  const sesionPago = await requireSesion();
+  if (sesionPago.impersonacion) {
+    return { error: "Vista de administrador: el portal está en solo lectura." };
+  }
+  const { userId: user_id } = sesionPago;
 
   const pago = await prisma.pago.findUnique({
     where: { cuenta_id_mes_anio: { cuenta_id: cuentaId, mes, anio } },
@@ -203,7 +215,11 @@ export async function crearPreferenciaTodoMP(
   }
   if (pagoIds.some((id) => !UUID_RE.test(id))) return { error: "IDs de pago inválidos." };
 
-  const { userId: user_id } = await requireSesion();
+  const sesionPago = await requireSesion();
+  if (sesionPago.impersonacion) {
+    return { error: "Vista de administrador: el portal está en solo lectura." };
+  }
+  const { userId: user_id } = sesionPago;
 
   const pagos = await prisma.pago.findMany({
     where: { id: { in: pagoIds } },
@@ -267,7 +283,11 @@ export async function avisarTransferenciaTodo(
   }
   if (pagoIds.some((id) => !UUID_RE.test(id))) return { error: "IDs de pago inválidos." };
 
-  const { userId: user_id } = await requireSesion();
+  const sesionPago = await requireSesion();
+  if (sesionPago.impersonacion) {
+    return { error: "Vista de administrador: el portal está en solo lectura." };
+  }
+  const { userId: user_id } = sesionPago;
 
   const pagos = await prisma.pago.findMany({
     where: { id: { in: pagoIds } },

@@ -1,14 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { Menu, Phone, X } from "lucide-react";
+import { FileText, LogIn, Menu, X } from "lucide-react";
 import { BrandLockup } from "./BrandLockup";
 
 const navLinks = [
   { name: "Inicio", href: "#inicio" },
+  { name: "Mi Central", href: "#portal" },
   { name: "Servicios", href: "#servicios" },
   { name: "Nosotros", href: "#nosotros" },
-  { name: "Mi Central", href: "#portal" },
+  { name: "Opiniones", href: "#opiniones" },
   { name: "Contacto", href: "#contacto" },
 ];
 
@@ -35,12 +37,11 @@ export default function Navbar() {
       .filter((section): section is HTMLElement => section !== null);
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActiveHref(`#${visible.target.id}`);
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveHref(`#${entry.target.id}`);
+        });
       },
-      { rootMargin: "-20% 0px -62%", threshold: [0.05, 0.2, 0.5] },
+      { rootMargin: "-50% 0px -50% 0px", threshold: 0 }
     );
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
@@ -55,19 +56,26 @@ export default function Navbar() {
   }, []);
 
   return (
-    <nav aria-label="Navegación principal" className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled || isMenuOpen ? "border-b border-white/10 bg-slate-950/88 py-2 shadow-2xl backdrop-blur-xl" : "bg-transparent py-4"}`}>
+    <nav
+      aria-label="Navegación principal"
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled || isMenuOpen ? "border-b border-white/10 bg-slate-950/88 py-2 shadow-2xl backdrop-blur-xl" : "bg-transparent py-4"}`}
+    >
       <span
         className="absolute inset-x-0 bottom-0 h-px origin-left bg-orange-400 transition-transform duration-100"
         style={{ transform: `scaleX(${progress / 100})` }}
         aria-hidden="true"
       />
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 2xl:max-w-[1600px] 2xl:px-12">
         <div className="flex h-16 items-center justify-between">
-          <a href="#inicio" className="group flex items-center gap-3" aria-label="Escobar Instalaciones - inicio">
+          <a
+            href="#inicio"
+            className="group flex items-center gap-3"
+            aria-label="Escobar Instalaciones - inicio"
+          >
             <BrandLockup context="Seguridad electrónica" />
           </a>
 
-          <div className="hidden items-center gap-6 md:flex">
+          <div className="hidden items-center gap-5 md:flex">
             {navLinks.map((link) => (
               <a
                 key={link.name}
@@ -82,17 +90,50 @@ export default function Navbar() {
                 {link.name}
               </a>
             ))}
-            <a href="#contacto" className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:-translate-y-0.5 hover:bg-orange-400 hover:shadow-lg hover:shadow-orange-500/25"><Phone className="h-4 w-4" /> Asesor</a>
+            <div className="flex items-center gap-2 pl-1">
+              <Link
+                href="/portal/dashboard"
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2.5 text-sm font-black text-emerald-100 transition hover:-translate-y-0.5 hover:border-emerald-200/60 hover:bg-emerald-300/15"
+              >
+                <LogIn className="h-4 w-4" /> Entrar a Mi Central
+              </Link>
+              <a
+                href="#contacto"
+                className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:-translate-y-0.5 hover:bg-orange-400 hover:shadow-lg hover:shadow-orange-500/25"
+              >
+                <FileText className="h-4 w-4" /> Presupuesto
+              </a>
+            </div>
           </div>
 
-          <button type="button" onClick={() => setIsMenuOpen((open) => !open)} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10 md:hidden" aria-expanded={isMenuOpen} aria-controls="mobile-menu" aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}>
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <Link
+              href="/portal/dashboard"
+              className="inline-flex min-h-[40px] items-center rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-3 text-xs font-black text-emerald-100"
+            >
+              Mi Central
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-menu"
+              aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div id="mobile-menu" aria-hidden={!isMenuOpen} className={`overflow-hidden border-t border-white/10 bg-slate-950/95 backdrop-blur-xl transition-all duration-300 md:hidden ${isMenuOpen ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"}`}>
-          <div className="space-y-1 px-4 py-4">
+      <div
+        id="mobile-menu"
+        aria-hidden={!isMenuOpen}
+        inert={isMenuOpen ? undefined : true}
+        className={`overflow-hidden border-t border-white/10 bg-slate-950/95 backdrop-blur-xl transition-all duration-300 md:hidden ${isMenuOpen ? "max-h-[520px] opacity-100" : "pointer-events-none max-h-0 opacity-0"}`}
+      >
+        <div className="space-y-1 px-4 py-4">
           {navLinks.map((link) => (
             <a
               key={link.name}
@@ -108,7 +149,20 @@ export default function Navbar() {
               {link.name}
             </a>
           ))}
-          <a href="#contacto" onClick={() => setIsMenuOpen(false)} className="mt-3 flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-4 font-black text-slate-950"><Phone className="h-4 w-4" /> Solicitar asesor</a>
+          <Link
+            href="/portal/dashboard"
+            onClick={() => setIsMenuOpen(false)}
+            className="mt-3 flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 px-4 py-4 font-black text-emerald-100"
+          >
+            <LogIn className="h-4 w-4" /> Entrar a Mi Central
+          </Link>
+          <a
+            href="#contacto"
+            onClick={() => setIsMenuOpen(false)}
+            className="mt-3 flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-4 font-black text-slate-950"
+          >
+            <FileText className="h-4 w-4" /> Solicitar presupuesto
+          </a>
         </div>
       </div>
     </nav>

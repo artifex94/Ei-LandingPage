@@ -60,6 +60,23 @@ export async function toggleEmpleadoActivo(empleado_id: string, activo: boolean)
   return empleado;
 }
 
+const CAPACIDADES_EMPLEADO = ["puede_monitorear", "puede_instalar", "puede_facturar"] as const;
+type CapacidadEmpleado = (typeof CAPACIDADES_EMPLEADO)[number];
+
+/**
+ * Toggle de una capacidad puntual desde la matriz de /admin/trabajadores.
+ * Reusa `actualizarEmpleado` (partial update + audit EMPLEADO_ACTUALIZAR) —
+ * no toca rol ni estado activo, solo el flag indicado.
+ */
+export async function toggleCapacidadEmpleado(
+  empleado_id: string,
+  capacidad: CapacidadEmpleado,
+  valor: boolean
+) {
+  if (!CAPACIDADES_EMPLEADO.includes(capacidad)) throw new Error("Capacidad inválida.");
+  return actualizarEmpleado(empleado_id, { [capacidad]: valor });
+}
+
 export async function actualizarEmpleado(
   empleado_id: string,
   data: Partial<{

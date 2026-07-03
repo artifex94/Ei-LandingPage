@@ -12,7 +12,7 @@
 import { useCallback, useMemo } from "react";
 import { MensajeClienteModal } from "./MensajeClienteModal";
 import { prioridadStyle, horaConDia } from "./eventos-live";
-import { mensajeEvento, categoriaEvento, type CategoriaEvento } from "@/lib/whatsapp";
+import { mensajeEvento, categoriaEvento, etiquetaCuenta, type CategoriaEvento } from "@/lib/whatsapp";
 import type { MotivoMensaje } from "@/lib/whatsapp-templates";
 import type { EventoLive } from "@/app/api/admin/eventos-live/route";
 import type { WebContactoCuenta } from "@/lib/softguard/api";
@@ -39,16 +39,30 @@ export function NotificarWhatsAppModal({
   );
   const p = prioridadStyle(evento.prioridad);
   const cat = CATEGORIA_UI[categoriaEvento(evento.prioridad)];
+  // Identificación de cuenta SOLO si el titular tiene 2+ cuentas activas, armada UNA vez:
+  // para el mensaje va con negrita wa.me; para el header del modal va limpia (sin asteriscos).
+  const identificacionCuenta = evento.titularMultiCuenta
+    ? { descripcion: evento.cuentaDescripcion, calle: evento.cuentaCalle, softguardRef: evento.softguard_ref }
+    : null;
+  const etiquetaMensaje = identificacionCuenta ? etiquetaCuenta(identificacionCuenta) : "";
+  const etiquetaHeader = identificacionCuenta ? etiquetaCuenta(identificacionCuenta, "plano") : "";
 
   const construirMensaje = useCallback(
     (c: WebContactoCuenta) =>
       mensajeEvento({
         prioridad: evento.prioridad,
         nombreContacto: c.nombre,
-        eventos: grupo.map((e) => ({ descripcion: e.descripcion, zona: e.zona })),
+        eventos: grupo.map((e) => ({
+          descripcion: e.descripcion,
+          zona: e.zona,
+          codigo: e.codigo,
+          zonaNumero: e.zonaNumero,
+          fecha: e.fecha,
+        })),
         fechaISO: grupo[grupo.length - 1].fecha, // el más reciente (grupo ordenado asc)
+        cuentaEtiqueta: etiquetaMensaje || undefined,
       }),
-    [grupo, evento.prioridad],
+    [grupo, evento.prioridad, etiquetaMensaje],
   );
 
   const resumenHeader =
@@ -73,7 +87,9 @@ export function NotificarWhatsAppModal({
           ))}
         </ul>
         <p className="mt-2 text-[10px] text-slate-500">
-          #{evento.softguard_ref} · {evento.titular} · se notifican juntos
+          #{evento.softguard_ref} · {evento.titular}
+          {etiquetaHeader && <span className="text-slate-300"> · {etiquetaHeader}</span>}
+          {" · se notifican juntos"}
         </p>
       </div>
     ) : (
@@ -86,7 +102,10 @@ export function NotificarWhatsAppModal({
         </div>
         <p className={`text-sm font-semibold mt-2 ${p.texto}`}>{evento.descripcion}</p>
         <p className="text-[11px] text-slate-500 mt-0.5">
-          #{evento.softguard_ref} · {evento.titular} · {horaConDia(evento.fecha)}
+          #{evento.softguard_ref} · {evento.titular}
+          {etiquetaHeader && <span className="text-slate-300"> · {etiquetaHeader}</span>}
+          {" · "}
+          {horaConDia(evento.fecha)}
           {evento.zona && <span> · zona {evento.zona}</span>}
         </p>
       </div>

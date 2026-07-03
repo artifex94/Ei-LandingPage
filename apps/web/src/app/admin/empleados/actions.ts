@@ -10,6 +10,7 @@ import type { Rol } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/actions/auth";
 import { siteConfig } from "@/config/site";
 import { UUID_RE } from "@/lib/constants/validation";
+import { difCamposPerfil } from "@/lib/perfil-diff";
 
 export interface EmpleadoActionResult {
   ok?: boolean;
@@ -184,6 +185,11 @@ export async function actualizarEmpleado(
 
   const rolPerfil = rolPerfilDesdeEmpleado(rol_empleado);
 
+  const perfilAntes = await prisma.perfil.findUnique({
+    where: { id },
+    select: { nombre: true, dni: true, telefono: true, email: true },
+  });
+
   await prisma.$transaction([
     prisma.perfil.update({
       where: { id },
@@ -206,13 +212,26 @@ export async function actualizarEmpleado(
     }),
   ]);
 
+  // dni/telefono undefined significa "campo no tocado en el form" — se
+  // conserva el valor previo, no se interpreta como vaciado para el audit.
+  const dniAplicado = dni !== undefined ? dni : (perfilAntes?.dni ?? null);
+  const telefonoAplicado = telefono !== undefined ? telefono : (perfilAntes?.telefono ?? null);
+
+  const camposCambiados = difCamposPerfil(
+    { nombre: perfilAntes?.nombre, dni: perfilAntes?.dni, telefono: perfilAntes?.telefono, email: perfilAntes?.email },
+    { nombre, dni: dniAplicado, telefono: telefonoAplicado, email: perfilAntes?.email }
+  );
+
   await registrarAudit({
     admin_id:     admin.id,
     admin_nombre: admin.nombre,
     accion:       "EMPLEADO_EDITADO",
     entidad:      "empleado",
     entidad_id:   id,
-    detalle:      { nombre, rol_empleado, puede_monitorear, puede_instalar, puede_facturar, activo },
+    detalle:      {
+      campos: camposCambiados,
+      rol_empleado, puede_monitorear, puede_instalar, puede_facturar, activo,
+    },
   });
 
   revalidatePath(`/admin/empleados/${id}`);

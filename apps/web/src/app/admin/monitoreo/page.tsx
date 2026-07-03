@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { MonitorOperadores } from "@/components/admin/MonitorOperadores";
+import { getParam } from "@/lib/parametros";
 
 export const metadata: Metadata = {
   title: "Monitoreo en vivo",
 };
 
-export default function MonitoreoPage() {
+export default async function MonitoreoPage() {
+  const ventanaAgrupacionMin = await getParam("VENTANA_AGRUPACION_MIN", 10);
+
   return (
     <div className="space-y-6">
       <div>
@@ -18,7 +21,7 @@ export default function MonitoreoPage() {
         </p>
       </div>
 
-      <MonitorOperadores />
+      <MonitorOperadores ventanaAgrupacionMin={ventanaAgrupacionMin} />
     </div>
   );
 }

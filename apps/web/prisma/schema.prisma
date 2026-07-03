@@ -86,6 +86,27 @@ enum Prioridad {
   ALTA
 }
 
+// ── Feedback de clientes (bugs/mejoras) ──────────────────────────────────────
+
+enum TipoTicketFeedback {
+  BUG
+  MEJORA
+}
+
+enum PrioridadTicket {
+  BAJA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum EstadoTicketFeedback {
+  NUEVO
+  EN_REVISION
+  RESUELTO
+  DESCARTADO
+}
+
 enum TipoTitular {
   RESIDENCIAL
   COMERCIAL
@@ -99,10 +120,29 @@ enum EstadoCambioInfo {
   RECHAZADO
 }
 
+enum TipoParametro {
+  INT
+  DECIMAL
+  STRING
+  JSON
+}
+
 enum EstadoAltaUsuario {
   PENDIENTE
   PROCESADA
   RECHAZADA
+}
+
+// Resolución humana de un CandidatoSuspension (plan maestro — Fase 3 tesoreros).
+enum AccionSuspension {
+  SUSPENDIDA
+  CONDONADA
+  PAGO_RECIBIDO
+}
+
+enum EstadoCronRun {
+  OK
+  ERROR
 }
 
 // ── Fase 3: Órdenes de Trabajo ───────────────────────────────
@@ -213,6 +253,7 @@ model Perfil {
   ordenes_trabajo    OrdenTrabajo[]
   tareas_asignadas   TareaAgendada[]      @relation("TareasTecnico")
   disponibilidad     DisponibilidadTecnico[] @relation("DisponibilidadTecnico")
+  tickets_feedback   TicketFeedback[]
 
   // ── Fase 2: datos fiscales del receptor ──────────────────────
   cuit               String?              // CUIT del titular (para Factura C)
@@ -226,6 +267,7 @@ model Perfil {
 model Cuenta {
   id              String          @id @default(uuid())
   softguard_ref   String          @unique
+  iid_softguard   Int?            // id interno de la cuenta en la central (rec_iidcuenta); lo backfillea el sync de eventos. Necesario para traer los contactos de aviso (Telefonos).
   perfil_id       String
   perfil          Perfil          @relation(fields: [perfil_id], references: [id])
   descripcion     String
@@ -265,6 +307,8 @@ model Cuenta {
   eventos_alarma  EventoAlarma[]
   camaras         CamaraCliente[]
   notificaciones  NotificacionCliente[]
+  solicitudes_cambio SolicitudCambioInfo[]
+  candidatos_suspension CandidatoSuspension[]
 
   @@index([perfil_id])
   @@map("cuentas")
@@ -308,6 +352,8 @@ model Pago {
   imputado_softguard Boolean  @default(false)
   imputado_en        DateTime?
 
+  movimientos_bancarios MovimientoBancario[]
+
   @@unique([cuenta_id, mes, anio])
   @@index([cuenta_id])
   @@index([factura_id])
@@ -326,6 +372,91 @@ model TarifaHistorico {
   @@map("tarifas_historico")
 }
 
+// Parámetros de negocio editables sin deploy (umbral de mora, días de gracia/suspensión,
+// cobertura de turnos, etc.). Clave-valor tipado; lectura autenticados, escritura ADMIN.
+// Sin seed: la fila se crea recién al editar por primera vez (hasta entonces rige el
+// fallback hardcodeado que sigue viviendo en cada caller — ver `src/lib/parametros.ts`).
+model ParametroNegocio {
+  clave       String        @id
+  valor       String
+  tipo        TipoParametro
+  categoria   String
+  descripcion String
+  updated_por String?
+  updated_at  DateTime      @updatedAt
+
+  @@map("parametros_negocio")
+}
+
+// Cola de candidatos a suspensión por mora — Fase 3 del plan maestro (tesoreros).
+// El cron mensual (`ejecutarCierreMensual`) detecta cuentas ACTIVA con DPD >=
+// DIAS_SUSPENSION y genera/actualiza un candidato ABIERTO (resuelto_en = null) por
+// cuenta; el tesorero decide manualmente desde /cobros si suspende o condona
+// (`suspenderCandidato` / `condonarCandidato`). La suspensión NUNCA es automática.
+//
+// Regla de unicidad: "un candidato ABIERTO por cuenta" (no `@@unique([cuenta_id,
+// generado_en])` — eso permitiría abrir uno nuevo cada corrida del cron mientras el
+// anterior sigue sin resolver). Prisma no soporta índices únicos parciales sin
+// preview feature, así que se enforce a nivel de aplicación (findFirst con
+// resuelto_en: null antes de crear) y se refuerza con un índice único parcial
+// manual — ver prisma/sql-manual/2026-07-02_fases-plan-maestro.sql.
+model CandidatoSuspension {
+  id          String            @id @default(uuid())
+  cuenta_id   String
+  cuenta      Cuenta            @relation(fields: [cuenta_id], references: [id])
+  dpd         Int
+  deuda_total Decimal           @db.Decimal(10, 2)
+  generado_en DateTime          @default(now())
+  resuelto_en DateTime?
+  accion      AccionSuspension?
+
+  @@index([cuenta_id, resuelto_en])
+  @@index([resuelto_en])
+  @@map("candidatos_suspension")
+}
+
+// Historial de corridas de los crons (cierre mensual, sync SoftGuard, auto-turnos)
+// — Fase 5 del plan maestro (administradores). Sin esto un cron caído (ej. sync
+// SoftGuard muerto) es invisible hasta que reclama un cliente. Escrito por el
+// wrapper `conRegistroCronRun` (ver src/lib/cron-run.ts); nunca por el propio
+// cron a mano, para que el registro sea uniforme.
+model CronRun {
+  id          String        @id @default(uuid())
+  cron        String
+  estado      EstadoCronRun
+  started_at  DateTime      @default(now())
+  finished_at DateTime?
+  duracion_ms Int?
+  resumen     String?
+
+  @@index([cron, started_at(sort: Desc)])
+  @@map("cron_runs")
+}
+
+// Conciliación bancaria — Fase 6 del plan maestro (tesoreros). Hoy las
+// transferencias avisadas por `avisarTransferencia` se buscan a ojo en el
+// homebanking; este modelo persiste el extracto CSV importado (créditos
+// únicamente) para matchear contra `Pago` PROCESANDO/PENDIENTE por
+// ref_externa o por importe. `hash` es la clave de idempotencia del import
+// (sha256 de fecha|importe|descripcion) — createMany + skipDuplicates evita
+// duplicar movimientos si el tesorero re-sube el mismo extracto.
+model MovimientoBancario {
+  id             String    @id @default(uuid())
+  hash           String    @unique
+  fecha          DateTime  @db.Date
+  importe        Decimal   @db.Decimal(10, 2)
+  descripcion    String
+  pago_id        String?
+  pago           Pago?     @relation(fields: [pago_id], references: [id])
+  conciliado_en  DateTime?
+  importado_en   DateTime  @default(now())
+  importado_por  String
+
+  @@index([fecha])
+  @@index([conciliado_en])
+  @@map("movimientos_bancarios")
+}
+
 model SolicitudMantenimiento {
   id          String          @id @default(uuid())
   cuenta_id   String
@@ -335,9 +466,34 @@ model SolicitudMantenimiento {
   prioridad   Prioridad       @default(MEDIA)
   creada_en   DateTime        @default(now())
   resuelta_en DateTime?
+  ot_id       String?         @unique // Fase 2: link 1:1 a la OT generada por conversión
+  ot          OrdenTrabajo?   @relation(fields: [ot_id], references: [id])
 
   @@index([cuenta_id])
   @@map("solicitudes_mantenimiento")
+}
+
+// Bucle cerrado de feedback: el cliente reporta un bug o sugiere una mejora
+// desde el portal (con adjunto opcional), el admin lo gestiona desde la
+// bandeja /admin/feedback y deja una nota visible para el cliente al resolver.
+model TicketFeedback {
+  id             String               @id @default(uuid())
+  perfil_id      String
+  perfil         Perfil               @relation(fields: [perfil_id], references: [id])
+  tipo           TipoTicketFeedback
+  descripcion    String
+  prioridad      PrioridadTicket
+  estado         EstadoTicketFeedback @default(NUEVO)
+  adjunto_url    String?
+  adjunto_mime   String?
+  creado_en      DateTime             @default(now())
+  actualizado_en DateTime             @updatedAt
+  resuelto_en    DateTime?
+  nota_admin     String?
+
+  @@index([estado, creado_en])
+  @@index([perfil_id])
+  @@map("tickets_feedback")
 }
 
 model AltaUsuario {
@@ -388,7 +544,9 @@ model SolicitudCambioInfo {
   id           String           @id @default(uuid())
   perfil_id    String
   perfil       Perfil           @relation(fields: [perfil_id], references: [id])
-  campo        String           // "nombre" | "telefono" | "email"
+  cuenta_id    String?          // solo para campo "orden_avisos" (reordenar contactos de aviso de una cuenta)
+  cuenta       Cuenta?          @relation(fields: [cuenta_id], references: [id])
+  campo        String           // "nombre" | "telefono" | "email" | "orden_avisos"
   valor_actual String?
   valor_nuevo  String
   estado       EstadoCambioInfo @default(PENDIENTE)
@@ -400,6 +558,7 @@ model SolicitudCambioInfo {
 
   @@index([perfil_id])
   @@index([estado])
+  @@index([cuenta_id])
   @@map("solicitudes_cambio_info")
 }
 
@@ -609,6 +768,7 @@ model OrdenTrabajo {
   fotos_urls              String?    // JSON array de URLs
   notas_admin             String?
   notas_tecnico           String?
+  motivo_no_firma         String?    // Fase 9: por qué se completó sin firma (AUSENTE | RECHAZO | OTRO + texto), cuando conformidad_firmada queda en false
   st_softguard_numero     Int?       // espejo del Nº en SoftGuard ST si se promovió
   gps_salida_lat          Decimal?   @db.Decimal(9, 6)
   gps_salida_lng          Decimal?   @db.Decimal(9, 6)
@@ -623,12 +783,53 @@ model OrdenTrabajo {
 
   reservas_vehiculo ReservaVehiculo[]
   tarea             TareaAgendada?    @relation("OTTarea")
+  solicitud         SolicitudMantenimiento? // back-relation Fase 2: solicitud que originó esta OT (si vino de una conversión)
+  materiales        MaterialUsadoOT[] // Fase 9: catálogo tipado — complementa (no reemplaza) `materiales_usados`
 
   @@index([estado])
   @@index([tecnico_id, fecha_visita])
   @@index([cuenta_id])
   @@index([perfil_id])
   @@map("ordenes_trabajo")
+}
+
+// ─────────────────────────────────────────────────────────────
+// FASE 9 — CATÁLOGO DE MATERIALES (cierre de OT en campo)
+// ─────────────────────────────────────────────────────────────
+// `OrdenTrabajo.materiales_usados` era un textarea libre (JSON no tipado)
+// tipeado a mano desde el celular — sin catálogo ni costos, imposible de
+// agregar para reportes. Este catálogo permite elegir de una lista con
+// costo de referencia. El campo legacy NO se borra: sigue siendo el
+// fallback si el catálogo todavía está vacío (p.ej. antes de correr el
+// seed) — ver `OTCampoClient.tsx`.
+
+model MaterialCatalogo {
+  id               String   @id @default(uuid())
+  nombre           String
+  unidad           String   @default("unidad") // "unidad" | "metros" | "juego" — determina si la cantidad admite decimales
+  costo_referencia Decimal? @db.Decimal(10, 2)
+  activo           Boolean  @default(true)
+
+  usos MaterialUsadoOT[]
+
+  @@map("materiales_catalogo")
+}
+
+// Snapshot de costo al momento de usar el material: `costo_unitario` se
+// copia de `MaterialCatalogo.costo_referencia` al agregar, así si el precio
+// de referencia cambia después el histórico de esta OT no se ve afectado.
+model MaterialUsadoOT {
+  id             String           @id @default(uuid())
+  ot_id          String
+  ot             OrdenTrabajo     @relation(fields: [ot_id], references: [id], onDelete: Cascade)
+  material_id    String
+  material       MaterialCatalogo @relation(fields: [material_id], references: [id])
+  cantidad       Decimal          @db.Decimal(10, 2)
+  costo_unitario Decimal?         @db.Decimal(10, 2)
+  created_at     DateTime         @default(now())
+
+  @@index([ot_id])
+  @@map("materiales_usados_ot")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -664,11 +865,69 @@ model EventoAlarma {
   notificado_cliente Boolean          @default(false)
   raw                String?
 
+  // Timestamps de gestión — Fase 7a del plan maestro (monitoreadores): permiten
+  // medir tiempos de atención NUEVO→tomado→resuelto. Se pueblan en
+  // `actualizarEstadoEvento` (src/lib/actions/eventos.ts); nunca se pisan una
+  // vez seteados (no se reescriben en re-tomas/re-resoluciones).
+  tomado_en   DateTime?
+  tomado_por  String?
+  resuelto_en DateTime?
+
+  // Pasos del protocolo guiado — Fase 7b del plan maestro. Complementa
+  // `resolucion` (texto libre), no la reemplaza.
+  gestiones GestionEvento[]
+
   synced_at DateTime @default(now())
 
   @@unique([softguard_ref, fecha_evento, codigo])
   @@index([cuenta_id, fecha_evento])
+  @@index([estado, fecha_evento])
   @@map("eventos_alarma")
+}
+
+// ─────────────────────────────────────────────────────────────
+// FASE 7b — PROTOCOLO GUIADO DE ACTUACIÓN (monitoreadores)
+// ─────────────────────────────────────────────────────────────
+
+enum TipoGestionEvento {
+  LLAMADA_CONTACTO
+  WHATSAPP_CONTACTO
+  VERIFICACION_CAMARA
+  AVISO_POLICIA
+  OTRO
+}
+
+enum ResultadoGestion {
+  ATENDIO
+  NO_ATENDIO
+  OCUPADO
+  HECHO
+  SIN_RESPUESTA
+}
+
+// Fila por paso del protocolo guiado (una llamada a un contacto, un aviso a
+// policía, una verificación de cámara, etc). Complementa `EventoAlarma.
+// resolucion` (texto libre) con registro estructurado — el operador ya no
+// pierde "llamé al contacto 2, no atendió" al no tener dónde anotarlo.
+//
+// Diseñada como fuente de datos de la Fase 5 del roadmap wa.me (timeline de
+// contactos): por eso los campos son genéricos (`destino` string libre,
+// `tipo`/`resultado` acotados por enum) en vez de acoplarse a un contacto
+// puntual de SoftGuard.
+model GestionEvento {
+  id         String            @id @default(uuid())
+  evento_id  String
+  evento     EventoAlarma      @relation(fields: [evento_id], references: [id])
+  orden      Int
+  tipo       TipoGestionEvento
+  destino    String? // nombre + teléfono del contacto, cuando aplica
+  resultado  ResultadoGestion
+  nota       String?
+  operador   String
+  created_at DateTime          @default(now())
+
+  @@index([evento_id, orden])
+  @@map("gestiones_evento")
 }
 
 // ─────────────────────────────────────────────────────────────

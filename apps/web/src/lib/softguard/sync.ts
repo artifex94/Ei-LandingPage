@@ -193,6 +193,15 @@ export async function syncEventosWebApi(): Promise<{
         select: { id: true },
       });
 
+      // Backfill del iid interno de la central: solo viaja en los eventos (rec_iidcuenta),
+      // no en el grid de cuentas. Lo necesita el portal para traer los contactos de aviso.
+      if (cuenta?.id && ev.iid_cuenta > 0) {
+        await prisma.cuenta.updateMany({
+          where: { id: cuenta.id, iid_softguard: null },
+          data:  { iid_softguard: ev.iid_cuenta },
+        });
+      }
+
       // Eventos pendientes = alarmas sin atender → estado NUEVO en el portal.
       const upserted = await prisma.eventoAlarma.upsert({
         where: {

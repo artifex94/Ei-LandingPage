@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma/client";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
 import { MultiMonitorLive } from "@/components/admin/MultiMonitorLive";
 import { softguardWebApiConfigured, fetchEventosPendientes } from "@/lib/softguard/api";
+import { hayCronConProblema } from "@/lib/cron-salud";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -156,6 +157,10 @@ export default async function AdminDashboardPage() {
     }
   }
 
+  // Prioridad más baja que eventos/turnos: un cron atrasado importa, pero no
+  // tanto como una alarma sin procesar o un hueco de cobertura hoy mismo.
+  const cronConProblema = await hayCronConProblema();
+
   const alertaUrgente = eventosUrgentes > 0
     ? {
         tipo: "critico" as const,
@@ -167,6 +172,12 @@ export default async function AdminDashboardPage() {
         tipo: "alerta" as const,
         texto: "Sin turnos de monitoreo asignados hoy",
         href: "/admin/turnos",
+      }
+    : cronConProblema
+    ? {
+        tipo: "alerta" as const,
+        texto: "Un cron del sistema está atrasado o falló",
+        href: "/admin/sync-softguard",
       }
     : null;
 

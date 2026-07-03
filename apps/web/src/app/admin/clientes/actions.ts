@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma/client";
 import { registrarAudit } from "@/lib/audit";
 import { requireAdmin } from "@/lib/actions/auth";
 import { UUID_RE } from "@/lib/constants/validation";
+import { difCamposPerfil } from "@/lib/perfil-diff";
 import type { CategoriaCuenta, CondicionIVA, TipoTitular } from "@/generated/prisma/enums";
 
 export interface ClienteActionResult {
@@ -305,13 +306,23 @@ export async function actualizarCliente(
 
   const perfilAntes = await prisma.perfil.findUnique({
     where: { id },
-    select: { nombre: true, dni: true, telefono: true, activo: true },
+    select: { nombre: true, dni: true, telefono: true, email: true, activo: true },
   });
 
   await prisma.perfil.update({
     where: { id },
     data: { ...rest, ...(dni !== undefined ? { dni } : {}), ...(telefono !== undefined ? { telefono } : {}) },
   });
+
+  // dni/telefono undefined significa "campo no tocado en el form" (se conserva
+  // el valor previo) — no confundir con "vaciado a null" para el diff del audit.
+  const dniAplicado = dni !== undefined ? dni : (perfilAntes?.dni ?? null);
+  const telefonoAplicado = telefono !== undefined ? telefono : (perfilAntes?.telefono ?? null);
+
+  const camposCambiados = difCamposPerfil(
+    { nombre: perfilAntes?.nombre, dni: perfilAntes?.dni, telefono: perfilAntes?.telefono, email: perfilAntes?.email },
+    { nombre: rest.nombre, dni: dniAplicado, telefono: telefonoAplicado, email: perfilAntes?.email }
+  );
 
   await registrarAudit({
     admin_id: admin.id,
@@ -320,8 +331,8 @@ export async function actualizarCliente(
     entidad: "cliente",
     entidad_id: id,
     detalle: {
-      antes: { nombre: perfilAntes?.nombre, dni: perfilAntes?.dni, activo: perfilAntes?.activo },
-      despues: { nombre: rest.nombre, dni, activo: rest.activo },
+      campos: camposCambiados,
+      activo: { antes: perfilAntes?.activo, despues: rest.activo },
     },
   });
 

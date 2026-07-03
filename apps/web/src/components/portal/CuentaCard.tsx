@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   calcularEstadoFinanciero,
+  type EstadoFinancieroConfig,
   type PagoParaEstado,
 } from "@/lib/billing-state";
 
@@ -102,10 +103,12 @@ interface CuentaCardProps {
     sensores: { id: string }[];
     pagos: (PagoParaEstado & { id: string })[];
   };
+  /** Umbrales de `ParametroNegocio` (DIAS_GRACIA/DIAS_SUSPENSION); sin config = default actual. */
+  config?: EstadoFinancieroConfig;
 }
 
-export function CuentaCard({ cuenta }: CuentaCardProps) {
-  const estadoFinanciero = calcularEstadoFinanciero(cuenta.estado, cuenta.pagos);
+export function CuentaCard({ cuenta, config }: CuentaCardProps) {
+  const estadoFinanciero = calcularEstadoFinanciero(cuenta.estado, cuenta.pagos, undefined, undefined, config);
   const led = getLedConfig(cuenta.estado, estadoFinanciero);
 
   const badgeLabel =

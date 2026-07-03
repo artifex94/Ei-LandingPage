@@ -43,6 +43,7 @@
 
   html {
     -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
 
   button,
@@ -198,7 +199,7 @@
 }
 
 
-/* ?? Landing experience: performant CSS-only motion ??????????????????????? */
+/* ── Landing experience: performant CSS-only motion ────────────────────── */
 @keyframes radar-sweep {
   0% { transform: rotate(0deg); opacity: 0.88; }
   100% { transform: rotate(360deg); opacity: 0.88; }
@@ -210,16 +211,6 @@
   100% { transform: translateY(760%); opacity: 0; }
 }
 
-@keyframes float-slow {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(0, -10px, 0); }
-}
-
-@keyframes float-delayed {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(-8px, 8px, 0); }
-}
-
 @utility radar-sweep {
   background: conic-gradient(from 0deg, rgba(241,119,32,0.38), transparent 42%, transparent 100%);
   animation: radar-sweep 8s linear infinite;
@@ -228,14 +219,6 @@
 
 @utility scanline {
   animation: scanline-pass 6s ease-in-out infinite;
-}
-
-@utility animate-float-slow {
-  animation: float-slow 5.5s ease-in-out infinite;
-}
-
-@utility animate-float-delayed {
-  animation: float-delayed 6.5s ease-in-out infinite;
 }
 
 .security-orb {
@@ -323,4 +306,112 @@
 @utility barra-vida {
   transform-origin: left;
   animation: drenar-vida linear forwards;
+}
+
+/* ── Logo: luminiscencia pulsante que calca el contorno ──────────────────── */
+/* Una copia desenfocada del propio logo, detrás del nítido, latiendo suave.  */
+@keyframes logo-glow-pulse {
+  0%, 100% { opacity: 0.22; transform: scale(1.03); }
+  50%      { opacity: 0.55; transform: scale(1.12); }
+}
+.logo-glow {
+  filter: blur(6px) saturate(1.25);
+  animation: logo-glow-pulse 3.4s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* ── Monitor de servicios: cambio de "canal" estilo TV analógica ─────────── */
+/* Cada animación se re-dispara al cambiar el `key` (remonta el elemento).    */
+
+/* Imagen entrante: roll vertical + colapso + ganancia de señal */
+@keyframes tv-channel {
+  0%   { transform: translateY(-7%) scaleY(0.86); filter: brightness(2) contrast(1.5) saturate(0.2); }
+  14%  { transform: translateY(4%)  scaleY(1.05); filter: brightness(1.25) contrast(1.15) saturate(1.1); }
+  28%  { transform: translateY(-2%) scaleY(0.98); filter: none; }
+  46%  { transform: translateY(1%)  scaleY(1.01); }
+  100% { transform: translateY(0)   scaleY(1); }
+}
+.tv-channel { animation: tv-channel 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* Nieve / estática que estalla en el cambio */
+@keyframes tv-static {
+  0%   { opacity: 0; }
+  6%   { opacity: 0.65; }
+  34%  { opacity: 0.3; }
+  60%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes tv-static-move {
+  0%   { background-position: 0 0; }
+  100% { background-position: 130px -80px; }
+}
+.tv-static {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  mix-blend-mode: screen;
+  animation: tv-static 0.55s steps(3) both, tv-static-move 0.55s steps(7) both;
+}
+
+/* Barrido de scanline */
+@keyframes monitor-scan {
+  0%   { transform: translateY(-120%); opacity: 0; }
+  12%  { opacity: 0.85; }
+  100% { transform: translateY(320%); opacity: 0; }
+}
+.monitor-scan { animation: monitor-scan 0.7s ease-in-out both; }
+
+/* Entrada del texto del servicio (OSD) */
+@keyframes monitor-osd {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.monitor-osd { animation: monitor-osd 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Estado de carga: estática que corre en loop mientras se pide la imagen.    */
+/* Reusa el mismo ruido fractal que el burst de cambio de canal.              */
+@keyframes tv-tuning-flicker {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 0.26; }
+}
+.tv-tuning {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  mix-blend-mode: screen;
+  animation:
+    tv-static-move 0.5s steps(7) infinite,
+    tv-tuning-flicker 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tv-tuning { animation: none; opacity: 0.4; }
+}
+
+/* ── Hero: reflejo holográfico del título ────────────────────────────────── */
+/* Base naranja de marca SIEMPRE visible + banda de brillo que barre encima.  */
+@keyframes holo-shine {
+  0%   { background-position: -160% 0, 0 0; }
+  100% { background-position: 260% 0, 0 0; }
+}
+.holo-text {
+  background-image:
+    linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.9) 50%, transparent 58%),
+    linear-gradient(95deg, #fdba74 0%, #f17720 50%, #fbbf24 100%);
+  background-size: 250% 100%, 100% 100%;
+  background-position: -160% 0, 0 0;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: holo-shine 5s linear infinite;
+}
+
+/* ── Hero: luces (glows) con respiración suave ───────────────────────────── */
+@keyframes hero-lights {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.06); }
+}
+.hero-lights {
+  transform-origin: 30% 20%;
+  animation: hero-lights 7s ease-in-out infinite;
+  will-change: opacity, transform;
 }

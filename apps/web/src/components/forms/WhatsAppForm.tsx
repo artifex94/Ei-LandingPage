@@ -51,7 +51,7 @@ const WhatsAppForm: React.FC = () => {
     const numeroDestino = siteConfig.contact.whatsappNumber;
 
     // Construimos el mensaje base
-    let textoMensaje = `Hola, mi nombre es ${data.nombre}. Necesito el servicio de: ${data.servicio}. Por favor, comuníquense a mi número: ${data.telefono}.`;
+    let textoMensaje = `Hola, mi nombre es ${data.nombre}. Quiero un presupuesto para: ${data.servicio}. Mi teléfono es: ${data.telefono}.`;
 
     // Si el usuario escribió un mensaje opcional, lo agregamos al final
     if (data.mensaje && data.mensaje.trim() !== '') {
@@ -128,12 +128,12 @@ const WhatsAppForm: React.FC = () => {
       </div>
 
       {/* Botón de envío */}
-      <Button 
-        type="submit" 
+      <Button
+        type="submit"
         isLoading={isSubmitting}
         loadingText="Abriendo WhatsApp..."
       >
-        ENVIAR CONSULTA
+        Solicitar presupuesto
       </Button>
     </form>
   );

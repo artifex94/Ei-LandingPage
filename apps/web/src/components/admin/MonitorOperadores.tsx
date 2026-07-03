@@ -15,48 +15,74 @@
  * SOLO LECTURA contra SoftGuard: procesar eventos sigue siendo manual en la suite.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLink, MessageCircle, Phone, RefreshCw, Search, X } from "lucide-react";
 import type { EventoLive } from "@/app/api/admin/eventos-live/route";
 import type { CuentaContextoResponse } from "@/app/api/admin/cuenta-contexto/route";
+import type { ContactosCuentaResponse } from "@/app/api/admin/contactos-cuenta/route";
+import type { PatronEventoResponse } from "@/app/api/admin/patron-evento/route";
+import type { WebContactoCuenta } from "@/lib/softguard/api";
+import { horaNumeroAR } from "@/lib/fecha-ar";
 import { BarraVidaUtil, EstadoConexion, EstadoEvento } from "./MultiMonitorLive";
 import { NotificarWhatsAppModal } from "./NotificarWhatsAppModal";
+import { Badge, type BadgeVariant } from "@/components/ui/Badge";
+import {
+  clasificarCodigo,
+  protocoloParaClasificacion,
+  type TipoGestionEvento,
+} from "@/lib/eventos-clasificacion";
+import {
+  registrarGestionEvento,
+  getGestionesEvento,
+  type GestionEventoItem,
+} from "@/lib/actions/eventos";
 import {
   useEventosLive,
   filtrarEventos,
   eventosAgrupadosCuenta,
+  agruparEventosRepetidos,
+  etiquetaCuentaUi,
   hora,
   horaConDia,
   prioridadStyle,
   COLUMNAS_MONITOREO,
+  VENTANA_AGRUPACION_MS,
   type ColumnaKey,
   type ColumnaMonitoreo,
   type EstadoCentral,
+  type EventoAgrupado,
 } from "./eventos-live";
 
 const LIMIT_OPERADORES = 80;
 
-export function MonitorOperadores() {
+export function MonitorOperadores({ ventanaAgrupacionMin = 10 }: { ventanaAgrupacionMin?: number } = {}) {
   const { data, estado, reconectando, flashIds, poll } = useEventosLive(LIMIT_OPERADORES);
   const [q, setQ] = useState("");
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [tabActiva, setTabActiva] = useState<ColumnaKey>("p1");
-  const [seleccionado, setSeleccionado] = useState<EventoLive | null>(null);
+  const [seleccionado, setSeleccionado] = useState<EventoAgrupado | null>(null);
 
   const base = useMemo(() => data?.eventos ?? [], [data]);
   // Referencia de tiempo para la barra de vida útil: el `at` del feed (render puro, sin Date.now()).
   const refMs = data ? Date.parse(data.at) : 0;
+  const ventanaAgrupacionMs =
+    Number.isFinite(ventanaAgrupacionMin) && ventanaAgrupacionMin > 0
+      ? ventanaAgrupacionMin * 60_000
+      : VENTANA_AGRUPACION_MS;
 
   // Una request, cuatro listas: cada columna es el mismo feed con su filtro de prioridad,
-  // compartiendo `q` y `soloPendientes`.
+  // compartiendo `q` y `soloPendientes`. La agrupación de repetidos se aplica DESPUÉS del
+  // filtro, solo para el render de esta pantalla — el feed base (`eventos`) que consumen
+  // el resto de columnas y el modal de WhatsApp sigue evento por evento.
   const porColumna = useMemo(() => {
-    const out = {} as Record<ColumnaKey, EventoLive[]>;
+    const out = {} as Record<ColumnaKey, EventoAgrupado[]>;
     for (const col of COLUMNAS_MONITOREO) {
-      out[col.key] = filtrarEventos(base, { q, prioridad: col.prioridad, soloPendientes });
+      const filtrados = filtrarEventos(base, { q, prioridad: col.prioridad, soloPendientes });
+      out[col.key] = agruparEventosRepetidos(filtrados, ventanaAgrupacionMs);
     }
     return out;
-  }, [base, q, soloPendientes]);
+  }, [base, q, soloPendientes, ventanaAgrupacionMs]);
 
   // En móvil el contexto aparece como drawer superpuesto; Escape lo cierra.
   useEffect(() => {
@@ -68,7 +94,7 @@ export function MonitorOperadores() {
     return () => window.removeEventListener("keydown", onKey);
   }, [seleccionado]);
 
-  const seleccionar = (e: EventoLive) =>
+  const seleccionar = (e: EventoAgrupado) =>
     setSeleccionado((prev) => (prev?.id === e.id ? null : e));
 
   return (
@@ -134,6 +160,7 @@ export function MonitorOperadores() {
                   onSelect={seleccionar}
                   estado={estado}
                   refMs={refMs}
+                  ventanaMin={ventanaAgrupacionMin}
                 />
               </div>
             ))}
@@ -239,14 +266,16 @@ function ColumnaEventos({
   onSelect,
   estado,
   refMs,
+  ventanaMin,
 }: {
   col: ColumnaMonitoreo;
-  eventos: EventoLive[];
+  eventos: EventoAgrupado[];
   flashIds: Set<string>;
   seleccionadoId: string | null;
-  onSelect: (e: EventoLive) => void;
+  onSelect: (e: EventoAgrupado) => void;
   estado: EstadoCentral;
   refMs: number;
+  ventanaMin: number;
 }) {
   return (
     <section
@@ -272,6 +301,7 @@ function ColumnaEventos({
               seleccionado={seleccionadoId === e.id}
               onSelect={() => onSelect(e)}
               refMs={refMs}
+              ventanaMin={ventanaMin}
             />
           ))}
         </ul>
@@ -288,12 +318,14 @@ function FilaOperador({
   seleccionado,
   onSelect,
   refMs,
+  ventanaMin,
 }: {
-  evento: EventoLive;
+  evento: EventoAgrupado;
   flash: boolean;
   seleccionado: boolean;
   onSelect: () => void;
   refMs: number;
+  ventanaMin: number;
 }) {
   const p = prioridadStyle(evento.prioridad);
   return (
@@ -323,6 +355,15 @@ function FilaOperador({
         >
           {evento.codigo}
         </span>
+        {evento.repeticiones > 1 && (
+          <span
+            className="font-mono text-[10px] font-bold rounded border border-orange-600/60 bg-orange-950/50 text-orange-300 px-1.5 py-px shrink-0"
+            title={`${evento.repeticiones} eventos en ${ventanaMin} min`}
+            aria-label={`${evento.repeticiones} eventos en ${ventanaMin} min`}
+          >
+            ×{evento.repeticiones}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <p className={`text-xs font-semibold truncate ${p.texto}`}>{evento.descripcion}</p>
           <p className="text-[11px] text-slate-500 truncate mt-0.5">
@@ -330,6 +371,12 @@ function FilaOperador({
             <span className="text-slate-700"> · #{evento.softguard_ref}</span>
             {evento.zona && <span className="text-slate-600"> · {evento.zona}</span>}
           </p>
+          {/* Titular con varias cuentas activas: aclarar de QUÉ propiedad es el evento. */}
+          {evento.titularMultiCuenta && (
+            <Badge variant="info" className="mt-1 max-w-full truncate text-[10px]">
+              {etiquetaCuentaUi(evento)}
+            </Badge>
+          )}
         </div>
         {!evento.procesado && <EstadoEvento procesado={false} />}
         <BarraVidaUtil evento={evento} refMs={refMs} />
@@ -345,7 +392,7 @@ type EstadoContexto =
   | { tipo: "error" }
   | { tipo: "ok"; data: CuentaContextoResponse };
 
-function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; eventos: EventoLive[]; onCerrar: () => void }) {
+function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoAgrupado; eventos: EventoLive[]; onCerrar: () => void }) {
   const [ctx, setCtx] = useState<EstadoContexto>({ tipo: "cargando" });
   const [notificando, setNotificando] = useState(false);
   const cacheRef = useRef(new Map<string, CuentaContextoResponse>());
@@ -397,6 +444,8 @@ function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; even
             {horaConDia(evento.fecha)}
             {evento.zona && <span> · {evento.zona}</span>}
           </p>
+          {evento.repeticiones > 1 && <RepeticionesEvento fechas={evento.fechasAgrupadas} />}
+          <PatronHorarioChip softguardRef={evento.softguard_ref} codigo={evento.codigo} fecha={evento.fecha} />
         </div>
         <button
           type="button"
@@ -417,6 +466,8 @@ function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; even
         <MessageCircle className="w-4 h-4" aria-hidden="true" />
         Notificar por WhatsApp
       </button>
+
+      <ProtocoloEvento evento={evento} />
 
       <div className="border-t border-slate-700/50 pt-3">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
@@ -457,6 +508,340 @@ function PanelContexto({ evento, eventos, onCerrar }: { evento: EventoLive; even
         />
       )}
     </section>
+  );
+}
+
+// ── Repeticiones del evento colapsado (Fase 10) ───────────────────────────────
+
+/** Lista compacta de horas de un evento que se agrupó por repetirse en poco tiempo. */
+function RepeticionesEvento({ fechas }: { fechas: string[] }) {
+  return (
+    <p className="text-[11px] text-slate-500 mt-1">
+      Se repitió {fechas.length} veces:{" "}
+      <span className="font-mono text-slate-400">{fechas.map((f) => hora(f)).join(" · ")}</span>
+    </p>
+  );
+}
+
+// ── Patrón horario (Fase 10) ──────────────────────────────────────────────────
+//
+// ¿Esta cuenta+código suele dispararse a esta hora? Histórico de 90 días,
+// calculado en el server (`/api/admin/patron-evento`) desde `EventoAlarma` —
+// sin cambios de schema, todo derivado en query-time. Ante cualquier falla el
+// endpoint responde `patron: null` y acá directamente no se muestra nada.
+
+function PatronHorarioChip({
+  softguardRef,
+  codigo,
+  fecha,
+}: {
+  softguardRef: string;
+  codigo: string;
+  fecha: string;
+}) {
+  const [patron, setPatron] = useState<PatronEventoResponse["patron"] | "cargando">("cargando");
+
+  useEffect(() => {
+    let cancelado = false;
+    queueMicrotask(() => {
+      if (!cancelado) setPatron("cargando");
+    });
+    const horaActual = horaNumeroAR(fecha);
+    const params = new URLSearchParams({ ref: softguardRef, codigo, hora: String(horaActual) });
+    fetch(`/api/admin/patron-evento?${params.toString()}`, { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<PatronEventoResponse>;
+      })
+      .then((data) => {
+        if (!cancelado) setPatron(data.patron);
+      })
+      .catch(() => {
+        if (!cancelado) setPatron(null);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [softguardRef, codigo, fecha]);
+
+  if (patron === "cargando" || patron === null) return null;
+  return (
+    <p className="text-[11px] text-slate-500 mt-1">
+      Suele disparar ~{String(patron.hora).padStart(2, "0")}:00 ({patron.veces} veces en 90 días)
+    </p>
+  );
+}
+
+// ── Protocolo guiado de actuación (Fase 7b) ─────────────────────────────────────
+//
+// Checklist de pasos según la clasificación del código Contact ID del evento
+// (`protocoloParaClasificacion`). Cada paso de llamada expande los contactos
+// priorizados de la cuenta (mismo endpoint que usa `NotificarWhatsAppModal`,
+// `/api/admin/contactos-cuenta`) con 1 tap por resultado; los demás pasos
+// tienen un único botón "Hecho". NO reemplaza `resolucion` (texto libre): la
+// complementa con registro estructurado (`registrarGestionEvento`).
+
+const ETIQUETA_TIPO_GESTION: Record<string, string> = {
+  LLAMADA_CONTACTO: "Llamada",
+  WHATSAPP_CONTACTO: "WhatsApp",
+  VERIFICACION_CAMARA: "Cámara",
+  AVISO_POLICIA: "Aviso a policía",
+  OTRO: "Otro",
+};
+
+const ETIQUETA_RESULTADO: Record<string, { label: string; variant: BadgeVariant }> = {
+  ATENDIO: { label: "Atendió", variant: "success" },
+  HECHO: { label: "Hecho", variant: "success" },
+  NO_ATENDIO: { label: "No atendió", variant: "warning" },
+  OCUPADO: { label: "Ocupado", variant: "neutral" },
+  SIN_RESPUESTA: { label: "Sin respuesta", variant: "neutral" },
+};
+
+type EstadoContactosProtocolo =
+  | { tipo: "idle" }
+  | { tipo: "cargando" }
+  | { tipo: "ok"; contactos: WebContactoCuenta[] }
+  | { tipo: "error" };
+
+function ProtocoloEvento({ evento }: { evento: EventoLive }) {
+  const pasos = useMemo(
+    () => protocoloParaClasificacion(clasificarCodigo(evento.codigo)),
+    [evento.codigo],
+  );
+  const tieneLlamadas = pasos.some((p) => p.tipo === "LLAMADA_CONTACTO");
+
+  const [contactos, setContactos] = useState<EstadoContactosProtocolo>({ tipo: "idle" });
+  const [gestiones, setGestiones] = useState<GestionEventoItem[]>([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(true);
+
+  const cargarHistorial = useCallback(() => {
+    let cancelado = false;
+    getGestionesEvento(evento.id)
+      .then((data) => {
+        if (!cancelado) setGestiones(data);
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoHistorial(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [evento.id]);
+
+  useEffect(() => {
+    let cancelado = false;
+    queueMicrotask(() => {
+      if (!cancelado) setCargandoHistorial(true);
+    });
+    const limpiar = cargarHistorial();
+    return () => {
+      cancelado = true;
+      limpiar();
+    };
+  }, [cargarHistorial]);
+
+  useEffect(() => {
+    if (!tieneLlamadas) return;
+    let cancelado = false;
+    queueMicrotask(() => {
+      if (!cancelado) setContactos({ tipo: "cargando" });
+    });
+    const params = new URLSearchParams();
+    if (evento.softguard_ref) params.set("ref", evento.softguard_ref);
+    if (evento.iid_cuenta) params.set("iid", String(evento.iid_cuenta));
+    fetch(`/api/admin/contactos-cuenta?${params.toString()}`, { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<ContactosCuentaResponse>;
+      })
+      .then((data) => {
+        if (!cancelado) setContactos({ tipo: "ok", contactos: data.contactos });
+      })
+      .catch(() => {
+        if (!cancelado) setContactos({ tipo: "error" });
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [tieneLlamadas, evento.softguard_ref, evento.iid_cuenta]);
+
+  if (pasos.length === 0) return null;
+
+  return (
+    <div className="border-t border-slate-700/50 pt-3 space-y-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+        Protocolo de actuación
+      </p>
+      <ol className="space-y-2">
+        {pasos.map((paso, i) => (
+          <li key={i} className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-2.5">
+            <p className="text-xs font-semibold text-slate-200 mb-1.5">
+              <span className="text-slate-500 mr-1.5 tabular-nums">{i + 1}.</span>
+              {paso.etiqueta}
+            </p>
+            {paso.tipo === "LLAMADA_CONTACTO" ? (
+              <PasoLlamadas
+                eventoId={evento.id}
+                contactos={contactos}
+                onRegistrado={cargarHistorial}
+              />
+            ) : (
+              <PasoGenerico eventoId={evento.id} tipo={paso.tipo} onRegistrado={cargarHistorial} />
+            )}
+          </li>
+        ))}
+      </ol>
+
+      {!cargandoHistorial && gestiones.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Historial de gestión
+          </p>
+          <ul className="space-y-1">
+            {gestiones.map((g) => {
+              const res = ETIQUETA_RESULTADO[g.resultado] ?? { label: g.resultado, variant: "neutral" as const };
+              return (
+                <li key={g.id} className="flex items-center gap-1.5 text-[11px] min-w-0">
+                  <span className="text-slate-600 tabular-nums shrink-0">{horaConDia(g.created_at)}</span>
+                  <span className="text-slate-500 shrink-0">{ETIQUETA_TIPO_GESTION[g.tipo] ?? g.tipo}</span>
+                  {g.destino && <span className="text-slate-300 truncate min-w-0">· {g.destino}</span>}
+                  <Badge variant={res.variant} className="ml-auto shrink-0">
+                    {res.label}
+                  </Badge>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PasoLlamadas({
+  eventoId,
+  contactos,
+  onRegistrado,
+}: {
+  eventoId: string;
+  contactos: EstadoContactosProtocolo;
+  onRegistrado: () => void;
+}) {
+  if (contactos.tipo === "idle" || contactos.tipo === "cargando") {
+    return <p className="text-[11px] text-slate-600">Cargando contactos…</p>;
+  }
+  if (contactos.tipo === "error") {
+    return <p className="text-[11px] text-red-400/80">No se pudieron cargar los contactos.</p>;
+  }
+  if (contactos.contactos.length === 0) {
+    return <p className="text-[11px] text-slate-600">Esta cuenta no tiene contactos cargados.</p>;
+  }
+  return (
+    <ul className="space-y-1.5">
+      {contactos.contactos.map((c, i) => (
+        <ContactoLlamada key={i} eventoId={eventoId} contacto={c} onRegistrado={onRegistrado} />
+      ))}
+    </ul>
+  );
+}
+
+const RESULTADOS_LLAMADA = [
+  { valor: "ATENDIO", label: "Atendió", clase: "border-emerald-700/60 bg-emerald-950/40 text-emerald-200 hover:bg-emerald-900/40" },
+  { valor: "NO_ATENDIO", label: "No atendió", clase: "border-amber-700/60 bg-amber-950/40 text-amber-200 hover:bg-amber-900/40" },
+  { valor: "OCUPADO", label: "Ocupado", clase: "border-slate-600 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60" },
+] as const;
+
+function ContactoLlamada({
+  eventoId,
+  contacto,
+  onRegistrado,
+}: {
+  eventoId: string;
+  contacto: WebContactoCuenta;
+  onRegistrado: () => void;
+}) {
+  const [pending, start] = useTransition();
+  const [registrado, setRegistrado] = useState<string | null>(null);
+
+  function registrar(resultado: string) {
+    start(async () => {
+      const destino = `${contacto.nombre}${contacto.telefono ? ` (${contacto.telefono})` : ""}`;
+      const r = await registrarGestionEvento({
+        evento_id: eventoId,
+        tipo: "LLAMADA_CONTACTO",
+        destino,
+        resultado,
+      });
+      if (!r.error) {
+        setRegistrado(resultado);
+        onRegistrado();
+      }
+    });
+  }
+
+  return (
+    <li className="rounded border border-slate-700/40 bg-slate-800/40 px-2 py-1.5">
+      <p className="text-[11px] text-slate-300 truncate">
+        {contacto.nombre}
+        {contacto.rol && <span className="text-slate-500"> · {contacto.rol}</span>}
+      </p>
+      {contacto.telefono && (
+        <p className="text-[10px] text-slate-500 font-mono">{contacto.telefono}</p>
+      )}
+      <div className="flex flex-wrap gap-1.5 mt-1.5">
+        {RESULTADOS_LLAMADA.map((r) => (
+          <button
+            key={r.valor}
+            type="button"
+            disabled={pending}
+            onClick={() => registrar(r.valor)}
+            className={`text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors min-h-[30px] disabled:opacity-50 ${
+              registrado === r.valor ? r.clase : "border-slate-700 text-slate-400 hover:text-white"
+            }`}
+          >
+            {registrado === r.valor ? `✓ ${r.label}` : r.label}
+          </button>
+        ))}
+      </div>
+    </li>
+  );
+}
+
+function PasoGenerico({
+  eventoId,
+  tipo,
+  onRegistrado,
+}: {
+  eventoId: string;
+  tipo: TipoGestionEvento;
+  onRegistrado: () => void;
+}) {
+  const [pending, start] = useTransition();
+  const [hecho, setHecho] = useState(false);
+
+  function registrar() {
+    start(async () => {
+      const r = await registrarGestionEvento({ evento_id: eventoId, tipo, resultado: "HECHO" });
+      if (!r.error) {
+        setHecho(true);
+        onRegistrado();
+      }
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={pending || hecho}
+      onClick={registrar}
+      className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors min-h-[32px] disabled:opacity-50 ${
+        hecho
+          ? "border-emerald-700/60 bg-emerald-950/40 text-emerald-200"
+          : "border-slate-600 bg-slate-700 hover:bg-slate-600 text-white"
+      }`}
+    >
+      {hecho ? "✓ Hecho" : pending ? "Guardando…" : "Hecho"}
+    </button>
   );
 }
 

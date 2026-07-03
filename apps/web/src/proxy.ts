@@ -129,6 +129,8 @@ export async function proxy(request: NextRequest) {
   const esRutaProtegida =
     pathname.startsWith("/portal") ||
     pathname.startsWith("/tecnico") ||
+    pathname.startsWith("/monitoreo") ||
+    pathname.startsWith("/cobros") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/recibo");
 
@@ -151,9 +153,22 @@ export async function proxy(request: NextRequest) {
 
   // ── Guard portal — exclusivo para CLIENTE ─────────────────────────────────
   // ADMIN y TECNICO tienen sus propias áreas; no deben ver el portal de cliente.
+  //
+  // Excepción: impersonación (ver src/lib/auth/impersonacion.ts). Un ADMIN con
+  // la cookie "ei_impersonar" presente puede entrar a /portal — acá solo se
+  // chequea PRESENCIA (no firma ni expiración: node:crypto/Prisma no corren
+  // en este runtime de middleware). La verificación real (HMAC + exp + que el
+  // target siga siendo CLIENTE) la hace `getSesion()` server-side; si la
+  // cookie es inválida, `getSesion()` devuelve la sesión real (ADMIN) y la
+  // "segunda línea de defensa" en portal/layout.tsx redirige igual. Fail-closed
+  // preservado: una cookie forjada nunca deja pasar más allá de esa segunda
+  // línea.
   if (pathname.startsWith("/portal")) {
     if (rolUsuario === "ADMIN") {
-      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+      const posibleImpersonacion = request.cookies.has("ei_impersonar");
+      if (!posibleImpersonacion) {
+        return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+      }
     }
     if (rolUsuario === "TECNICO") {
       return NextResponse.redirect(new URL("/tecnico/mi-dia", request.url));
