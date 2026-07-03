@@ -7,6 +7,7 @@ import {
   CursorTextoWin,
 } from "@/components/layout/CursoresWindows";
 import {
+  EVENTO_BUSQUEDA,
   MONITOR,
   calcularBarridoBusqueda,
   calcularDesvioCursor,
@@ -161,6 +162,10 @@ export default function HeaderMonitor() {
       holder.dataset.buscando = "1";
       if (cursorRef.current) cursorRef.current.dataset.tipo = "oculto";
       ultimoElemento = null;
+      // La cámara del header acompaña el barrido (mismo seno, mismo reloj).
+      window.dispatchEvent(
+        new CustomEvent(EVENTO_BUSQUEDA, { detail: { activa: true, inicio: inicioBusqueda } })
+      );
       kick();
     };
 
@@ -168,6 +173,7 @@ export default function HeaderMonitor() {
       if (!buscando) return;
       buscando = false;
       delete holder.dataset.buscando;
+      window.dispatchEvent(new CustomEvent(EVENTO_BUSQUEDA, { detail: { activa: false } }));
     };
 
     const onMove = (e: MouseEvent) => {
@@ -249,8 +255,7 @@ export default function HeaderMonitor() {
       document.removeEventListener("visibilitychange", onVisibility);
       cancelAnimationFrame(raf);
       running = false;
-      buscando = false;
-      delete holder.dataset.buscando;
+      salirDeBusqueda();
       ultimoElemento = null;
       if (cursorRef.current) cursorRef.current.dataset.tipo = "default";
       delete holder.dataset.monitorActive;

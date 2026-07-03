@@ -28,15 +28,37 @@ export const MONITOR = {
    */
   ESCAPE_Y: 96,
   /** Período del barrido de búsqueda (ida y vuelta completa, ms). */
-  BUSQUEDA_PERIODO_MS: 6000,
+  BUSQUEDA_PERIODO_MS: 11_000,
   /** Amplitud del barrido como fracción del ancho del viewport. */
   BUSQUEDA_AMPLITUD: 0.4,
 } as const;
 
 /**
- * Target del paneo en modo búsqueda: barrido sinusoidal horizontal de lado a
- * lado del viewport (la cámara "busca" al mouse perdido), centrado en la
- * banda vertical media de lo que se está viendo.
+ * Evento con el que el monitor anuncia entrar/salir del modo búsqueda
+ * (detail: { activa, inicio }). La cámara del header lo escucha para
+ * acompañar el barrido con su giro, en fase (mismo seno, mismo reloj).
+ */
+export const EVENTO_BUSQUEDA = "ei-vigilancia-busqueda";
+
+/**
+ * Punto de mira del barrido de búsqueda, en coordenadas de viewport: oscila
+ * de lado a lado del ancho visible, en la banda vertical media.
+ */
+export function calcularPuntoBusquedaViewport(
+  tMs: number,
+  anchoViewport: number,
+  altoViewport: number
+): { x: number; y: number } {
+  const fase = (2 * Math.PI * tMs) / MONITOR.BUSQUEDA_PERIODO_MS;
+  return {
+    x: anchoViewport * (0.5 + MONITOR.BUSQUEDA_AMPLITUD * Math.sin(fase)),
+    y: altoViewport / 2,
+  };
+}
+
+/**
+ * Target del paneo del feed en modo búsqueda: el punto de mira del barrido
+ * llevado a coordenadas de documento.
  */
 export function calcularBarridoBusqueda(
   tMs: number,
@@ -45,10 +67,8 @@ export function calcularBarridoBusqueda(
   scrollX: number,
   scrollY: number
 ): { tx: number; ty: number } {
-  const fase = (2 * Math.PI * tMs) / MONITOR.BUSQUEDA_PERIODO_MS;
-  const pageX = scrollX + anchoViewport * (0.5 + MONITOR.BUSQUEDA_AMPLITUD * Math.sin(fase));
-  const pageY = scrollY + altoViewport / 2;
-  return calcularTransformMonitor(pageX, pageY);
+  const p = calcularPuntoBusquedaViewport(tMs, anchoViewport, altoViewport);
+  return calcularTransformMonitor(scrollX + p.x, scrollY + p.y);
 }
 
 export type TipoCursor = "default" | "pointer" | "text";

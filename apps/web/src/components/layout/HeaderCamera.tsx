@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { CAM, CAM_REST_DEG, CAM_WALL_SHIFT_X } from "@/lib/ui/headerCamera";
+import { EVENTO_BUSQUEDA, calcularPuntoBusquedaViewport } from "@/lib/ui/headerMonitor";
 
 const DEG = 180 / Math.PI;
 
@@ -64,15 +65,30 @@ export default function HeaderCamera() {
 
     let lastFrame = 0;
 
+    // Cuando el monitor entra en modo búsqueda, la cámara acompaña el barrido
+    // apuntando al mismo punto de mira (mismo seno, mismo reloj → en fase).
+    let busca = false;
+    let buscaInicio = 0;
+
     const loop = (now: number) => {
+      if (busca) {
+        const p = calcularPuntoBusquedaViewport(
+          now - buscaInicio,
+          window.innerWidth,
+          window.innerHeight
+        );
+        const aim = Math.atan2(p.y - pivot.y, p.x - pivot.x) * DEG;
+        target = Math.min(CAM.AIM_MAX, Math.max(CAM.AIM_MIN, aim)) - CAM.A0;
+      }
       // Suavizado exponencial en tiempo real: mismo ritmo a cualquier fps.
       const dt = lastFrame ? Math.min(now - lastFrame, 100) : 16.7;
       lastFrame = now;
       cur += (target - cur) * (1 - Math.exp(-dt / CAM.TAU_MS));
-      if (Math.abs(target - cur) <= CAM.EPSILON) {
+      if (Math.abs(target - cur) <= CAM.EPSILON && !busca) {
         cur = target;
         running = false;
       } else {
+        // Buscando, el punto de mira se mueve solo: el loop sigue vivo.
         raf = requestAnimationFrame(loop);
       }
       body.style.transform = `rotate(${cur}deg)`;
@@ -92,6 +108,9 @@ export default function HeaderCamera() {
     };
 
     const onMove = (e: MouseEvent) => {
+      // En búsqueda el barrido manda; el monitor avisa cuándo se reencuentra
+      // (su listener corre antes: se monta primero en el Navbar).
+      if (busca) return;
       const aim = Math.atan2(e.clientY - pivot.y, e.clientX - pivot.x) * DEG;
       target = Math.min(CAM.AIM_MAX, Math.max(CAM.AIM_MIN, aim)) - CAM.A0;
       kick();
@@ -116,6 +135,16 @@ export default function HeaderCamera() {
       }
     };
 
+    const onBusqueda = (e: Event) => {
+      const detail = (e as CustomEvent<{ activa: boolean; inicio?: number }>).detail;
+      busca = !!detail?.activa;
+      if (busca) {
+        buscaInicio = detail.inicio ?? performance.now();
+        clearTimeout(idleTimer);
+        kick();
+      }
+    };
+
     // ── Grupo seguimiento (mouse): desktop && sin reduced-motion ────────────
     const attach = () => {
       measure();
@@ -129,6 +158,7 @@ export default function HeaderCamera() {
       document.addEventListener("visibilitychange", onVisibility);
       window.addEventListener("resize", scheduleMeasure);
       window.addEventListener("scroll", scheduleMeasure, { passive: true });
+      window.addEventListener(EVENTO_BUSQUEDA, onBusqueda);
       // El pivote se corre al re-asentarse el soporte (pared ↔ techo).
       carrier.addEventListener("transitionend", measure);
     };
@@ -144,10 +174,12 @@ export default function HeaderCamera() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", scheduleMeasure);
       window.removeEventListener("scroll", scheduleMeasure);
+      window.removeEventListener(EVENTO_BUSQUEDA, onBusqueda);
       carrier.removeEventListener("transitionend", measure);
       clearTimeout(idleTimer);
       cancelAnimationFrame(raf);
       running = false;
+      busca = false;
       cur = target = CAM_REST_DEG;
       body.style.transform = `rotate(${CAM_REST_DEG}deg)`;
       delete body.dataset.camActive;
