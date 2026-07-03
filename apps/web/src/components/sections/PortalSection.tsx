@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import {
   ArrowRight,
   CalendarCheck,
@@ -87,12 +88,13 @@ export default function PortalSection() {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[1.05fr_.95fr]">
-          <div className="reveal-on-scroll grid grid-cols-2 gap-2 sm:gap-3">
-            {portalActions.map(({ icon: Icon, title, text, href }) => (
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            {portalActions.map(({ icon: Icon, title, text, href }, index) => (
               <Link
                 key={title}
                 href={href}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 p-4 transition hover:-translate-y-1 hover:border-orange-300/40 hover:bg-slate-900 sm:p-5"
+                className="reveal-item group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 p-4 transition hover:-translate-y-1 hover:border-orange-300/40 hover:bg-slate-900 sm:p-5"
+                style={{ "--i": index } as CSSProperties}
               >
                 <div
                   className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.08] mix-blend-screen"

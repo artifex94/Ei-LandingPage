@@ -2,11 +2,12 @@ import React from "react";
 import { MapPin, Phone, ShieldCheck, Star } from "lucide-react";
 import WhatsAppForm from "@/components/forms/WhatsAppForm";
 import { siteConfig } from "@/config/site";
+import { YEARS_EXPERIENCE } from "@/config/landing";
 
 const highlights = [
   { icon: Phone, label: "Atención directa", value: siteConfig.contact.phoneDisplay },
   { icon: MapPin, label: "Cobertura", value: "Victoria y alrededores" },
-  { icon: Star, label: "Experiencia", value: "26 años en el sector" },
+  { icon: Star, label: "Experiencia", value: `${YEARS_EXPERIENCE} años en el sector` },
 ];
 
 export default function ContactSection() {

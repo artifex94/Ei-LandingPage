@@ -34,7 +34,7 @@ export default function OpinionsSection() {
           <p className="mb-3 text-sm font-black uppercase tracking-[0.25em] text-orange-400">Opiniones</p>
           <h2
             id="opinions-heading"
-            className="text-balance text-2xl font-black tracking-tight sm:text-3xl md:text-4xl"
+            className="hud-title text-balance text-2xl font-black tracking-tight sm:text-3xl md:text-4xl"
           >
             Lo que dicen quienes ya nos eligen
           </h2>

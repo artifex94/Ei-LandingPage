@@ -9,6 +9,7 @@ import EmpezaSection from "@/components/sections/EmpezaSection";
 import ContactSection from "@/components/sections/ContactSection";
 import Footer from "@/components/layout/Footer";
 import FloatingWhatsApp from "@/components/layout/FloatingWhatsApp";
+import ScrollRevealFallback from "@/components/layout/ScrollRevealFallback";
 import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
@@ -125,6 +126,7 @@ export default function Home() {
           <Footer />
         </main>
         <FloatingWhatsApp />
+        <ScrollRevealFallback />
       </div>
     </>
   );

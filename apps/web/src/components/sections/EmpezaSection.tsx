@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { ArrowRight, FileText, Fingerprint, ShieldCheck, UserCheck } from "lucide-react";
 
 export default function EmpezaSection() {
@@ -18,7 +19,7 @@ export default function EmpezaSection() {
           <p className="mb-3 text-sm font-black uppercase tracking-[0.25em] text-orange-400">Empezá</p>
           <h2
             id="empeza-heading"
-            className="text-balance text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl"
+            className="hud-title text-balance text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl"
           >
             ¿Por dónde arrancás?
           </h2>
@@ -26,7 +27,10 @@ export default function EmpezaSection() {
 
         <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
           {/* Nuevo */}
-          <div className="reveal-on-scroll relative flex flex-col overflow-hidden rounded-2xl border border-orange-400/25 bg-slate-950/60 p-6 sm:p-8">
+          <div
+            className="reveal-item relative flex flex-col overflow-hidden rounded-2xl border border-orange-400/25 bg-slate-950/60 p-6 sm:p-8"
+            style={{ "--i": 0 } as CSSProperties}
+          >
             <div
               className="pointer-events-none absolute inset-0 bg-cover bg-left opacity-[0.10] mix-blend-screen"
               style={{ backgroundImage: "url('/images/victoria-security-texture.webp')" }}
@@ -48,7 +52,10 @@ export default function EmpezaSection() {
           </div>
 
           {/* Cliente existente */}
-          <div className="reveal-on-scroll relative flex flex-col overflow-hidden rounded-2xl border border-emerald-300/25 bg-slate-950/60 p-6 sm:p-8">
+          <div
+            className="reveal-item relative flex flex-col overflow-hidden rounded-2xl border border-emerald-300/25 bg-slate-950/60 p-6 sm:p-8"
+            style={{ "--i": 1 } as CSSProperties}
+          >
             <div
               className="pointer-events-none absolute inset-0 bg-cover bg-right opacity-[0.10] mix-blend-screen"
               style={{ backgroundImage: "url('/images/victoria-security-texture.webp')" }}

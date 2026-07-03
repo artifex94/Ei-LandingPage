@@ -247,14 +247,35 @@
 }
 
 @keyframes editorial-reveal {
-  from { opacity: 0.35; transform: translateY(32px); }
+  from { opacity: 0; transform: translateY(40px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes image-reveal {
-  from { opacity: 0.5; clip-path: inset(8% 0 8% 0 round 1rem); transform: scale(0.985); }
+  from { opacity: 0.4; clip-path: inset(14% 0 14% 0 round 1rem); transform: scale(0.965); }
   to { opacity: 1; clip-path: inset(0 0 0 0 round 1rem); transform: scale(1); }
 }
+
+/* Barrido de scanline bajo los títulos de sección: el panel "dibuja" la línea
+   una sola vez al entrar en vista. */
+@keyframes hud-underline {
+  from { transform: scaleX(0); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: scaleX(1); opacity: 0.9; }
+}
+
+/* Cierre del count-up de stats: micro-pop con destello naranja que se apaga,
+   como un readout que fija señal. */
+@keyframes stat-settle {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.06); text-shadow: 0 0 14px rgba(241, 119, 32, 0.55); }
+  100% { transform: scale(1); text-shadow: 0 0 0 rgba(241, 119, 32, 0); }
+}
+
+/* Layout del counter (no es motion, va fuera de los media queries): dos copias
+   apiladas en la misma celda — la invisible reserva el ancho del valor final. */
+.stat-figure { display: inline-grid; white-space: nowrap; }
+.stat-figure > * { grid-area: 1 / 1; }
 
 @keyframes portal-page-enter {
   from { opacity: 0; transform: translateY(6px); }
@@ -274,6 +295,10 @@
     animation: portal-page-enter 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  .stat-settled {
+    animation: stat-settle 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   @supports (animation-timeline: view()) {
     .reveal-on-scroll {
       animation: editorial-reveal linear both;
@@ -281,10 +306,54 @@
       animation-range: entry 4% cover 28%;
     }
 
+    /* Variante con stagger para hijos de grillas: cada card define --i y su
+       rango de entrada se corre en cascada, ligado al scroll (un delay
+       temporal no aplica a scroll-timelines). */
+    .reveal-item {
+      animation: editorial-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry calc(2% + (var(--i, 0) * 6%)) cover 30%;
+    }
+
     .image-reveal {
       animation: image-reveal linear both;
       animation-timeline: view();
       animation-range: entry 2% cover 34%;
+    }
+
+    .hud-title { position: relative; }
+    .hud-title::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -0.35rem;
+      height: 2px;
+      width: 100%;
+      transform-origin: left;
+      transform: scaleX(0);
+      background: linear-gradient(90deg, var(--color-tactical-500), transparent);
+      animation: hud-underline linear both;
+      animation-timeline: view();
+      animation-range: entry 6% cover 26%;
+    }
+  }
+
+  /* Fallback sin scroll-driven animations (Firefox/Safari viejos): el
+     IntersectionObserver de ScrollRevealFallback agrega .in-view. Bajo
+     prefers-reduced-motion este bloque no aplica y nada queda invisible. */
+  @supports not (animation-timeline: view()) {
+    .reveal-on-scroll,
+    .reveal-item {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      transition-delay: calc(var(--i, 0) * 80ms);
+    }
+
+    .reveal-on-scroll.in-view,
+    .reveal-item.in-view {
+      opacity: 1;
+      transform: none;
     }
   }
 }
