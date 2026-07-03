@@ -196,11 +196,13 @@ export default function ServicesSection() {
                 <Image src={image} alt="" fill unoptimized sizes="100vw" className="object-cover" />
               </span>
               <span className="pointer-events-none absolute inset-0 bg-slate-950/70" />
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-orange-300 ring-1 ring-white/10">
+              {/* relative: sin posicionar, los overlays absolutos de arriba
+                  pintan POR ENCIMA del contenido y lo dejan velado/oscuro. */}
+              <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-orange-300 ring-1 ring-white/10">
                 <Icon className="h-5 w-5" />
               </span>
-              <span className="flex-1 text-base font-bold">{title}</span>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 text-slate-400 transition group-hover:border-orange-300/40 group-hover:text-orange-200">
+              <span className="relative flex-1 text-base font-bold">{title}</span>
+              <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 text-slate-400 transition group-hover:border-orange-300/40 group-hover:text-orange-200">
                 <Plus className="h-4 w-4" />
               </span>
             </button>

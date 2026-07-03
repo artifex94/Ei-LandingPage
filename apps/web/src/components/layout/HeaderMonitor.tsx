@@ -26,7 +26,9 @@ export default function HeaderMonitor() {
     const holder = holderRef.current;
     if (!holder) return;
 
-    // El monitor solo existe visualmente en 2xl (hueco libre junto al logo).
+    // Anclado al borde izquierdo, encima de la cámara, desde 2xl. Entre 1536
+    // y 1759px el margen del container no alcanza: el Navbar corre su
+    // contenido con padding en ese rango para que la placa no pise el logo.
     const desktop = window.matchMedia("(min-width: 1536px) and (pointer: fine)");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -207,7 +209,7 @@ export default function HeaderMonitor() {
     <div
       aria-hidden="true"
       data-cctv-root
-      className="pointer-events-none hidden select-none 2xl:block"
+      className="pointer-events-none absolute left-3 top-1/2 hidden -translate-y-1/2 select-none 2xl:block"
     >
       <div className="cctv-monitor">
         <div

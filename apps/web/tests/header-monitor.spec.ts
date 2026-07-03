@@ -24,7 +24,7 @@ async function distanciaAlTarget(page: Page, pageX: number, pageY: number): Prom
 }
 
 test.describe("HeaderMonitor — pantallita CCTV (2xl)", () => {
-  test.use({ viewport: { width: 1600, height: 900 } });
+  test.use({ viewport: { width: 1920, height: 900 } });
 
   test("el punto bajo el mouse queda centrado en la pantalla", async ({ page }) => {
     await page.goto("/");
@@ -103,7 +103,7 @@ test.describe("HeaderMonitor — gates", () => {
 
   test("con reduced-motion muestra el feed estático sin seguir al mouse", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.setViewportSize({ width: 1920, height: 900 });
     await page.goto("/");
 
     // El feed existe (clon montado) pero el seguimiento no se activa
@@ -114,8 +114,8 @@ test.describe("HeaderMonitor — gates", () => {
       .toBe(1);
     await expect(page.locator('[data-monitor-active="1"]')).toHaveCount(0);
 
-    // Encuadre estático inicial: centrado en el centro del viewport (1600×900)
-    const estatico = calcularTransformMonitor(800, 450);
+    // Encuadre estático inicial: centrado en el centro del viewport (1920×900)
+    const estatico = calcularTransformMonitor(960, 450);
     await expect
       .poll(() => transformActual(page).then((t) => t.tx), { timeout: 10_000 })
       .toBeCloseTo(estatico.tx, 0);
