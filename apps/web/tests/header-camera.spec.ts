@@ -181,3 +181,31 @@ test.describe("HeaderCamera — gates", () => {
     await page.mouse.up();
   });
 });
+
+test.describe("HeaderCamera — acompaña la búsqueda del monitor", () => {
+  test.use({ viewport: { width: 1920, height: 900 } });
+
+  test("cuando el monitor busca, la cámara barre; al reencontrar, vuelve a seguir", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator('[data-cam-active="1"]')).toBeAttached();
+    await expect(page.locator('[data-monitor-active="1"]')).toBeAttached();
+
+    // Escape por arriba → búsqueda: el ángulo de la cámara cambia solo
+    await page.mouse.move(900, 40);
+    await expect(page.locator('[data-cctv-clone][data-buscando="1"]')).toBeAttached();
+    const a1 = await anguloActual(page);
+    await page.waitForTimeout(900);
+    const a2 = await anguloActual(page);
+    await page.waitForTimeout(900);
+    const a3 = await anguloActual(page);
+    expect(Math.abs(a2 - a1) + Math.abs(a3 - a2)).toBeGreaterThan(1);
+
+    // Reencuentro: vuelve a apuntar al mouse
+    await page.mouse.move(1300, 130);
+    await expect
+      .poll(() => anguloActual(page), { timeout: 10_000 })
+      .toBeCloseTo(CAM.AIM_MIN - CAM.A0, 0);
+  });
+});
