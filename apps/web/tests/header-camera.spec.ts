@@ -51,18 +51,34 @@ test.describe("HeaderCamera — seguimiento y flash (desktop)", () => {
     expect(await anguloActual(page)).toBeGreaterThan(CAM.AIM_MIN - CAM.A0);
   });
 
-  test("cada click dispara el flash (remonta en clicks consecutivos)", async ({ page }) => {
+  test("la luz prende al presionar, se mantiene presionada y se desvanece al soltar", async ({
+    page,
+  }) => {
     await page.goto("/");
+    await expect(page.locator('[data-cam-active="1"]')).toBeAttached();
     const root = page.locator(ROOT);
+    const flash = page.locator(".cam-flash");
     await expect(root).toHaveAttribute("data-flash", "0");
+    await expect(flash).toHaveCSS("opacity", "0");
 
-    await page.mouse.click(700, 500);
+    await page.mouse.move(700, 500);
+    await page.mouse.down();
     await expect(root).toHaveAttribute("data-flash", "1");
-    await expect(page.locator(".cam-flash")).toBeAttached();
+    await expect(flash).toHaveCSS("opacity", "1");
 
-    await page.mouse.click(700, 500);
-    await page.mouse.click(700, 500);
-    await expect(root).toHaveAttribute("data-flash", "3");
+    // Mantiene la intensidad plena mientras el botón sigue presionado
+    // (mucho más que los 320ms del desvanecimiento)
+    await page.waitForTimeout(700);
+    await expect(flash).toHaveCSS("opacity", "1");
+
+    // Al soltar, se apaga (transición de salida de 320ms)
+    await page.mouse.up();
+    await expect(root).toHaveAttribute("data-flash", "0");
+    await expect
+      .poll(() => flash.evaluate((el) => Number(getComputedStyle(el).opacity)), {
+        timeout: 3_000,
+      })
+      .toBe(0);
   });
 
   test("no intercepta clicks: un click sobre la cámara llega al contenido de abajo", async ({
@@ -158,8 +174,10 @@ test.describe("HeaderCamera — gates", () => {
     await page.waitForTimeout(600);
     expect(await anguloActual(page)).toBeCloseTo(CAM_REST_DEG, 0);
 
-    await page.mouse.click(700, 500);
+    await page.mouse.move(700, 500);
+    await page.mouse.down();
     await expect(page.locator(ROOT)).toHaveAttribute("data-flash", "0");
-    await expect(page.locator(".cam-flash")).toHaveCount(0);
+    await expect(page.locator(".cam-flash")).toHaveCSS("opacity", "0");
+    await page.mouse.up();
   });
 });

@@ -20,7 +20,9 @@ const DEG = 180 / Math.PI;
 export default function HeaderCamera() {
   const bodyRef = useRef<HTMLDivElement>(null);
   const carrierRef = useRef<HTMLDivElement>(null);
-  const [flashKey, setFlashKey] = useState(0);
+  // Luz de captura: prende instantánea al presionar (pointerdown), se
+  // mantiene mientras el botón esté presionado y se desvanece al soltar.
+  const [pressed, setPressed] = useState(false);
   // Al tope de la página el nav no tiene línea inferior: la cámara se sujeta
   // de la pared izquierda de la ventana. Con la línea dura visible (scrollY >
   // SCROLL_UMBRAL, mismo umbral del Navbar) cuelga de ella. SSR asume tope.
@@ -97,10 +99,12 @@ export default function HeaderCamera() {
       idleTimer = setTimeout(reposo, CAM.IDLE_MS);
     };
 
-    const onClick = () => {
+    const onDown = () => {
       if (reduce.matches) return;
-      setFlashKey((k) => k + 1);
+      setPressed(true);
     };
+
+    const onUp = () => setPressed(false);
 
     const onVisibility = () => {
       if (document.hidden) {
@@ -117,7 +121,10 @@ export default function HeaderCamera() {
       measure();
       body.dataset.camActive = "1";
       document.addEventListener("mousemove", onMove, { passive: true });
-      document.addEventListener("click", onClick);
+      document.addEventListener("pointerdown", onDown, { passive: true });
+      document.addEventListener("pointerup", onUp, { passive: true });
+      document.addEventListener("pointercancel", onUp);
+      window.addEventListener("blur", onUp);
       document.documentElement.addEventListener("mouseleave", reposo);
       document.addEventListener("visibilitychange", onVisibility);
       window.addEventListener("resize", scheduleMeasure);
@@ -128,8 +135,12 @@ export default function HeaderCamera() {
 
     const detach = () => {
       document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("click", onClick);
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("blur", onUp);
       document.documentElement.removeEventListener("mouseleave", reposo);
+      setPressed(false);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", scheduleMeasure);
       window.removeEventListener("scroll", scheduleMeasure);
@@ -196,18 +207,19 @@ export default function HeaderCamera() {
   const ledStyle = {
     left: `${CAM.LENS_FRONT.x * 100}%`,
     top: `${CAM.LENS_FRONT.y * 100}%`,
-    animationDuration: `${CAM.FLASH_MS}ms`,
     // Dirección del haz en convención conic (0 = arriba, + horario): el
     // barril del asset apunta A0 grados bajo la horizontal derecha.
     "--cam-beam-dir": `${90 + CAM.A0}deg`,
   } as CSSProperties;
+
+  const luz = pressed ? " cam-on" : "";
 
   const seatTransition = `transform ${CAM.SEAT_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
 
   return (
     <div
       aria-hidden="true"
-      data-flash={flashKey}
+      data-flash={pressed ? "1" : "0"}
       className="pointer-events-none absolute left-3 top-full hidden select-none lg:block"
     >
       <div
@@ -254,12 +266,8 @@ export default function HeaderCamera() {
               unoptimized
               className="absolute inset-0"
             />
-            {flashKey > 0 && (
-              <>
-                <span key={`flash-${flashKey}`} className="cam-flash" style={ledStyle} />
-                <span key={`led-${flashKey}`} className="cam-led-on" style={ledStyle} />
-              </>
-            )}
+            <span className={`cam-flash${luz}`} style={ledStyle} />
+            <span className={`cam-led${luz}`} style={ledStyle} />
           </div>
         </div>
       </div>

@@ -29,8 +29,6 @@ export const CAM = {
   EPSILON: 0.05,
   /** Sin movimiento de mouse durante este tiempo → vuelve al reposo. */
   IDLE_MS: 4000,
-  /** Duración del flash de captura al click. */
-  FLASH_MS: 320,
   /** Offset horizontal del ancla (la clase left-3 del root). */
   LEFT_PX: 12,
   /**

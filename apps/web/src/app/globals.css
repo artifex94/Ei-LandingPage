@@ -279,18 +279,6 @@
 
 /* ── Cámara de vigilancia del header (HeaderCamera) ──────────────────────── */
 
-/* Fogonazo de captura: encendido instantáneo (arranca a intensidad plena en
-   el frame del click, sin crecer — un flash no "aparece", destella) y decay. */
-@keyframes cam-capture {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-@keyframes cam-led-ping {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
 /* Haz de luz cónico: círculo centrado en la punta del lente del que solo se
    ve la porción (torta conic) que apunta en la dirección del barril
    (--cam-beam-dir, la setea el componente desde A0: 90deg + inclinación).
@@ -313,9 +301,10 @@
   mix-blend-mode: screen;
   opacity: 0;
   transform: translate(-50%, -50%);
+  transition: opacity 320ms ease-out;
 }
 
-.cam-led-on {
+.cam-led {
   position: absolute;
   width: 6px;
   height: 6px;
@@ -324,11 +313,14 @@
   box-shadow: 0 0 12px 4px rgba(241, 119, 32, 0.9);
   opacity: 0;
   transform: translate(-50%, -50%);
+  transition: opacity 320ms ease-out;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .cam-flash { animation: cam-capture 320ms ease-out; }
-  .cam-led-on { animation: cam-led-ping 320ms ease-out; }
+/* Presionado: encendido instantáneo (sin transición de entrada); al soltar,
+   la regla base retoma y la luz se desvanece en 320ms. */
+.cam-on {
+  opacity: 1;
+  transition: none;
 }
 
 @keyframes portal-page-enter {
