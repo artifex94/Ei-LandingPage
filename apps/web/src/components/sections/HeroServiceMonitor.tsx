@@ -159,7 +159,7 @@ export default function HeroServiceMonitor() {
                   <span className="block text-sm text-slate-300">{service.description}</span>
                 </span>
               </div>
-              <div className="hidden items-center gap-1.5 sm:flex" aria-label="Servicios destacados">
+              <div className="hidden items-center sm:flex" aria-label="Servicios destacados">
                 {services.map((item, index) => (
                   <button
                     key={item.title}
@@ -167,10 +167,16 @@ export default function HeroServiceMonitor() {
                     onClick={() => setActive(index)}
                     aria-label={`Ver ${item.title}`}
                     aria-current={index === active ? "true" : undefined}
-                    className={`h-2 rounded-full transition-all ${
-                      index === active ? "w-8 bg-orange-400" : "w-2 bg-white/30 hover:bg-white/60"
-                    }`}
-                  />
+                    className="group/dot flex h-6 min-w-6 items-center justify-center px-0.5"
+                  >
+                    <span
+                      className={`h-2 rounded-full transition-all ${
+                        index === active
+                          ? "w-8 bg-orange-400"
+                          : "w-2 bg-white/30 group-hover/dot:bg-white/60"
+                      }`}
+                    />
+                  </button>
                 ))}
               </div>
             </div>
