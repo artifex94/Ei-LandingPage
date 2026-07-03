@@ -13,7 +13,7 @@ describe("validarAdjuntoFeedback", () => {
   });
 
   it("acepta un video dentro del límite", () => {
-    const r = validarAdjuntoFeedback({ mime: "video/mp4", size: 20 * 1024 * 1024 });
+    const r = validarAdjuntoFeedback({ mime: "video/mp4", size: 12 * 1024 * 1024 });
     expect(r.ok).toBe(true);
   });
 
@@ -29,9 +29,9 @@ describe("validarAdjuntoFeedback", () => {
     if (!r.ok) expect(r.error).toMatch(/10 MB/);
   });
 
-  it("rechaza un video que supera los 25 MB", () => {
-    const r = validarAdjuntoFeedback({ mime: "video/webm", size: 25 * 1024 * 1024 + 1 });
+  it("rechaza un video que supera los 15 MB", () => {
+    const r = validarAdjuntoFeedback({ mime: "video/webm", size: 15 * 1024 * 1024 + 1 });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toMatch(/25 MB/);
+    if (!r.ok) expect(r.error).toMatch(/15 MB/);
   });
 });

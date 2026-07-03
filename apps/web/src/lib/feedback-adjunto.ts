@@ -15,7 +15,9 @@ export const FEEDBACK_VIDEO_TIPOS_VALIDOS = new Set([
 ]);
 
 export const FEEDBACK_IMAGEN_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-export const FEEDBACK_VIDEO_MAX_SIZE = 25 * 1024 * 1024; // 25 MB
+// Tope alineado al file size limit del bucket "feedback-adjuntos" en Supabase
+// (15 MB, configurado a mano): si se sube este valor, subir también el del bucket.
+export const FEEDBACK_VIDEO_MAX_SIZE = 15 * 1024 * 1024; // 15 MB
 
 export interface AdjuntoFeedbackInput {
   mime: string;
@@ -46,7 +48,7 @@ export function validarAdjuntoFeedback(
 
   if (FEEDBACK_VIDEO_TIPOS_VALIDOS.has(mime)) {
     if (size > FEEDBACK_VIDEO_MAX_SIZE) {
-      return { ok: false, error: "El video supera el límite de 25 MB." };
+      return { ok: false, error: "El video supera el límite de 15 MB." };
     }
     return { ok: true };
   }

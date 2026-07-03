@@ -87,7 +87,7 @@ export function FeedbackForm() {
 
       <FormField
         label="Adjuntar imagen o video (opcional)"
-        hint="Imágenes hasta 10 MB, videos hasta 25 MB."
+        hint="Imágenes hasta 10 MB, videos hasta 15 MB."
       >
         {(field) => (
           <input
