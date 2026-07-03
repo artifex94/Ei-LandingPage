@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { MONITOR, calcularDesvioCursor, calcularTransformMonitor, clasificarCursor } from "./headerMonitor";
+import { MONITOR, calcularBarridoBusqueda, calcularDesvioCursor, calcularTransformMonitor, clasificarCursor } from "./headerMonitor";
 
 describe("calcularTransformMonitor", () => {
   it("el origen de la página cae en el centro de la pantalla", () => {
@@ -65,5 +65,32 @@ describe("clasificarCursor", () => {
     expect(clasificarCursor("auto", "DIV", false)).toBe("default");
     expect(clasificarCursor("auto", "SECTION", false)).toBe("default");
     expect(clasificarCursor("grab", "DIV", false)).toBe("default");
+  });
+});
+
+describe("calcularBarridoBusqueda", () => {
+  it("en fase 0 apunta al centro de la banda visible", () => {
+    const b = calcularBarridoBusqueda(0, 1920, 900, 0, 500);
+    expect(b).toEqual(calcularTransformMonitor(960, 950));
+  });
+
+  it("en un cuarto de período está en el extremo derecho del barrido", () => {
+    const t = MONITOR.BUSQUEDA_PERIODO_MS / 4;
+    const b = calcularBarridoBusqueda(t, 1920, 900, 0, 0);
+    const esperadoX = 1920 * (0.5 + MONITOR.BUSQUEDA_AMPLITUD);
+    expect(b.tx).toBeCloseTo(calcularTransformMonitor(esperadoX, 450).tx, 6);
+  });
+
+  it("es periódico: t y t+período dan el mismo target", () => {
+    const a = calcularBarridoBusqueda(1234, 1440, 900, 0, 0);
+    const b = calcularBarridoBusqueda(1234 + MONITOR.BUSQUEDA_PERIODO_MS, 1440, 900, 0, 0);
+    expect(b.tx).toBeCloseTo(a.tx, 6);
+    expect(b.ty).toBeCloseTo(a.ty, 6);
+  });
+
+  it("sigue el scroll: la banda vertical acompaña scrollY", () => {
+    const a = calcularBarridoBusqueda(0, 1920, 900, 0, 0);
+    const b = calcularBarridoBusqueda(0, 1920, 900, 0, 1000);
+    expect(a.ty - b.ty).toBeCloseTo(MONITOR.SCALE * 1000, 6);
   });
 });

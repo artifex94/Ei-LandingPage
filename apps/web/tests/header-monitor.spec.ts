@@ -128,3 +128,44 @@ test.describe("HeaderMonitor — gates", () => {
     expect(despues.ty).toBeCloseTo(estatico.ty, 1);
   });
 });
+
+test.describe("HeaderMonitor — modo búsqueda", () => {
+  test.use({ viewport: { width: 1920, height: 900 } });
+
+  test("el mouse escapa por arriba, la cámara barre buscándolo y lo reencuentra", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator('[data-monitor-active="1"]')).toBeAttached();
+    const cursor = page.locator("[data-cctv-cursor]");
+
+    // Tracking normal
+    await page.mouse.move(800, 500);
+    await expect
+      .poll(() => distanciaAlTarget(page, 800, 500), { timeout: 10_000 })
+      .toBeLessThan(1.5);
+    await expect(cursor).not.toHaveAttribute("data-tipo", "oculto");
+
+    // Escape: el mouse sube a la franja del navbar → cursor oculto + barrido
+    await page.mouse.move(800, 40);
+    await expect(page.locator('[data-cctv-clone][data-buscando="1"]')).toBeAttached();
+    await expect(cursor).toHaveAttribute("data-tipo", "oculto");
+
+    // El feed panea solo (el transform cambia sin mover el mouse)
+    const tx = async () => (await transformActual(page)).tx;
+    const t1 = await tx();
+    await page.waitForTimeout(700);
+    const t2 = await tx();
+    await page.waitForTimeout(700);
+    const t3 = await tx();
+    expect(Math.abs(t2 - t1) + Math.abs(t3 - t2)).toBeGreaterThan(3);
+
+    // Reencuentro: el mouse baja → deja de buscar y vuelve a centrarlo
+    await page.mouse.move(600, 600);
+    await expect(page.locator('[data-cctv-clone][data-buscando="1"]')).toHaveCount(0);
+    await expect
+      .poll(() => distanciaAlTarget(page, 600, 600), { timeout: 10_000 })
+      .toBeLessThan(1.5);
+    await expect(cursor).not.toHaveAttribute("data-tipo", "oculto");
+  });
+});

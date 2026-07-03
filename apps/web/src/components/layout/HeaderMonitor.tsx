@@ -8,6 +8,7 @@ import {
 } from "@/components/layout/CursoresWindows";
 import {
   MONITOR,
+  calcularBarridoBusqueda,
   calcularDesvioCursor,
   calcularTransformMonitor,
   clasificarCursor,
@@ -75,17 +76,37 @@ export default function HeaderMonitor() {
       tgtY = t.ty;
     };
 
+    // Modo búsqueda: el mouse "se escapó por arriba" (franja del navbar o
+    // fuera de la ventana) y la cámara barre el sitio de lado a lado
+    // buscándolo. El cursor dibujado desaparece del feed.
+    let buscando = false;
+    let inicioBusqueda = 0;
+
     const loop = (now: number) => {
+      if (buscando) {
+        const b = calcularBarridoBusqueda(
+          now - inicioBusqueda,
+          window.innerWidth,
+          window.innerHeight,
+          window.scrollX,
+          window.scrollY
+        );
+        tgtX = b.tx;
+        tgtY = b.ty;
+      }
       const dt = lastFrame ? Math.min(now - lastFrame, 100) : 16.7;
       lastFrame = now;
       const k = 1 - Math.exp(-dt / MONITOR.TAU_MS);
       curX += (tgtX - curX) * k;
       curY += (tgtY - curY) * k;
-      if (Math.abs(tgtX - curX) <= MONITOR.EPSILON && Math.abs(tgtY - curY) <= MONITOR.EPSILON) {
+      const convergido =
+        Math.abs(tgtX - curX) <= MONITOR.EPSILON && Math.abs(tgtY - curY) <= MONITOR.EPSILON;
+      if (convergido && !buscando) {
         curX = tgtX;
         curY = tgtY;
         running = false;
       } else {
+        // Buscando, el target se mueve solo: el loop no se auto-detiene.
         raf = requestAnimationFrame(loop);
       }
       aplicar();
@@ -133,15 +154,41 @@ export default function HeaderMonitor() {
       );
     };
 
+    const entrarEnBusqueda = () => {
+      if (buscando) return;
+      buscando = true;
+      inicioBusqueda = performance.now();
+      holder.dataset.buscando = "1";
+      if (cursorRef.current) cursorRef.current.dataset.tipo = "oculto";
+      ultimoElemento = null;
+      kick();
+    };
+
+    const salirDeBusqueda = () => {
+      if (!buscando) return;
+      buscando = false;
+      delete holder.dataset.buscando;
+    };
+
     const onMove = (e: MouseEvent) => {
       lastClientX = e.clientX;
       lastClientY = e.clientY;
+      if (e.clientY <= MONITOR.ESCAPE_Y) {
+        // "Se escapó por arriba": fuera del campo visual de la cámara.
+        entrarEnBusqueda();
+        return;
+      }
+      salirDeBusqueda();
       retarget();
       kick();
       espejarFormaCursor(e.clientX, e.clientY);
     };
 
+    // Si el mouse sale de la ventana, la cámara también lo pierde.
+    const onLeave = () => entrarEnBusqueda();
+
     const onScroll = () => {
+      if (buscando) return; // el barrido ya sigue al scroll frame a frame
       retarget();
       kick();
     };
@@ -190,16 +237,20 @@ export default function HeaderMonitor() {
     const attachFollow = () => {
       holder.dataset.monitorActive = "1";
       document.addEventListener("mousemove", onMove, { passive: true });
+      document.documentElement.addEventListener("mouseleave", onLeave);
       window.addEventListener("scroll", onScroll, { passive: true });
       document.addEventListener("visibilitychange", onVisibility);
     };
 
     const detachFollow = () => {
       document.removeEventListener("mousemove", onMove);
+      document.documentElement.removeEventListener("mouseleave", onLeave);
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("visibilitychange", onVisibility);
       cancelAnimationFrame(raf);
       running = false;
+      buscando = false;
+      delete holder.dataset.buscando;
       ultimoElemento = null;
       if (cursorRef.current) cursorRef.current.dataset.tipo = "default";
       delete holder.dataset.monitorActive;

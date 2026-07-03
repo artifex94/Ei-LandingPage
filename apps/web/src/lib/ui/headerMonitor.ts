@@ -20,7 +20,36 @@ export const MONITOR = {
    * movimiento brusco lo saque de la pantallita.
    */
   CURSOR_DESVIO_MAX: { x: 14, y: 9 },
+  /**
+   * Franja superior del viewport (px) donde el mouse "se escapa por arriba"
+   * del campo visual de la cámara: cubre las dos alturas del navbar (96 al
+   * tope, 80 scrolleado) y evita el efecto túnel al posar el mouse sobre la
+   * propia pantallita.
+   */
+  ESCAPE_Y: 96,
+  /** Período del barrido de búsqueda (ida y vuelta completa, ms). */
+  BUSQUEDA_PERIODO_MS: 6000,
+  /** Amplitud del barrido como fracción del ancho del viewport. */
+  BUSQUEDA_AMPLITUD: 0.4,
 } as const;
+
+/**
+ * Target del paneo en modo búsqueda: barrido sinusoidal horizontal de lado a
+ * lado del viewport (la cámara "busca" al mouse perdido), centrado en la
+ * banda vertical media de lo que se está viendo.
+ */
+export function calcularBarridoBusqueda(
+  tMs: number,
+  anchoViewport: number,
+  altoViewport: number,
+  scrollX: number,
+  scrollY: number
+): { tx: number; ty: number } {
+  const fase = (2 * Math.PI * tMs) / MONITOR.BUSQUEDA_PERIODO_MS;
+  const pageX = scrollX + anchoViewport * (0.5 + MONITOR.BUSQUEDA_AMPLITUD * Math.sin(fase));
+  const pageY = scrollY + altoViewport / 2;
+  return calcularTransformMonitor(pageX, pageY);
+}
 
 export type TipoCursor = "default" | "pointer" | "text";
 
