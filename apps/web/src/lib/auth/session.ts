@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
@@ -40,7 +41,11 @@ export type Sesion = {
  * activa en otra pestaña — así puede tener /admin y /portal abiertos a la vez
  * sin que sus propias acciones administrativas se vean bloqueadas.
  */
-export async function getSesionReal(): Promise<Sesion | null> {
+export const getSesionReal = cache(async (): Promise<Sesion | null> => {
+  // React.cache: UNA resolución por request. Sin esto, layout + página +
+  // componentes anidados repetían el roundtrip a la Auth API de Supabase
+  // (~200-300ms cada uno) y la query de perfil — medido como la mayor parte
+  // del TTFB >1s de los dashboards en producción.
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,7 +59,7 @@ export async function getSesionReal(): Promise<Sesion | null> {
   if (!perfil) return null;
 
   return { userId: user.id, perfil: perfil as Sesion["perfil"] };
-}
+});
 
 /**
  * Decide si corresponde aplicar la impersonación en curso. Función PURA —
@@ -97,7 +102,7 @@ export function debeAplicarImpersonacion(params: {
  * Pensada para el portal (`requireSesion`, páginas y Server Actions bajo
  * `/portal`). Para admin/empleados usar `getSesionReal`.
  */
-export async function getSesion(): Promise<Sesion | null> {
+export const getSesion = cache(async (): Promise<Sesion | null> => {
   const real = await getSesionReal();
   if (!real) return null;
   if (real.perfil.rol !== "ADMIN") return real;
@@ -126,7 +131,7 @@ export async function getSesion(): Promise<Sesion | null> {
     perfil: cliente as Sesion["perfil"],
     impersonacion: { adminId: payload.adminId, adminNombre: payload.adminNombre },
   };
-}
+});
 
 /** Exige sesión autenticada (impersonation-aware). Redirige a /login si no hay. */
 export async function requireSesion(): Promise<Sesion> {

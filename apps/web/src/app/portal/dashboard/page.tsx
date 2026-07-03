@@ -21,25 +21,25 @@ export const metadata: Metadata = { title: "Inicio" };
 export default async function DashboardPage() {
   const { userId, perfil } = await requireSesion();
 
-  const cuentas = await prisma.cuenta.findMany({
-    where: { perfil_id: userId, estado: { not: "BAJA_DEFINITIVA" } },
-    include: {
-      sensores: { where: { alerta_mant: true }, select: { id: true } },
-      pagos: {
-        where: { estado: { in: ["PENDIENTE", "VENCIDO", "PROCESANDO"] } },
-        select: { id: true, estado: true, importe: true, mes: true, anio: true },
+  // Cuentas y parámetros no dependen entre sí: un solo roundtrip.
+  const [cuentas, diasGracia, diasSuspension] = await Promise.all([
+    prisma.cuenta.findMany({
+      where: { perfil_id: userId, estado: { not: "BAJA_DEFINITIVA" } },
+      include: {
+        sensores: { where: { alerta_mant: true }, select: { id: true } },
+        pagos: {
+          where: { estado: { in: ["PENDIENTE", "VENCIDO", "PROCESANDO"] } },
+          select: { id: true, estado: true, importe: true, mes: true, anio: true },
+        },
+        // Para "visita técnica en gestión" en la tarjeta de estado del sistema.
+        solicitudes: { where: { estado: { not: "RESUELTA" } }, select: { id: true } },
+        ordenes_trabajo: {
+          where: { estado: { notIn: ["COMPLETADA", "CANCELADA"] } },
+          select: { id: true },
+        },
       },
-      // Para "visita técnica en gestión" en la tarjeta de estado del sistema.
-      solicitudes: { where: { estado: { not: "RESUELTA" } }, select: { id: true } },
-      ordenes_trabajo: {
-        where: { estado: { notIn: ["COMPLETADA", "CANCELADA"] } },
-        select: { id: true },
-      },
-    },
-    orderBy: { descripcion: "asc" },
-  });
-
-  const [diasGracia, diasSuspension] = await Promise.all([
+      orderBy: { descripcion: "asc" },
+    }),
     getParam("DIAS_GRACIA", DIAS_GRACIA),
     getParam("DIAS_SUSPENSION", DIAS_SUSPENSION),
   ]);
