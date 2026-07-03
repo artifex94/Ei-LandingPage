@@ -42,6 +42,7 @@ export default defineConfig({
         "**/header-camera.spec.ts",
         "**/header-monitor.spec.ts",
         "**/services-modal.spec.ts",
+        "**/splash.spec.ts",
       ],
       use: { ...devices["Desktop Chrome"] },
     },
