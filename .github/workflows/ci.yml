@@ -32,6 +32,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Suite completa de Vitest (unit + componentes con jsdom). No necesita
+      # env de Supabase: los tests mockean todo y el TZ lo fija vitest.config.
+      - name: Unit tests (Vitest)
+        run: npx vitest run
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 

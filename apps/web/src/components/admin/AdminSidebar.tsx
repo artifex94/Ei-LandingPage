@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLockup } from "@/components/layout/BrandLockup";
@@ -112,6 +112,25 @@ const BADGE_COLOR: Record<BadgeKey, string> = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+// ── Preferencia de sidebar colapsado (store externo en localStorage) ─────────
+
+const COLAPSADO_KEY = "admin-sidebar-colapsado";
+// El evento storage no dispara en la pestaña que escribe: se notifica a mano.
+const COLAPSADO_EVENTO = "ei-sidebar-colapsado";
+
+function suscribirColapsado(cb: () => void) {
+  window.addEventListener("storage", cb);
+  window.addEventListener(COLAPSADO_EVENTO, cb);
+  return () => {
+    window.removeEventListener("storage", cb);
+    window.removeEventListener(COLAPSADO_EVENTO, cb);
+  };
+}
+
+function leerColapsado(): boolean {
+  return localStorage.getItem(COLAPSADO_KEY) === "1";
+}
 
 function getSectionForPath(path: string): NavSection["id"] | null {
   for (const section of NAV_SECTIONS) {
@@ -400,17 +419,19 @@ export function AdminSidebar({
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Sidebar desktop colapsado a solo-íconos. SSR asume expandido; la
-  // preferencia persistida se aplica tras el mount (sin hydration mismatch).
-  const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => {
-    setCollapsed(localStorage.getItem("admin-sidebar-colapsado") === "1");
-  }, []);
+  // Sidebar desktop colapsado a solo-íconos: la preferencia vive en
+  // localStorage como store externo (useSyncExternalStore: SSR asume
+  // expandido, el cliente lee el valor persistido y otras pestañas se
+  // sincronizan vía el evento storage).
+  const collapsed = useSyncExternalStore(
+    suscribirColapsado,
+    leerColapsado,
+    () => false
+  );
 
   function toggleCollapsed() {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem("admin-sidebar-colapsado", next ? "1" : "0");
+    localStorage.setItem(COLAPSADO_KEY, collapsed ? "0" : "1");
+    window.dispatchEvent(new Event(COLAPSADO_EVENTO));
   }
 
   const seccionActual = getSectionForPath(pathname);
