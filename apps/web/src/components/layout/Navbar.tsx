@@ -77,16 +77,13 @@ export default function Navbar() {
       />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 2xl:max-w-[1600px] 2xl:px-12">
         <div className="flex h-16 items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-5">
-            <HeaderMonitor />
-            <a
-              href="#inicio"
-              className="group flex min-w-0 items-center gap-3 lg:shrink-0"
-              aria-label="Escobar Instalaciones - inicio"
-            >
-              <BrandLockup context="Seguridad electrónica" />
-            </a>
-          </div>
+          <a
+            href="#inicio"
+            className="group flex min-w-0 items-center gap-3 lg:shrink-0"
+            aria-label="Escobar Instalaciones - inicio"
+          >
+            <BrandLockup context="Seguridad electrónica" />
+          </a>
 
           {/* El set completo de links + 2 CTAs no entra entre 768 y 1023px:
               el nav de escritorio arranca en lg y el burger cubre hasta ahí. */}
@@ -190,6 +187,9 @@ export default function Navbar() {
         </div>
       </div>
 
+      {/* Anclados al borde físico izquierdo, en columna: monitor dentro de la
+          barra, cámara colgando debajo. */}
+      <HeaderMonitor />
       <HeaderCamera />
     </nav>
   );
