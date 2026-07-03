@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#334155"/>
+      <stop offset="0.24" stop-color="#1e293b"/>
+      <stop offset="0.72" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#475569"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <radialGradient id="glass" cx="42%" cy="36%" r="65%">
+      <stop offset="0" stop-color="#334155"/>
+      <stop offset="0.42" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#020617"/>
+    </radialGradient>
+    <filter id="soft" x="-15%" y="-20%" width="130%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.2" result="b"/>
+      <feOffset dx="0" dy="1" result="o"/>
+      <feComposite in="SourceGraphic" in2="o" operator="over"/>
+    </filter>
+  </defs>
+  <!-- shared rear pivot collar centered exactly at 0.40,0.30 => (409.6,307.2); camera axis rotated 30deg downward -->
+  <g transform="rotate(30 409.6 307.2)" filter="url(#soft)">
+    <!-- rear pivot collar centered on pivot -->
+    <circle cx="409.6" cy="307.2" r="48" fill="url(#rim)"/>
+    <circle cx="409.6" cy="307.2" r="29" fill="#0f172a" stroke="#334155" stroke-width="4"/>
+    <path d="M381 290 Q407 270 439 288" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" opacity="0.28" fill="none"/>
+
+    <!-- compact bullet camera body; lens center local x=909.6 gives approx canvas (842.6,557.2) -->
+    <path d="M450 245 H840 Q884 245 909.6 276 Q924 294 924 307.2 Q924 320 909.6 338 Q884 369 840 369 H450 Q429 369 429 348 V266 Q429 245 450 245 Z" fill="url(#body)"/>
+    <path d="M463 257 H836 Q870 257 889 276" stroke="#64748b" stroke-width="4" stroke-linecap="round" opacity="0.38" fill="none"/>
+    <path d="M470 354 H838 Q870 354 893 333" stroke="#020617" stroke-width="5" stroke-linecap="round" opacity="0.55" fill="none"/>
+    <path d="M497 238 H719 L748 262 H487 Z" fill="#1e293b" stroke="#334155" stroke-width="3" opacity="0.95"/>
+    <path d="M518 244 H704" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" opacity="0.28"/>
+    <path d="M454 260 V354" stroke="#334155" stroke-width="5" opacity="0.85"/>
+
+    <!-- front lens bezel and face -->
+    <circle cx="909.6" cy="307.2" r="80" fill="#0f172a" stroke="#334155" stroke-width="8"/>
+    <circle cx="909.6" cy="307.2" r="68" fill="none" stroke="#f17720" stroke-width="6"/>
+    <circle cx="909.6" cy="307.2" r="47" fill="url(#glass)" stroke="#020617" stroke-width="7"/>
+    <path d="M884 281 Q906 267 931 279" stroke="#64748b" stroke-width="4" stroke-linecap="round" opacity="0.30" fill="none"/>
+    <!-- OFF LED: small dark recessed circle, no glow -->
+    <circle cx="909.6" cy="307.2" r="8" fill="#020617" stroke="#1e293b" stroke-width="2"/>
+  </g>
+</svg>

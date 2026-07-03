@@ -277,6 +277,47 @@
 .stat-figure { display: inline-grid; white-space: nowrap; }
 .stat-figure > * { grid-area: 1 / 1; }
 
+/* ── Cámara de vigilancia del header (HeaderCamera) ──────────────────────── */
+
+/* Fogonazo de captura: subida casi instantánea ("clack") y decay expansivo. */
+@keyframes cam-capture {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
+  10% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); }
+}
+
+@keyframes cam-led-ping {
+  0%, 100% { opacity: 0; }
+  8% { opacity: 1; }
+}
+
+.cam-flash {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(241, 119, 32, 0.55) 35%, transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.35);
+}
+
+.cam-led-on {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #ffe4c4;
+  box-shadow: 0 0 12px 4px rgba(241, 119, 32, 0.9);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cam-flash { animation: cam-capture 320ms ease-out; }
+  .cam-led-on { animation: cam-led-ping 320ms ease-out; }
+}
+
 @keyframes portal-page-enter {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }

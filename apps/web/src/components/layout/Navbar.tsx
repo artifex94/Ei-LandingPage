@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { FileText, LogIn, Menu, X } from "lucide-react";
 import { BrandLockup } from "./BrandLockup";
+import HeaderCamera from "./HeaderCamera";
 
 const navLinks = [
   { name: "Inicio", href: "#inicio" },
@@ -165,6 +166,8 @@ export default function Navbar() {
           </a>
         </div>
       </div>
+
+      <HeaderCamera />
     </nav>
   );
 }
