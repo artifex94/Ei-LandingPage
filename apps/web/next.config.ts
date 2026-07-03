@@ -22,10 +22,13 @@ const securityHeaders = [
     key: "Referrer-Policy",
     value: "strict-origin-when-cross-origin",
   },
-  // Desactiva APIs del browser no utilizadas
+  // Desactiva APIs del browser no utilizadas. geolocation queda habilitada
+  // para el propio origen: el flujo móvil del técnico captura GPS con
+  // navigator.geolocation (src/app/tecnico/ot/[id]/OTCampoClient.tsx) y
+  // geolocation=() la bloquea incluso para self.
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    value: "camera=(), microphone=(), geolocation=(self), interest-cohort=()",
   },
   // Content Security Policy
   // script-src incluye unsafe-inline/unsafe-eval porque Next.js App Router
