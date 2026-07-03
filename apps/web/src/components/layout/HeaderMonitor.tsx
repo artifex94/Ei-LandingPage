@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MousePointer2 } from "lucide-react";
-import { MONITOR, calcularTransformMonitor } from "@/lib/ui/headerMonitor";
+import { MONITOR, calcularDesvioCursor, calcularTransformMonitor } from "@/lib/ui/headerMonitor";
 
 /**
  * Pantallita CCTV en el navbar (solo 2xl): muestra "lo que graba la cámara"
@@ -19,6 +19,7 @@ import { MONITOR, calcularTransformMonitor } from "@/lib/ui/headerMonitor";
  */
 export default function HeaderMonitor() {
   const holderRef = useRef<HTMLDivElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
   // El reloj se setea recién en el cliente (la hora real en SSR daría mismatch).
   const [hora, setHora] = useState("--:--:--");
 
@@ -48,6 +49,12 @@ export default function HeaderMonitor() {
 
     const aplicar = () => {
       holder.style.transform = `translate(${curX}px, ${curY}px) scale(${MONITOR.SCALE})`;
+      // El cursor dibujado se adelanta al paneo en el error de seguimiento:
+      // el mouse "se movió primero" y la cámara lo alcanza.
+      if (cursorRef.current) {
+        const { dx, dy } = calcularDesvioCursor(curX, curY, tgtX, tgtY);
+        cursorRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
+      }
     };
 
     const retarget = () => {
@@ -219,8 +226,9 @@ export default function HeaderMonitor() {
           <div ref={holderRef} className="cctv-clone" data-cctv-clone />
           <div className="cctv-overlay cctv-scanlines" />
           <div className="cctv-overlay cctv-vignette" />
-          {/* El "mouse grabado": cursor con la punta en el punto rastreado */}
-          <div className="cctv-overlay cctv-cursor">
+          {/* El "mouse grabado": cursor con la punta en el punto rastreado.
+              Su transform (desvío por lag de captura) se muta por ref. */}
+          <div ref={cursorRef} className="cctv-overlay cctv-cursor" data-cctv-cursor>
             <MousePointer2 />
           </div>
           <div className="cctv-overlay cctv-hud font-mono">
