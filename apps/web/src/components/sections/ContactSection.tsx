@@ -26,7 +26,7 @@ export default function ContactSection() {
                 className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.10] mix-blend-screen"
                 style={{ backgroundImage: "url('/images/victoria-security-texture.webp')" }}
               />
-              <div className="absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/3 rounded-full bg-orange-500/15 blur-3xl" />
+              <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 translate-x-1/3 -translate-y-1/3 rounded-full bg-orange-500/15 blur-3xl" />
               <div className="relative z-10">
                 <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500/10 text-orange-300"><ShieldCheck className="h-5 w-5" /></div>
                 <h2 id="contact-heading" className="text-balance text-3xl font-black tracking-tight md:text-4xl">Solicitá tu presupuesto</h2>

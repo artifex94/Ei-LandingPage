@@ -132,8 +132,10 @@ const WhatsAppForm: React.FC = () => {
         type="submit"
         isLoading={isSubmitting}
         loadingText="Abriendo WhatsApp..."
+        className="whitespace-nowrap"
       >
-        Solicitar presupuesto
+        <span className="sm:hidden">Pedir presupuesto</span>
+        <span className="hidden sm:inline">Solicitar presupuesto</span>
       </Button>
     </form>
   );

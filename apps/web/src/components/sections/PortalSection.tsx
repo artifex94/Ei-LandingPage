@@ -80,7 +80,7 @@ export default function PortalSection() {
           </div>
           <Link
             href="/portal/dashboard"
-            className="group inline-flex min-h-[52px] items-center justify-center gap-2 rounded-xl bg-emerald-300 px-6 py-3 font-black text-slate-950 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:ring-offset-2 focus:ring-offset-slate-950"
+            className="group inline-flex min-h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-300 px-5 py-3 font-black text-slate-950 transition hover:-translate-y-0.5 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:ring-offset-2 focus:ring-offset-slate-950 sm:px-6"
           >
             Acceder ahora
             <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
@@ -162,7 +162,7 @@ export default function PortalSection() {
 
               <Link
                 href="/portal/dashboard"
-                className="group mt-5 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-base font-bold text-slate-950 transition hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 focus:ring-offset-slate-950"
+                className="group mt-5 flex min-h-[50px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-orange-500 px-4 py-3 text-base font-bold text-slate-950 transition hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:ring-offset-2 focus:ring-offset-slate-950 sm:px-6"
               >
                 Entrar a Mi Central{" "}
                 <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
