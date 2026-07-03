@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma/client";
 import { calcularEstadoFinanciero, peorEstadoFinanciero } from "@/lib/billing-state";
 import { DIAS_GRACIA, DIAS_SUSPENSION } from "@/lib/constants/billing";
 import { getParam } from "@/lib/parametros";
-import { construirFeedNotificaciones } from "@/lib/notificaciones-feed";
+import { cargarFeedCrudo, componerFeed } from "@/lib/notificaciones-feed";
 import { PagoRequeridoGuard } from "@/components/portal/PagoRequeridoGuard";
 import { PortalNav } from "@/components/portal/PortalNav";
 import { ImpersonacionBanner } from "@/components/portal/ImpersonacionBanner";
@@ -36,8 +36,9 @@ export default async function PortalLayout({
   if (perfil.rol === "ADMIN")   redirect("/admin/dashboard");
   if (perfil.rol === "TECNICO") redirect("/tecnico/mi-dia");
 
-  // Los parámetros no dependen de cuentas: un solo roundtrip para todo.
-  const [cuentas, empleado, diasGracia, diasSuspension] = await Promise.all([
+  // Parámetros y feed no dependen de cuentas: un solo roundtrip para todo;
+  // el feed se compone después (componerFeed, puro) con el peorEstado.
+  const [cuentas, empleado, diasGracia, diasSuspension, feedCrudo] = await Promise.all([
     prisma.cuenta.findMany({
       where: {
         perfil_id: userId,
@@ -57,13 +58,14 @@ export default async function PortalLayout({
     prisma.empleado.findFirst({ where: { perfil_id: userId }, select: { id: true } }),
     getParam("DIAS_GRACIA", DIAS_GRACIA),
     getParam("DIAS_SUSPENSION", DIAS_SUSPENSION),
+    cargarFeedCrudo(userId),
   ]);
   const estados = cuentas.map((c) =>
     calcularEstadoFinanciero(c.estado, c.pagos, c.override_activo, c.override_expira, { diasGracia, diasSuspension })
   );
   const peorEstado = peorEstadoFinanciero(estados);
 
-  const feed = await construirFeedNotificaciones({ userId, peorEstado });
+  const feed = componerFeed(feedCrudo, peorEstado);
 
   const deudaTotal =
     peorEstado.tipo === "SUSPENDED"

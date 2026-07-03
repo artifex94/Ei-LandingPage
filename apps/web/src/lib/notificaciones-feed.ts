@@ -43,13 +43,15 @@ const SEVERIDAD_EVENTO: Partial<Record<TipoDia, SeveridadFeed>> = {
 const MAX_POR_FUENTE = 40;
 const MAX_FEED = 50;
 
-export async function construirFeedNotificaciones(params: {
-  userId: string;
-  /** Ya calculado por el layout — no se recalcula el estado de cuentas acá. */
-  peorEstado: EstadoFinanciero;
-}): Promise<NotificacionItem[]> {
-  const { userId, peorEstado } = params;
+/** Resultado del fetch, previo a componer con el estado financiero. */
+export type FeedCrudo = Awaited<ReturnType<typeof cargarFeedCrudo>>;
 
+/**
+ * Solo las queries del feed (no dependen del estado financiero): el layout
+ * las dispara EN PARALELO con cuentas/params y compone después — un
+ * roundtrip menos en el TTFB de todas las páginas del portal.
+ */
+export async function cargarFeedCrudo(userId: string) {
   const [eventos, notifs] = await Promise.all([
     prisma.eventoAlarma.findMany({
       where: { cuenta: { perfil_id: userId, estado: { not: "BAJA_DEFINITIVA" } } },
@@ -63,7 +65,15 @@ export async function construirFeedNotificaciones(params: {
       take: MAX_POR_FUENTE,
     }),
   ]);
+  return { eventos, notifs };
+}
 
+/** Composición pura (sin I/O): mezcla, clasifica, ordena y recorta. */
+export function componerFeed(
+  crudo: FeedCrudo,
+  peorEstado: EstadoFinanciero
+): NotificacionItem[] {
+  const { eventos, notifs } = crudo;
   const items: NotificacionItem[] = [];
 
   // ── 1. Estado financiero en vivo (pinned arriba) ─────────────────────────────
@@ -130,4 +140,13 @@ export async function construirFeedNotificaciones(params: {
   });
 
   return items.slice(0, MAX_FEED);
+}
+
+/** Wrapper compatible: fetch + composición en un paso (call sites simples). */
+export async function construirFeedNotificaciones(params: {
+  userId: string;
+  /** Ya calculado por el layout — no se recalcula el estado de cuentas acá. */
+  peorEstado: EstadoFinanciero;
+}): Promise<NotificacionItem[]> {
+  return componerFeed(await cargarFeedCrudo(params.userId), params.peorEstado);
 }
