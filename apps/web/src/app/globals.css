@@ -279,16 +279,16 @@
 
 /* ── Cámara de vigilancia del header (HeaderCamera) ──────────────────────── */
 
-/* Fogonazo de captura: subida casi instantánea ("clack") y decay expansivo. */
+/* Fogonazo de captura: encendido instantáneo (arranca a intensidad plena en
+   el frame del click, sin crecer — un flash no "aparece", destella) y decay. */
 @keyframes cam-capture {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
-  10% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); }
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 @keyframes cam-led-ping {
-  0%, 100% { opacity: 0; }
-  8% { opacity: 1; }
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 /* Haz de luz cónico: círculo centrado en la punta del lente del que solo se
@@ -312,7 +312,7 @@
   -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.55) 42%, transparent 72%);
   mix-blend-mode: screen;
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.35);
+  transform: translate(-50%, -50%);
 }
 
 .cam-led-on {
