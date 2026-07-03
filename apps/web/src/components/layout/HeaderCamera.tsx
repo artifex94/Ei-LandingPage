@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { CAM, CAM_REST_DEG } from "@/lib/ui/headerCamera";
 
 const DEG = 180 / Math.PI;
@@ -160,7 +160,10 @@ export default function HeaderCamera() {
     left: `${CAM.LENS_FRONT.x * 100}%`,
     top: `${CAM.LENS_FRONT.y * 100}%`,
     animationDuration: `${CAM.FLASH_MS}ms`,
-  };
+    // Dirección del haz en convención conic (0 = arriba, + horario): el
+    // barril del asset apunta A0 grados bajo la horizontal derecha.
+    "--cam-beam-dir": `${90 + CAM.A0}deg`,
+  } as CSSProperties;
 
   return (
     <div

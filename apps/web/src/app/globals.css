@@ -291,12 +291,25 @@
   8% { opacity: 1; }
 }
 
+/* Haz de luz cónico: círculo centrado en la punta del lente del que solo se
+   ve la porción (torta conic) que apunta en la dirección del barril
+   (--cam-beam-dir, la setea el componente desde A0: 90deg + inclinación).
+   La máscara radial atenúa la luz con la distancia, como una linterna. */
 .cam-flash {
   position: absolute;
-  width: 52px;
-  height: 52px;
+  width: 112px;
+  height: 112px;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(241, 119, 32, 0.55) 35%, transparent 70%);
+  background: conic-gradient(
+    from calc(var(--cam-beam-dir, 120deg) - 20deg),
+    transparent 0deg,
+    rgba(241, 119, 32, 0.7) 10deg,
+    rgba(255, 236, 200, 0.95) 20deg,
+    rgba(241, 119, 32, 0.7) 30deg,
+    transparent 40deg
+  );
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.55) 42%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.55) 42%, transparent 72%);
   mix-blend-mode: screen;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.35);
