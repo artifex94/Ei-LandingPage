@@ -31,7 +31,26 @@ export const CAM = {
   IDLE_MS: 4000,
   /** Duración del flash de captura al click. */
   FLASH_MS: 320,
+  /** Offset horizontal del ancla (la clase left-3 del root). */
+  LEFT_PX: 12,
+  /**
+   * Umbral de scroll en el que el Navbar muestra su línea dura inferior
+   * (Navbar.tsx usa scrollY > 24): por debajo, la cámara se sujeta de la
+   * pared izquierda de la ventana; por encima, cuelga de esa línea.
+   */
+  SCROLL_UMBRAL: 24,
+  /** Duración del re-asiento pared ↔ techo. */
+  SEAT_MS: 450,
 } as const;
 
 /** Rotación CSS en reposo (la que trae el SSR). */
 export const CAM_REST_DEG = CAM.REST_AIM - CAM.A0;
+
+/**
+ * Corrimiento horizontal en modo pared: rota el soporte -90° alrededor de la
+ * bisagra y este shift deja la placa exactamente al ras del borde izquierdo
+ * de la ventana (la placa está al ras del borde superior del canvas, a
+ * RENDER_W·PIVOT.y de la bisagra).
+ */
+export const CAM_WALL_SHIFT_X =
+  CAM.RENDER_W * CAM.PIVOT.y - CAM.LEFT_PX - CAM.RENDER_W * CAM.PIVOT.x;

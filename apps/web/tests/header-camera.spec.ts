@@ -99,6 +99,49 @@ test.describe("HeaderCamera — seguimiento y flash (desktop)", () => {
   });
 });
 
+async function rotacionMount(page: Page): Promise<number> {
+  return page.locator("[data-cam-mount]").evaluate((el) => {
+    const t = getComputedStyle(el).transform;
+    if (t === "none") return 0;
+    const [a, b] = t.replace("matrix(", "").split(",").map(Number);
+    return (Math.atan2(b, a) * 180) / Math.PI;
+  });
+}
+
+test.describe("HeaderCamera — anclaje pared/techo", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("al tope se sujeta de la pared; con la línea del nav cuelga del techo", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const carrier = page.locator("[data-cam-wall]");
+
+    // Tope de página: modo pared (soporte rotado -90°, corrido al borde)
+    await expect(carrier).toHaveAttribute("data-cam-wall", "1");
+    await expect.poll(() => rotacionMount(page), { timeout: 10_000 }).toBeCloseTo(-90, 0);
+
+    // Aparece la línea dura del nav: re-asiento a modo techo
+    await expect(page.locator('[data-cam-active="1"]')).toBeAttached();
+    await page.evaluate(() => {
+      document.documentElement.style.scrollBehavior = "auto";
+      window.scrollTo(0, 200);
+    });
+    await expect(carrier).toHaveAttribute("data-cam-wall", "0");
+    await expect.poll(() => rotacionMount(page), { timeout: 10_000 }).toBeCloseTo(0, 0);
+
+    // El seguimiento sigue calibrado tras el re-asiento (pivote remedido)
+    await page.mouse.move(1300, 130);
+    await expect
+      .poll(() => anguloActual(page), { timeout: 10_000 })
+      .toBeCloseTo(CAM.AIM_MIN - CAM.A0, 0);
+
+    // De vuelta al tope: modo pared otra vez
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(carrier).toHaveAttribute("data-cam-wall", "1");
+  });
+});
+
 test.describe("HeaderCamera — gates", () => {
   test("oculta en viewport menor a lg", async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 800 });

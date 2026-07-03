@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { CAM, CAM_REST_DEG } from "@/lib/ui/headerCamera";
+import { CAM, CAM_REST_DEG, CAM_WALL_SHIFT_X } from "@/lib/ui/headerCamera";
 
 const DEG = 180 / Math.PI;
 
@@ -19,11 +19,17 @@ const DEG = 180 / Math.PI;
  */
 export default function HeaderCamera() {
   const bodyRef = useRef<HTMLDivElement>(null);
+  const carrierRef = useRef<HTMLDivElement>(null);
   const [flashKey, setFlashKey] = useState(0);
+  // Al tope de la página el nav no tiene línea inferior: la cámara se sujeta
+  // de la pared izquierda de la ventana. Con la línea dura visible (scrollY >
+  // SCROLL_UMBRAL, mismo umbral del Navbar) cuelga de ella. SSR asume tope.
+  const [wall, setWall] = useState(true);
 
   useEffect(() => {
     const body = bodyRef.current;
-    if (!body) return;
+    const carrier = carrierRef.current;
+    if (!body || !carrier) return;
 
     const desktop = window.matchMedia("(min-width: 1024px) and (pointer: fine)");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -106,6 +112,7 @@ export default function HeaderCamera() {
       }
     };
 
+    // ── Grupo seguimiento (mouse): desktop && sin reduced-motion ────────────
     const attach = () => {
       measure();
       body.dataset.camActive = "1";
@@ -115,6 +122,8 @@ export default function HeaderCamera() {
       document.addEventListener("visibilitychange", onVisibility);
       window.addEventListener("resize", scheduleMeasure);
       window.addEventListener("scroll", scheduleMeasure, { passive: true });
+      // El pivote se corre al re-asentarse el soporte (pared ↔ techo).
+      carrier.addEventListener("transitionend", measure);
     };
 
     const detach = () => {
@@ -124,6 +133,7 @@ export default function HeaderCamera() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", scheduleMeasure);
       window.removeEventListener("scroll", scheduleMeasure);
+      carrier.removeEventListener("transitionend", measure);
       clearTimeout(idleTimer);
       cancelAnimationFrame(raf);
       running = false;
@@ -132,12 +142,35 @@ export default function HeaderCamera() {
       delete body.dataset.camActive;
     };
 
+    // ── Grupo anclaje (pared ↔ techo): solo desktop — es corrección de
+    // layout, corre también bajo reduced-motion (re-asiento instantáneo). ───
+    const onScrollAnclaje = () => setWall(window.scrollY <= CAM.SCROLL_UMBRAL);
+
+    const attachAnclaje = () => {
+      onScrollAnclaje();
+      window.addEventListener("scroll", onScrollAnclaje, { passive: true });
+    };
+
+    const detachAnclaje = () => {
+      window.removeEventListener("scroll", onScrollAnclaje);
+    };
+
+    let anclado = false;
+
     const sync = () => {
-      const activa = desktop.matches && !reduce.matches;
-      if (activa && !attached) {
+      const enDesktop = desktop.matches;
+      const conSeguimiento = enDesktop && !reduce.matches;
+      if (enDesktop && !anclado) {
+        anclado = true;
+        attachAnclaje();
+      } else if (!enDesktop && anclado) {
+        anclado = false;
+        detachAnclaje();
+      }
+      if (conSeguimiento && !attached) {
         attached = true;
         attach();
-      } else if (!activa && attached) {
+      } else if (!conSeguimiento && attached) {
         attached = false;
         detach();
       }
@@ -149,6 +182,10 @@ export default function HeaderCamera() {
     return () => {
       desktop.removeEventListener("change", sync);
       reduce.removeEventListener("change", sync);
+      if (anclado) {
+        anclado = false;
+        detachAnclaje();
+      }
       if (attached) {
         attached = false;
         detach();
@@ -165,44 +202,65 @@ export default function HeaderCamera() {
     "--cam-beam-dir": `${90 + CAM.A0}deg`,
   } as CSSProperties;
 
+  const seatTransition = `transform ${CAM.SEAT_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+
   return (
     <div
       aria-hidden="true"
       data-flash={flashKey}
       className="pointer-events-none absolute left-3 top-full hidden select-none lg:block"
     >
-      <div className="relative" style={{ width: CAM.RENDER_W, height: CAM.RENDER_W }}>
-        <Image
-          src="/images/cctv-layers/cam-mount.svg"
-          alt=""
-          width={CAM.RENDER_W}
-          height={CAM.RENDER_W}
-          unoptimized
-          className="absolute inset-0"
-        />
-        <div
-          ref={bodyRef}
-          data-cam-body
-          className="absolute inset-0"
-          style={{
-            transform: `rotate(${CAM_REST_DEG}deg)`,
-            transformOrigin: `${CAM.PIVOT.x * 100}% ${CAM.PIVOT.y * 100}%`,
-          }}
-        >
-          <Image
-            src="/images/cctv-layers/cam-body.svg"
-            alt=""
-            width={CAM.RENDER_W}
-            height={CAM.RENDER_W}
-            unoptimized
+      <div
+        ref={carrierRef}
+        data-cam-wall={wall ? "1" : "0"}
+        style={{
+          transform: wall ? `translateX(${CAM_WALL_SHIFT_X}px)` : "translateX(0px)",
+          transition: seatTransition,
+        }}
+      >
+        <div className="relative" style={{ width: CAM.RENDER_W, height: CAM.RENDER_W }}>
+          <div
+            data-cam-mount
             className="absolute inset-0"
-          />
-          {flashKey > 0 && (
-            <>
-              <span key={`flash-${flashKey}`} className="cam-flash" style={ledStyle} />
-              <span key={`led-${flashKey}`} className="cam-led-on" style={ledStyle} />
-            </>
-          )}
+            style={{
+              transform: wall ? "rotate(-90deg)" : "rotate(0deg)",
+              transformOrigin: `${CAM.PIVOT.x * 100}% ${CAM.PIVOT.y * 100}%`,
+              transition: seatTransition,
+            }}
+          >
+            <Image
+              src="/images/cctv-layers/cam-mount.svg"
+              alt=""
+              width={CAM.RENDER_W}
+              height={CAM.RENDER_W}
+              unoptimized
+              className="absolute inset-0"
+            />
+          </div>
+          <div
+            ref={bodyRef}
+            data-cam-body
+            className="absolute inset-0"
+            style={{
+              transform: `rotate(${CAM_REST_DEG}deg)`,
+              transformOrigin: `${CAM.PIVOT.x * 100}% ${CAM.PIVOT.y * 100}%`,
+            }}
+          >
+            <Image
+              src="/images/cctv-layers/cam-body.svg"
+              alt=""
+              width={CAM.RENDER_W}
+              height={CAM.RENDER_W}
+              unoptimized
+              className="absolute inset-0"
+            />
+            {flashKey > 0 && (
+              <>
+                <span key={`flash-${flashKey}`} className="cam-flash" style={ledStyle} />
+                <span key={`led-${flashKey}`} className="cam-led-on" style={ledStyle} />
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
