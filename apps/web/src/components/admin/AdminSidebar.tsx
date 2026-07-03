@@ -343,10 +343,21 @@ function NavContent({
 
 // ── Marca e identidad ─────────────────────────────────────────────────────────
 
-function BrandBlock({ compact = false }: { compact?: boolean }) {
+function BrandBlock({
+  compact = false,
+  soloIcono = false,
+}: {
+  compact?: boolean;
+  /** Sidebar colapsado: solo el isotipo — el nombre no entra en 64px. */
+  soloIcono?: boolean;
+}) {
   return (
-    <Link href="/admin/dashboard">
-      <BrandLockup context="Administración" compact={compact} />
+    <Link
+      href="/admin/dashboard"
+      aria-label={soloIcono ? "Escobar Instalaciones — Dashboard" : undefined}
+      title={soloIcono ? "Escobar Instalaciones" : undefined}
+    >
+      <BrandLockup context="Administración" compact={compact} soloIcono={soloIcono} />
     </Link>
   );
 }
@@ -549,7 +560,7 @@ export function AdminSidebar({
             collapsed ? "flex justify-center px-2" : "px-4"
           }`}
         >
-          <BrandBlock compact={collapsed} />
+          <BrandBlock compact={collapsed} soloIcono={collapsed} />
         </div>
 
         {/* Items scrollables */}

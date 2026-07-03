@@ -4,11 +4,13 @@ import { cn } from "@/lib/ui/cn";
 interface BrandLockupProps {
   context?: string;
   compact?: boolean;
+  /** Solo el isotipo, sin nombre ni contexto (p.ej. sidebar colapsado). */
+  soloIcono?: boolean;
   className?: string;
 }
 
 /** Identidad compartida por las superficies públicas y autenticadas. */
-export function BrandLockup({ context, compact = false, className }: BrandLockupProps) {
+export function BrandLockup({ context, compact = false, soloIcono = false, className }: BrandLockupProps) {
   const size = compact ? 32 : 44;
   return (
     <div className={cn("flex items-center gap-3", className)}>
@@ -34,16 +36,18 @@ export function BrandLockup({ context, compact = false, className }: BrandLockup
           className={cn("relative object-contain", compact ? "h-8 w-8" : "h-11 w-11")}
         />
       </span>
-      <span className="min-w-0">
-        <span className={cn("block font-display font-bold leading-none text-white", compact ? "text-sm" : "text-base")}>
-          Escobar Instalaciones
-        </span>
-        {context && (
-          <span className="mt-1 block truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-            {context}
+      {!soloIcono && (
+        <span className="min-w-0">
+          <span className={cn("block font-display font-bold leading-none text-white", compact ? "text-sm" : "text-base")}>
+            Escobar Instalaciones
           </span>
-        )}
-      </span>
+          {context && (
+            <span className="mt-1 block truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              {context}
+            </span>
+          )}
+        </span>
+      )}
     </div>
   );
 }

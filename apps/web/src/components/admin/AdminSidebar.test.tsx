@@ -65,3 +65,22 @@ describe("AdminSidebar — colapso a solo íconos", () => {
     expect(localStorage.getItem("admin-sidebar-colapsado")).toBe("0");
   });
 });
+
+describe("AdminSidebar — marca en modo colapsado", () => {
+  it("colapsado muestra solo el isotipo, sin el nombre de la empresa", () => {
+    localStorage.setItem("admin-sidebar-colapsado", "1");
+    render(<AdminSidebar nombreAdmin="Ramiro" />);
+    const nav = screen.getByRole("navigation", { name: "Navegación del administrador" });
+    expect(within(nav).queryByText("Escobar Instalaciones")).toBeNull();
+    expect(within(nav).queryByText("Administración")).toBeNull();
+    expect(within(nav).getByRole("link", { name: "Escobar Instalaciones — Dashboard" })).toBeInTheDocument();
+  });
+
+  it("expandido conserva nombre y contexto", () => {
+    localStorage.clear();
+    render(<AdminSidebar nombreAdmin="Ramiro" />);
+    const nav = screen.getByRole("navigation", { name: "Navegación del administrador" });
+    expect(within(nav).getByText("Escobar Instalaciones")).toBeInTheDocument();
+    expect(within(nav).getByText("Administración")).toBeInTheDocument();
+  });
+});
