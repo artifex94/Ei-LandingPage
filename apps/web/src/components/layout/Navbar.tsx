@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { FileText, LogIn, Menu, X } from "lucide-react";
 import { BrandLockup } from "./BrandLockup";
 import HeaderCamera from "./HeaderCamera";
+import HeaderMonitor from "./HeaderMonitor";
 
 const navLinks = [
   { name: "Inicio", href: "#inicio" },
@@ -68,13 +69,16 @@ export default function Navbar() {
       />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 2xl:max-w-[1600px] 2xl:px-12">
         <div className="flex h-16 items-center justify-between">
-          <a
-            href="#inicio"
-            className="group flex items-center gap-3"
-            aria-label="Escobar Instalaciones - inicio"
-          >
-            <BrandLockup context="Seguridad electrónica" />
-          </a>
+          <div className="flex min-w-0 items-center gap-5">
+            <HeaderMonitor />
+            <a
+              href="#inicio"
+              className="group flex items-center gap-3"
+              aria-label="Escobar Instalaciones - inicio"
+            >
+              <BrandLockup context="Seguridad electrónica" />
+            </a>
+          </div>
 
           <div className="hidden items-center gap-5 md:flex">
             {navLinks.map((link) => (

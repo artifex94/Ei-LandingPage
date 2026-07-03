@@ -36,7 +36,12 @@ export default defineConfig({
     // Tests que NO requieren auth
     {
       name: "public",
-      testMatch: ["**/a11y.spec.ts", "**/billing.spec.ts", "**/header-camera.spec.ts"],
+      testMatch: [
+        "**/a11y.spec.ts",
+        "**/billing.spec.ts",
+        "**/header-camera.spec.ts",
+        "**/header-monitor.spec.ts",
+      ],
       use: { ...devices["Desktop Chrome"] },
     },
     // Tests que requieren auth (dependen de setup)
