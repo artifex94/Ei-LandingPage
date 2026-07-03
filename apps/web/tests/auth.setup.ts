@@ -19,8 +19,8 @@ setup("autenticar usuario de test", async ({ page }) => {
   }
 
   await page.goto("/login");
-  await page.getByLabel(/correo/i).fill(email);
-  await page.getByLabel(/contraseña/i).fill(password);
+  await page.getByPlaceholder("Email o DNI").fill(email);
+  await page.getByPlaceholder("Contraseña").fill(password);
   await page.getByRole("button", { name: /ingresar/i }).click();
 
   // Esperar a llegar al portal
