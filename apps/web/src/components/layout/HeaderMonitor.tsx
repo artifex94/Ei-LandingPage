@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MousePointer2 } from "lucide-react";
-import { MONITOR, calcularDesvioCursor, calcularTransformMonitor } from "@/lib/ui/headerMonitor";
+import { MousePointer2, Pointer, TextCursor } from "lucide-react";
+import {
+  MONITOR,
+  calcularDesvioCursor,
+  calcularTransformMonitor,
+  clasificarCursor,
+} from "@/lib/ui/headerMonitor";
 
 /**
  * Pantallita CCTV en el navbar (solo 2xl): muestra "lo que graba la cámara"
@@ -107,11 +112,29 @@ export default function HeaderMonitor() {
       holder.replaceChildren(clone);
     };
 
+    // Espeja la forma del cursor real: hit-test cacheado por elemento (el
+    // costo real es ~0: los browsers hacen este mismo hit-test por evento).
+    let ultimoElemento: Element | null = null;
+    const espejarFormaCursor = (x: number, y: number) => {
+      const cursor = cursorRef.current;
+      if (!cursor) return;
+      const el = document.elementFromPoint(x, y);
+      if (!el || el === ultimoElemento) return;
+      ultimoElemento = el;
+      const enCampoDeTexto = el.closest("input, textarea, [contenteditable]") !== null;
+      cursor.dataset.tipo = clasificarCursor(
+        getComputedStyle(el).cursor,
+        el.tagName,
+        enCampoDeTexto
+      );
+    };
+
     const onMove = (e: MouseEvent) => {
       lastClientX = e.clientX;
       lastClientY = e.clientY;
       retarget();
       kick();
+      espejarFormaCursor(e.clientX, e.clientY);
     };
 
     const onScroll = () => {
@@ -173,6 +196,8 @@ export default function HeaderMonitor() {
       document.removeEventListener("visibilitychange", onVisibility);
       cancelAnimationFrame(raf);
       running = false;
+      ultimoElemento = null;
+      if (cursorRef.current) cursorRef.current.dataset.tipo = "default";
       delete holder.dataset.monitorActive;
     };
 
@@ -226,10 +251,18 @@ export default function HeaderMonitor() {
           <div ref={holderRef} className="cctv-clone" data-cctv-clone />
           <div className="cctv-overlay cctv-scanlines" />
           <div className="cctv-overlay cctv-vignette" />
-          {/* El "mouse grabado": cursor con la punta en el punto rastreado.
-              Su transform (desvío por lag de captura) se muta por ref. */}
-          <div ref={cursorRef} className="cctv-overlay cctv-cursor" data-cctv-cursor>
-            <MousePointer2 />
+          {/* El "mouse grabado": adopta la forma del cursor real (flecha /
+              manito / I-beam vía data-tipo) y su transform (desvío por lag de
+              captura) se muta por ref. */}
+          <div
+            ref={cursorRef}
+            className="cctv-overlay cctv-cursor"
+            data-cctv-cursor
+            data-tipo="default"
+          >
+            <MousePointer2 className="cctv-cursor-default" />
+            <Pointer className="cctv-cursor-pointer" />
+            <TextCursor className="cctv-cursor-text" />
           </div>
           <div className="cctv-overlay cctv-hud font-mono">
             <span className="cctv-rec">REC</span>

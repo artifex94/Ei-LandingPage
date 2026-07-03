@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { MONITOR, calcularDesvioCursor, calcularTransformMonitor } from "./headerMonitor";
+import { MONITOR, calcularDesvioCursor, calcularTransformMonitor, clasificarCursor } from "./headerMonitor";
 
 describe("calcularTransformMonitor", () => {
   it("el origen de la página cae en el centro de la pantalla", () => {
@@ -45,5 +45,25 @@ describe("calcularDesvioCursor", () => {
     const { x, y } = MONITOR.CURSOR_DESVIO_MAX;
     expect(calcularDesvioCursor(0, 0, -500, -500)).toEqual({ dx: x, dy: y });
     expect(calcularDesvioCursor(-500, -500, 0, 0)).toEqual({ dx: -x, dy: -y });
+  });
+});
+
+describe("clasificarCursor", () => {
+  it("pointer sobre interactivos (cursor: pointer)", () => {
+    expect(clasificarCursor("pointer", "A", false)).toBe("pointer");
+    expect(clasificarCursor("pointer", "BUTTON", false)).toBe("pointer");
+  });
+
+  it("text sobre cursor text explícito o auto en tags de texto", () => {
+    expect(clasificarCursor("text", "DIV", false)).toBe("text");
+    expect(clasificarCursor("auto", "P", false)).toBe("text");
+    expect(clasificarCursor("auto", "H2", false)).toBe("text");
+    expect(clasificarCursor("auto", "INPUT", true)).toBe("text");
+  });
+
+  it("default para el resto (auto sobre contenedores, cursors especiales)", () => {
+    expect(clasificarCursor("auto", "DIV", false)).toBe("default");
+    expect(clasificarCursor("auto", "SECTION", false)).toBe("default");
+    expect(clasificarCursor("grab", "DIV", false)).toBe("default");
   });
 });
