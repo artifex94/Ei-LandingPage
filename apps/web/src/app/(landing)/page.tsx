@@ -113,7 +113,9 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="font-sans text-slate-800 bg-slate-900 min-h-screen overflow-x-hidden selection:bg-orange-500 selection:text-white">
+      {/* overflow-x-clip (no hidden): hidden crea un scroll container y las
+          view timelines de los reveals quedarían medidas contra él (congeladas). */}
+      <div className="font-sans text-slate-800 bg-slate-900 min-h-screen overflow-x-clip selection:bg-orange-500 selection:text-white">
         <Navbar />
         <main>
           <HeroSection />

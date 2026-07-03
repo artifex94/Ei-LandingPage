@@ -9,7 +9,7 @@ export default function HeroSection() {
     <section
       id="inicio"
       aria-labelledby="hero-heading"
-      className="relative flex items-center overflow-hidden bg-slate-950 pt-20 text-white lg:min-h-screen lg:pt-24"
+      className="relative flex items-center overflow-clip bg-slate-950 pt-20 text-white lg:min-h-screen lg:pt-24"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,#020617_0%,#0f172a_54%,#111827_100%)]" />

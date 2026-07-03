@@ -32,7 +32,7 @@ export default function FeaturesSection() {
     <section
       id="nosotros"
       aria-labelledby="features-heading"
-      className="relative overflow-hidden bg-slate-900 py-12 sm:py-20"
+      className="relative overflow-clip bg-slate-900 py-12 sm:py-20"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_12%,rgba(241,119,32,0.10),transparent_32%)]" />
       <div
@@ -117,7 +117,7 @@ export default function FeaturesSection() {
             </figcaption>
           </figure>
 
-          <div className="grid overflow-hidden rounded-2xl border border-white/10 bg-slate-950/35 sm:grid-cols-2">
+          <div className="grid overflow-clip rounded-2xl border border-white/10 bg-slate-950/35 sm:grid-cols-2">
             {capabilities.map(({ icon: Icon, title, desc }, index) => (
               <article
                 key={title}

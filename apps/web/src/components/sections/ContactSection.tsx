@@ -12,7 +12,7 @@ const highlights = [
 
 export default function ContactSection() {
   return (
-    <section id="contacto" aria-labelledby="contact-heading" className="relative overflow-hidden bg-slate-950 py-16 sm:py-20">
+    <section id="contacto" aria-labelledby="contact-heading" className="relative overflow-clip bg-slate-950 py-16 sm:py-20">
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_15%_20%,rgba(34,197,94,0.12),transparent_28%),radial-gradient(circle_at_85%_25%,rgba(241,119,32,0.16),transparent_30%)]" />
       <div
         className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-15 mix-blend-screen"

@@ -82,7 +82,7 @@ export default function ServicesSection() {
     <section
       id="servicios"
       aria-labelledby="services-heading"
-      className="relative overflow-hidden bg-slate-950 py-16 text-white sm:py-20"
+      className="relative overflow-clip bg-slate-950 py-16 text-white sm:py-20"
     >
       <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-orange-500/8 to-transparent" />
       <div

@@ -321,7 +321,13 @@
       animation-range: entry 2% cover 34%;
     }
 
-    .hud-title { position: relative; }
+    /* La timeline vive en el h2 (elemento real) y el ::after anima contra
+       ella por nombre: Chromium no resuelve view() declarado en el propio
+       pseudo-elemento (queda inactiva y salta al estado final). */
+    .hud-title {
+      position: relative;
+      view-timeline: --hud-title block;
+    }
     .hud-title::after {
       content: "";
       position: absolute;
@@ -333,8 +339,8 @@
       transform: scaleX(0);
       background: linear-gradient(90deg, var(--color-tactical-500), transparent);
       animation: hud-underline linear both;
-      animation-timeline: view();
-      animation-range: entry 6% cover 26%;
+      animation-timeline: --hud-title;
+      animation-range: cover 8% cover 42%;
     }
   }
 

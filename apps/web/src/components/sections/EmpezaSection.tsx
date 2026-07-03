@@ -7,7 +7,7 @@ export default function EmpezaSection() {
     <section
       id="empeza"
       aria-labelledby="empeza-heading"
-      className="relative scroll-mt-24 overflow-hidden bg-slate-900 py-16 sm:py-20"
+      className="relative scroll-mt-24 overflow-clip bg-slate-900 py-16 sm:py-20"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(241,119,32,0.12),transparent_30%),radial-gradient(circle_at_85%_20%,rgba(34,197,94,0.12),transparent_30%)]" />
       <div

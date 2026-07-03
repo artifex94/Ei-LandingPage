@@ -53,7 +53,7 @@ export default function PortalSection() {
     <section
       id="portal"
       aria-labelledby="portal-heading"
-      className="relative scroll-mt-24 overflow-hidden bg-slate-950 py-12 text-white sm:py-20"
+      className="relative scroll-mt-24 overflow-clip bg-slate-950 py-12 text-white sm:py-20"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(34,197,94,0.12),transparent_30%),radial-gradient(circle_at_84%_18%,rgba(241,119,32,0.15),transparent_34%)]" />
