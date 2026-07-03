@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FileText, LogIn, Menu, X } from "lucide-react";
 import { BrandLockup } from "./BrandLockup";
 import HeaderCamera from "./HeaderCamera";
@@ -18,6 +18,7 @@ const navLinks = [
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [activeHref, setActiveHref] = useState("#inicio");
   const [progress, setProgress] = useState(0);
@@ -50,12 +51,19 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
+    // Solo escucha mientras el menú está abierto; al cerrar con Escape,
+    // devuelve el foco al botón hamburguesa (el menú pasa a inert y el foco
+    // moriría dentro de él — WCAG 2.4.3).
+    if (!isMenuOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsMenuOpen(false);
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [isMenuOpen]);
 
   return (
     <nav
@@ -129,6 +137,7 @@ export default function Navbar() {
               Mi Central
             </Link>
             <button
+              ref={menuButtonRef}
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
               className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
