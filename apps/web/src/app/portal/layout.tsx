@@ -36,7 +36,8 @@ export default async function PortalLayout({
   if (perfil.rol === "ADMIN")   redirect("/admin/dashboard");
   if (perfil.rol === "TECNICO") redirect("/tecnico/mi-dia");
 
-  const [cuentas, empleado] = await Promise.all([
+  // Los parámetros no dependen de cuentas: un solo roundtrip para todo.
+  const [cuentas, empleado, diasGracia, diasSuspension] = await Promise.all([
     prisma.cuenta.findMany({
       where: {
         perfil_id: userId,
@@ -54,9 +55,6 @@ export default async function PortalLayout({
       },
     }),
     prisma.empleado.findFirst({ where: { perfil_id: userId }, select: { id: true } }),
-  ]);
-
-  const [diasGracia, diasSuspension] = await Promise.all([
     getParam("DIAS_GRACIA", DIAS_GRACIA),
     getParam("DIAS_SUSPENSION", DIAS_SUSPENSION),
   ]);
