@@ -14,9 +14,11 @@ interface Props {
    * cliente). En su lugar, termina la impersonación y vuelve al admin.
    */
   impersonando?: boolean;
+  /** Solo ícono (para el sidebar colapsado del admin). */
+  compact?: boolean;
 }
 
-export function LogoutButton({ variant = "nav", impersonando = false }: Props) {
+export function LogoutButton({ variant = "nav", impersonando = false, compact = false }: Props) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -41,6 +43,18 @@ export function LogoutButton({ variant = "nav", impersonando = false }: Props) {
   }
 
   if (variant === "sidebar") {
+    if (compact) {
+      return (
+        <button
+          onClick={handleLogout}
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+          className="mx-auto flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
+        >
+          <span aria-hidden="true">→</span>
+        </button>
+      );
+    }
     return (
       <button
         onClick={handleLogout}

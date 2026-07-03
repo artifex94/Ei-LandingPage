@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLockup } from "@/components/layout/BrandLockup";
 import {
-  Menu, X, ChevronDown,
+  Menu, X, ChevronDown, PanelLeftClose, PanelLeftOpen,
   LayoutDashboard,
   Users, ShieldCheck, CreditCard, AlertTriangle, Wrench, FilePen,
   ClipboardList, CalendarDays, Truck, CalendarCheck,
@@ -132,15 +132,42 @@ function NavLink({
   item,
   badges,
   onClick,
+  collapsed = false,
 }: {
   item: NavItem;
   badges: Record<BadgeKey, number>;
   onClick?: () => void;
+  collapsed?: boolean;
 }) {
   const pathname = usePathname();
   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
   const Icon = item.icon;
   const badgeCount = item.badge ? badges[item.badge] : 0;
+
+  if (collapsed) {
+    // Solo ícono: label vía title/aria-label, badge como dot en la esquina.
+    return (
+      <Link
+        href={item.href}
+        onClick={onClick}
+        aria-label={badgeCount > 0 ? `${item.label} (${badgeCount})` : item.label}
+        title={badgeCount > 0 ? `${item.label} (${badgeCount})` : item.label}
+        className={`relative mx-auto flex h-10 w-10 items-center justify-center rounded-md transition-colors duration-150 ${
+          isActive
+            ? "bg-tactical-500/10 text-tactical-400 ring-1 ring-tactical-500/40"
+            : "text-slate-500 hover:bg-slate-800/55 hover:text-slate-200"
+        }`}
+      >
+        <Icon className="h-4 w-4" strokeWidth={isActive ? 2.2 : 1.8} />
+        {badgeCount > 0 && (
+          <span
+            aria-hidden="true"
+            className={`${BADGE_COLOR[item.badge!]} absolute right-1 top-1 h-2 w-2 rounded-full`}
+          />
+        )}
+      </Link>
+    );
+  }
 
   return (
     <Link
@@ -233,12 +260,35 @@ function NavContent({
   openSections,
   onToggle,
   onLinkClick,
+  collapsed = false,
 }: {
   badges: Record<BadgeKey, number>;
   openSections: Set<NavSection["id"]>;
   onToggle: (id: NavSection["id"]) => void;
   onLinkClick?: () => void;
+  collapsed?: boolean;
 }) {
+  if (collapsed) {
+    // Modo ícono: sin toggles de grupo (todos los items visibles) y con un
+    // separador fino entre secciones para conservar la estructura visual.
+    return (
+      <ul className="flex flex-col gap-0.5" role="list">
+        {NAV_SECTIONS.map((section, i) => (
+          <li key={section.id}>
+            {i > 0 && <div aria-hidden="true" className="mx-2 my-2 h-px bg-industrial-700/60" />}
+            <ul role="list" className="space-y-1">
+              {section.items.map((item) => (
+                <li key={item.href}>
+                  <NavLink item={item} badges={badges} onClick={onLinkClick} collapsed />
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <ul className="flex flex-col gap-0.5" role="list">
       {NAV_SECTIONS.map((section) =>
@@ -282,8 +332,28 @@ function BrandBlock({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function SidebarFooter({ nombreAdmin }: { nombreAdmin: string }) {
+function SidebarFooter({
+  nombreAdmin,
+  collapsed = false,
+}: {
+  nombreAdmin: string;
+  collapsed?: boolean;
+}) {
   const inicial = nombreAdmin.trim().charAt(0).toUpperCase() || "A";
+
+  if (collapsed) {
+    return (
+      <div className="flex-shrink-0 space-y-2 border-t border-industrial-700/60 px-2 py-4">
+        <div
+          title={`${nombreAdmin} — Administrador`}
+          className="mx-auto flex h-8 w-8 items-center justify-center rounded-sm border border-industrial-700 bg-industrial-800 text-xs font-display font-bold text-tactical-400"
+        >
+          {inicial}
+        </div>
+        <LogoutButton variant="sidebar" compact />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-shrink-0 px-4 py-4 border-t border-industrial-700/60 space-y-2">
@@ -329,6 +399,19 @@ export function AdminSidebar({
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Sidebar desktop colapsado a solo-íconos. SSR asume expandido; la
+  // preferencia persistida se aplica tras el mount (sin hydration mismatch).
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    setCollapsed(localStorage.getItem("admin-sidebar-colapsado") === "1");
+  }, []);
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem("admin-sidebar-colapsado", next ? "1" : "0");
+  }
 
   const seccionActual = getSectionForPath(pathname);
   const [openSections, setOpenSections] = useState<Set<NavSection["id"]>>(
@@ -436,22 +519,49 @@ export function AdminSidebar({
       {/* ── Sidebar fijo desktop ───────────────────────────────────────────── */}
       <nav
         aria-label="Navegación del administrador"
-        className="hidden lg:flex sticky top-0 h-screen w-56 flex-col bg-industrial-900 border-r border-industrial-700/60 flex-shrink-0"
+        className={`hidden lg:flex sticky top-0 h-screen flex-col bg-industrial-900 border-r border-industrial-700/60 flex-shrink-0 transition-[width] duration-200 ${
+          collapsed ? "w-16" : "w-56"
+        }`}
       >
-        <div className="px-4 py-4 flex-shrink-0 border-b border-industrial-700/60">
-          <BrandBlock />
+        <div
+          className={`flex-shrink-0 border-b border-industrial-700/60 py-4 ${
+            collapsed ? "flex justify-center px-2" : "px-4"
+          }`}
+        >
+          <BrandBlock compact={collapsed} />
         </div>
 
         {/* Items scrollables */}
-        <div className="flex-1 overflow-y-auto overscroll-contain py-3 px-3">
+        <div className={`flex-1 overflow-y-auto overscroll-contain py-3 ${collapsed ? "px-2" : "px-3"}`}>
           <NavContent
             badges={badges}
             openSections={openSections}
             onToggle={toggleSection}
+            collapsed={collapsed}
           />
         </div>
 
-        <SidebarFooter nombreAdmin={nombreAdmin} />
+        {/* Toggle colapsar/expandir */}
+        <button
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Expandir barra de navegación" : "Colapsar barra de navegación"}
+          title={collapsed ? "Expandir" : "Colapsar"}
+          className={`flex min-h-[40px] items-center gap-2 border-t border-industrial-700/60 text-slate-500 transition-colors hover:bg-slate-800/55 hover:text-slate-200 ${
+            collapsed ? "justify-center px-2" : "px-4"
+          }`}
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="h-4 w-4" />
+          ) : (
+            <>
+              <PanelLeftClose className="h-4 w-4" />
+              <span className="text-xs">Colapsar</span>
+            </>
+          )}
+        </button>
+
+        <SidebarFooter nombreAdmin={nombreAdmin} collapsed={collapsed} />
       </nav>
     </>
   );
