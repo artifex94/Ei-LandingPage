@@ -95,8 +95,8 @@ test.describe("HeaderMonitor — pantallita CCTV (2xl)", () => {
 });
 
 test.describe("HeaderMonitor — gates", () => {
-  test("oculto bajo el gate de 1760px", async ({ page }) => {
-    await page.setViewportSize({ width: 1600, height: 900 });
+  test("oculto bajo 2xl", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await expect(page.locator("[data-cctv-root]")).toBeHidden();
   });

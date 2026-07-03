@@ -26,10 +26,10 @@ export default function HeaderMonitor() {
     const holder = holderRef.current;
     if (!holder) return;
 
-    // Anclado al borde izquierdo, encima de la cámara: necesita que el margen
-    // lateral del container (max-w-[1600px]) deje lugar para no pisar el
-    // logo → gate en 1760px.
-    const desktop = window.matchMedia("(min-width: 1760px) and (pointer: fine)");
+    // Anclado al borde izquierdo, encima de la cámara, desde 2xl. Entre 1536
+    // y 1759px el margen del container no alcanza: el Navbar corre su
+    // contenido con padding en ese rango para que la placa no pise el logo.
+    const desktop = window.matchMedia("(min-width: 1536px) and (pointer: fine)");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     let raf = 0;
@@ -209,7 +209,7 @@ export default function HeaderMonitor() {
     <div
       aria-hidden="true"
       data-cctv-root
-      className="pointer-events-none absolute left-3 top-1/2 hidden -translate-y-1/2 select-none min-[1760px]:block"
+      className="pointer-events-none absolute left-3 top-1/2 hidden -translate-y-1/2 select-none 2xl:block"
     >
       <div className="cctv-monitor">
         <div

@@ -76,7 +76,10 @@ export default function Navbar() {
         aria-hidden="true"
       />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 2xl:max-w-[1600px] 2xl:px-12">
-        <div className="flex h-16 items-center justify-between gap-4">
+        {/* Entre 1536 y 1759px el margen lateral del container no alcanza para
+            el monitor CCTV anclado al borde (left-3, ~96px): el contenido se
+            corre a la derecha solo en ese rango. Desde 1760 el margen basta. */}
+        <div className="flex h-16 items-center justify-between gap-4 2xl:pl-16 min-[1760px]:pl-0">
           <a
             href="#inicio"
             className="group flex min-w-0 items-center gap-3 lg:shrink-0"
