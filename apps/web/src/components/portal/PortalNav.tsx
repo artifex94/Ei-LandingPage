@@ -116,12 +116,14 @@ function DesktopLink({ nav, pathname }: { nav: NavDef; pathname: string }) {
         ${active ? "bg-white/[0.07] text-white" : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"}
       `}
     >
+      {/* En lg (1024-1279) los 7 items con ícono no entran y el documento
+          desbordaba 113px: el label es lo legible, el ícono vuelve en xl. */}
       <Icon
-        className={`w-3.5 h-3.5 flex-shrink-0 transition-colors
+        className={`hidden w-3.5 h-3.5 flex-shrink-0 transition-colors xl:block
           ${active ? "text-tactical-400" : "text-slate-500 group-hover:text-slate-300"}`}
         strokeWidth={active ? 2.2 : 1.8}
       />
-      <span>{nav.label}</span>
+      <span className="whitespace-nowrap">{nav.label}</span>
       {active && (
         <span
           className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-tactical-500"
