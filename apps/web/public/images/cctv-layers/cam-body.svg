@@ -1,47 +1,59 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#334155"/>
-      <stop offset="0.24" stop-color="#1e293b"/>
-      <stop offset="0.72" stop-color="#0f172a"/>
-      <stop offset="1" stop-color="#020617"/>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#64748b"/>
+      <stop offset="0.24" stop-color="#475569"/>
+      <stop offset="0.72" stop-color="#334155"/>
+      <stop offset="1" stop-color="#1e293b"/>
     </linearGradient>
-    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#475569"/>
-      <stop offset="1" stop-color="#0f172a"/>
+    <linearGradient id="barrel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#64748b"/>
+      <stop offset="0.35" stop-color="#475569"/>
+      <stop offset="1" stop-color="#334155"/>
     </linearGradient>
-    <radialGradient id="glass" cx="42%" cy="36%" r="65%">
-      <stop offset="0" stop-color="#334155"/>
-      <stop offset="0.42" stop-color="#0f172a"/>
-      <stop offset="1" stop-color="#020617"/>
-    </radialGradient>
-    <filter id="soft" x="-15%" y="-20%" width="130%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="1.2" result="b"/>
-      <feOffset dx="0" dy="1" result="o"/>
-      <feComposite in="SourceGraphic" in2="o" operator="over"/>
-    </filter>
+    <linearGradient id="lug" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#64748b"/>
+      <stop offset="0.55" stop-color="#334155"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
   </defs>
-  <!-- shared rear pivot collar centered exactly at 0.40,0.30 => (409.6,307.2); camera axis rotated 30deg downward -->
-  <g transform="rotate(30 409.6 307.2)" filter="url(#soft)">
-    <!-- rear pivot collar centered on pivot -->
-    <circle cx="409.6" cy="307.2" r="48" fill="url(#rim)"/>
-    <circle cx="409.6" cy="307.2" r="29" fill="#0f172a" stroke="#334155" stroke-width="4"/>
-    <path d="M381 290 Q407 270 439 288" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" opacity="0.28" fill="none"/>
 
-    <!-- compact bullet camera body; lens center local x=909.6 gives approx canvas (842.6,557.2) -->
-    <path d="M450 245 H840 Q884 245 909.6 276 Q924 294 924 307.2 Q924 320 909.6 338 Q884 369 840 369 H450 Q429 369 429 348 V266 Q429 245 450 245 Z" fill="url(#body)"/>
-    <path d="M463 257 H836 Q870 257 889 276" stroke="#64748b" stroke-width="4" stroke-linecap="round" opacity="0.38" fill="none"/>
-    <path d="M470 354 H838 Q870 354 893 333" stroke="#020617" stroke-width="5" stroke-linecap="round" opacity="0.55" fill="none"/>
-    <path d="M497 238 H719 L748 262 H487 Z" fill="#1e293b" stroke="#334155" stroke-width="3" opacity="0.95"/>
-    <path d="M518 244 H704" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" opacity="0.28"/>
-    <path d="M454 260 V354" stroke="#334155" stroke-width="5" opacity="0.85"/>
+  <!-- Retro camera body only. TRUE SIDE PROFILE. Lug center exactly (409.6, 307.2); body axis tilted 30deg down-right. -->
+  <g transform="rotate(30 409.6 307.2)">
+    <!-- boxy 1970s/80s housing: bold simple side silhouette -->
+    <path d="M350 252 H632 L684 304 V414 L632 466 H350 Q328 466 328 444 V274 Q328 252 350 252 Z" fill="url(#housing)" stroke="#64748b" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M369 270 H620 L662 312" stroke="#94a3b8" stroke-width="8" stroke-linecap="round" opacity="0.38" fill="none"/>
+    <path d="M368 451 H620 L662 410" stroke="#1e293b" stroke-width="9" stroke-linecap="round" opacity="0.55" fill="none"/>
 
-    <!-- front lens bezel and face -->
-    <circle cx="909.6" cy="307.2" r="80" fill="#0f172a" stroke="#334155" stroke-width="8"/>
-    <circle cx="909.6" cy="307.2" r="68" fill="none" stroke="#f17720" stroke-width="6"/>
-    <circle cx="909.6" cy="307.2" r="47" fill="url(#glass)" stroke="#020617" stroke-width="7"/>
-    <path d="M884 281 Q906 267 931 279" stroke="#64748b" stroke-width="4" stroke-linecap="round" opacity="0.30" fill="none"/>
-    <!-- OFF LED: small dark recessed circle, no glow -->
-    <circle cx="909.6" cy="307.2" r="8" fill="#020617" stroke="#1e293b" stroke-width="2"/>
+    <!-- small top mounting lug centered at shared pivot, attached to rear third -->
+    <path d="M371.6 279.2 H447.6 Q461.6 279.2 461.6 293.2 V321.2 Q461.6 335.2 447.6 335.2 H371.6 Q357.6 335.2 357.6 321.2 V293.2 Q357.6 279.2 371.6 279.2 Z" fill="url(#lug)" stroke="#64748b" stroke-width="7"/>
+    <circle cx="409.6" cy="307.2" r="19" fill="#334155" stroke="#94a3b8" stroke-width="8"/>
+    <path d="M390 307.2 H430" stroke="#1e293b" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- thick horizontal ventilation grooves on the flat left flank -->
+    <path d="M382 314 H538" stroke="#1e293b" stroke-width="12" stroke-linecap="round" opacity="0.86"/>
+    <path d="M382 359 H558" stroke="#1e293b" stroke-width="12" stroke-linecap="round" opacity="0.86"/>
+    <path d="M382 404 H528" stroke="#1e293b" stroke-width="12" stroke-linecap="round" opacity="0.86"/>
+
+    <!-- two visible screw heads -->
+    <circle cx="610" cy="314" r="18" fill="#475569" stroke="#94a3b8" stroke-width="7"/>
+    <path d="M598 314 H622" stroke="#1e293b" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="610" cy="406" r="18" fill="#475569" stroke="#94a3b8" stroke-width="7"/>
+    <path d="M598 406 H622" stroke="#1e293b" stroke-width="7" stroke-linecap="round"/>
+
+    <!-- single orange brand accent stripe along lower housing edge -->
+    <path d="M354 456 H624" stroke="#f17720" stroke-width="10" stroke-linecap="round"/>
+
+    <!-- protruding side-view cylindrical lens barrel; rectangle/ridges only, no circular lens face -->
+    <path d="M684 284 H886 Q906 284 906 304 V366 Q906 386 886 386 H684 Z" fill="url(#barrel)" stroke="#64748b" stroke-width="8" stroke-linejoin="round"/>
+    <!-- chunky focus-ring ridges, side-profile bands -->
+    <rect x="712" y="269" width="36" height="132" rx="10" fill="#475569" stroke="#94a3b8" stroke-width="7"/>
+    <rect x="810" y="269" width="36" height="132" rx="10" fill="#475569" stroke="#94a3b8" stroke-width="7"/>
+    <path d="M696 298 H886" stroke="#94a3b8" stroke-width="8" stroke-linecap="round" opacity="0.35"/>
+    <path d="M696 374 H886" stroke="#1e293b" stroke-width="8" stroke-linecap="round" opacity="0.45"/>
+
+    <!-- flat dark barrel tip at front: side-profile sliver only, no circular lens face -->
+    <rect x="906" y="290" width="13" height="90" rx="4" fill="#1e293b" stroke="#64748b" stroke-width="6"/>
+    <rect x="916" y="307" width="4" height="56" fill="#0f172a"/>
   </g>
 </svg>

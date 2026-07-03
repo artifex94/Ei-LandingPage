@@ -54,8 +54,13 @@ export default function HeaderCamera() {
       });
     };
 
-    const loop = () => {
-      cur += (target - cur) * CAM.LERP;
+    let lastFrame = 0;
+
+    const loop = (now: number) => {
+      // Suavizado exponencial en tiempo real: mismo ritmo a cualquier fps.
+      const dt = lastFrame ? Math.min(now - lastFrame, 100) : 16.7;
+      lastFrame = now;
+      cur += (target - cur) * (1 - Math.exp(-dt / CAM.TAU_MS));
       if (Math.abs(target - cur) <= CAM.EPSILON) {
         cur = target;
         running = false;
@@ -68,6 +73,7 @@ export default function HeaderCamera() {
     const kick = () => {
       if (!running) {
         running = true;
+        lastFrame = 0;
         raf = requestAnimationFrame(loop);
       }
     };
