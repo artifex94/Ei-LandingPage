@@ -4,7 +4,6 @@ import Link from "next/link";
 import { AlertTriangle, CreditCard, MessageCircle, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
-import { createClient } from "@/lib/supabase/client";
 import { siteConfig } from "@/config/site";
 
 interface Props {
@@ -23,10 +22,12 @@ interface Props {
 
 export function PagoRequeridoModal({ deudaTotal, impersonando = false }: Props) {
   const router = useRouter();
-  const supabase = createClient();
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    // Import dinámico: el SDK de Supabase (~220 kB) solo se descarga al
+    // hacer click en "Cerrar sesión", no en el first-load de cada página.
+    const { createClient } = await import("@/lib/supabase/client");
+    await createClient().auth.signOut();
     router.push("/login");
   }
 

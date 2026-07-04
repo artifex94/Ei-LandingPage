@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { terminarImpersonacion } from "@/lib/actions/impersonacion";
 
 interface Props {
@@ -20,10 +19,12 @@ interface Props {
 
 export function LogoutButton({ variant = "nav", impersonando = false, compact = false }: Props) {
   const router = useRouter();
-  const supabase = createClient();
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    // Import dinámico: el SDK de Supabase (~220 kB) solo se descarga al
+    // hacer click en "Cerrar sesión", no en el first-load de cada página.
+    const { createClient } = await import("@/lib/supabase/client");
+    await createClient().auth.signOut();
     router.push("/login");
   }
 
