@@ -27,7 +27,7 @@ export default async function CobrosPagosPage({
   const mes = Math.min(12, Math.max(1, Number(sp.mes) || ahora.getMonth() + 1));
   const anio = Math.min(2100, Math.max(2020, Number(sp.anio) || ahora.getFullYear()));
 
-  const [transferenciasPendientes, pagos] = await Promise.all([
+  const [transferenciasPendientes, pagos, cuentasSinPago] = await Promise.all([
     // Transferencias bancarias a verificar — siempre visibles, sin filtrar por mes.
     prisma.pago.findMany({
       where: { estado: "PROCESANDO", metodo: "TRANSFERENCIA_BANCARIA" },
@@ -41,19 +41,20 @@ export default async function CobrosPagosPage({
       orderBy: [{ estado: "asc" }, { cuenta: { descripcion: "asc" } }],
       take: 500,
     }),
+    // Cuentas activas que todavía no tienen pago cargado este mes → registro
+    // manual. El filtro `pagos: { none: { mes, anio } }` resuelve en SQL lo que
+    // antes se computaba en JS con el resultado de la query anterior (y sin el
+    // borde del take: 500 truncando el set de exclusión).
+    prisma.cuenta.findMany({
+      where: {
+        estado: { in: ["ACTIVA", "SUSPENDIDA_PAGO"] },
+        pagos: { none: { mes, anio } },
+      },
+      include: { perfil: { select: { nombre: true } } },
+      orderBy: { descripcion: "asc" },
+      take: 500,
+    }),
   ]);
-
-  // Cuentas activas que todavía no tienen pago cargado este mes → registro manual.
-  const cuentasConPago = new Set(pagos.map((p) => p.cuenta_id));
-  const cuentasSinPago = await prisma.cuenta.findMany({
-    where: {
-      estado: { in: ["ACTIVA", "SUSPENDIDA_PAGO"] },
-      id: { notIn: [...cuentasConPago] },
-    },
-    include: { perfil: { select: { nombre: true } } },
-    orderBy: { descripcion: "asc" },
-    take: 500,
-  });
 
   const totalCobrado = pagos
     .filter((p) => p.estado === "PAGADO")

@@ -15,39 +15,6 @@ export default async function CobrosMorosidadPage() {
   const ahora = new Date();
   const mesActual = ahora.getMonth() + 1;
   const anioActual = ahora.getFullYear();
-  const umbralMora = await getParam("UMBRAL_MORA", UMBRAL_MORA);
-
-  // Cola "A suspender hoy" (Fase 3 plan maestro): candidatos abiertos generados
-  // por el cron mensual. Suspender/condonar es siempre decisión del tesorero.
-  // El .catch degrada a lista vacía si la tabla aún no existe en la DB
-  // (SQL manual pendiente de aplicar), para no romper la landing del tesorero.
-  const candidatosAbiertos = await prisma.candidatoSuspension
-    .findMany({
-      where: { resuelto_en: null },
-      include: {
-        cuenta: {
-          select: {
-            descripcion: true,
-            calle: true,
-            softguard_ref: true,
-            perfil: { select: { nombre: true } },
-          },
-        },
-      },
-      orderBy: { dpd: "desc" },
-    })
-    .catch(() => []);
-
-  const filasColaSuspension = candidatosAbiertos.map((c) => ({
-    id: c.id,
-    clienteNombre: c.cuenta.perfil.nombre,
-    cuentaEtiqueta: etiquetaCuenta(
-      { descripcion: c.cuenta.descripcion, calle: c.cuenta.calle, softguardRef: c.cuenta.softguard_ref },
-      "plano",
-    ),
-    dpd: c.dpd,
-    deudaTotal: Number(c.deuda_total),
-  }));
 
   // Un pago se considera vencido si:
   //   a) su estado es "VENCIDO" (cron ya lo transitó), O
@@ -65,20 +32,55 @@ export default async function CobrosMorosidadPage() {
     ],
   };
 
-  const cuentasVencidas = await prisma.cuenta.findMany({
-    where: {
-      estado: { not: "BAJA_DEFINITIVA" },
-      pagos: { some: filtroPagoVencido },
-    },
-    include: {
-      perfil: { select: { id: true, nombre: true, telefono: true, email: true } },
-      pagos: {
-        where: filtroPagoVencido,
-        orderBy: [{ anio: "asc" }, { mes: "asc" }],
+  // Las tres queries son independientes: un solo hop a la BD en lugar de tres.
+  const [umbralMora, candidatosAbiertos, cuentasVencidas] = await Promise.all([
+    getParam("UMBRAL_MORA", UMBRAL_MORA),
+    // Cola "A suspender hoy" (Fase 3 plan maestro): candidatos abiertos generados
+    // por el cron mensual. Suspender/condonar es siempre decisión del tesorero.
+    // El .catch degrada a lista vacía si la tabla aún no existe en la DB
+    // (SQL manual pendiente de aplicar), para no romper la landing del tesorero.
+    prisma.candidatoSuspension
+      .findMany({
+        where: { resuelto_en: null },
+        include: {
+          cuenta: {
+            select: {
+              descripcion: true,
+              calle: true,
+              softguard_ref: true,
+              perfil: { select: { nombre: true } },
+            },
+          },
+        },
+        orderBy: { dpd: "desc" },
+      })
+      .catch(() => []),
+    prisma.cuenta.findMany({
+      where: {
+        estado: { not: "BAJA_DEFINITIVA" },
+        pagos: { some: filtroPagoVencido },
       },
-    },
-    orderBy: { descripcion: "asc" },
-  });
+      include: {
+        perfil: { select: { id: true, nombre: true, telefono: true, email: true } },
+        pagos: {
+          where: filtroPagoVencido,
+          orderBy: [{ anio: "asc" }, { mes: "asc" }],
+        },
+      },
+      orderBy: { descripcion: "asc" },
+    }),
+  ]);
+
+  const filasColaSuspension = candidatosAbiertos.map((c) => ({
+    id: c.id,
+    clienteNombre: c.cuenta.perfil.nombre,
+    cuentaEtiqueta: etiquetaCuenta(
+      { descripcion: c.cuenta.descripcion, calle: c.cuenta.calle, softguardRef: c.cuenta.softguard_ref },
+      "plano",
+    ),
+    dpd: c.dpd,
+    deudaTotal: Number(c.deuda_total),
+  }));
 
   const morosas = cuentasVencidas.filter((c) => c.pagos.length >= 1);
 
