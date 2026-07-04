@@ -28,12 +28,9 @@ const TUTORIAL_CONFIGURACION = [
 export const metadata: Metadata = { title: "Configuración" };
 
 export default async function ConfiguracionPage() {
-  // findMany en try/catch: hasta que se corra la sync manual de `parametros_negocio`
-  // (ver prisma/sql-manual/2026-07-02_parametro-negocio.sql) la tabla puede no existir
-  // todavía — la UI debe seguir mostrando los defaults, no romper la página.
   const [ultimaTarifa, filasParametros] = await Promise.all([
     prisma.tarifaHistorico.findFirst({ orderBy: { vigente_desde: "desc" } }),
-    prisma.parametroNegocio.findMany().catch(() => []),
+    prisma.parametroNegocio.findMany(),
   ]);
 
   const porClave = new Map(filasParametros.map((f) => [f.clave, f]));

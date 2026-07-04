@@ -32,14 +32,10 @@ const ESTADO_CONFIG: Record<string, { label: string; cls: string }> = {
 export default async function FeedbackAdminPage() {
   await requireAdmin();
 
-  // `.catch(() => [])`: pre-migración (SQL manual sin correr todavía) la
-  // tabla puede no existir aún — la bandeja no debe romperse por eso.
-  const ticketsRaw = await prisma.ticketFeedback
-    .findMany({
-      include: { perfil: { select: { id: true, nombre: true } } },
-      take: 300,
-    })
-    .catch(() => []);
+  const ticketsRaw = await prisma.ticketFeedback.findMany({
+    include: { perfil: { select: { id: true, nombre: true } } },
+    take: 300,
+  });
 
   const tickets = ordenarTickets(ticketsRaw);
 

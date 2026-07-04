@@ -37,24 +37,20 @@ export default async function CobrosMorosidadPage() {
     getParam("UMBRAL_MORA", UMBRAL_MORA),
     // Cola "A suspender hoy" (Fase 3 plan maestro): candidatos abiertos generados
     // por el cron mensual. Suspender/condonar es siempre decisión del tesorero.
-    // El .catch degrada a lista vacía si la tabla aún no existe en la DB
-    // (SQL manual pendiente de aplicar), para no romper la landing del tesorero.
-    prisma.candidatoSuspension
-      .findMany({
-        where: { resuelto_en: null },
-        include: {
-          cuenta: {
-            select: {
-              descripcion: true,
-              calle: true,
-              softguard_ref: true,
-              perfil: { select: { nombre: true } },
-            },
+    prisma.candidatoSuspension.findMany({
+      where: { resuelto_en: null },
+      include: {
+        cuenta: {
+          select: {
+            descripcion: true,
+            calle: true,
+            softguard_ref: true,
+            perfil: { select: { nombre: true } },
           },
         },
-        orderBy: { dpd: "desc" },
-      })
-      .catch(() => []),
+      },
+      orderBy: { dpd: "desc" },
+    }),
     // Select fino: solo lo que la página y el botón de WhatsApp consumen
     // (el include arrastraba la cuenta completa con proyección sg_* y notas).
     prisma.cuenta.findMany({

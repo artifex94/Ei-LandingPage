@@ -80,11 +80,7 @@ export async function contarPendientesAdmin(): Promise<PendientesAdmin> {
                 AND n.fecha_envio >= ${inicioMes}
             ))::int AS morosos_sin_contactar
     `,
-    // `.catch(() => 0)`: pre-migración (SQL manual sin correr todavía) la
-    // tabla tickets_feedback puede no existir aún.
-    prisma.ticketFeedback
-      .count({ where: { estado: { in: ["NUEVO", "EN_REVISION"] } } })
-      .catch(() => 0),
+    prisma.ticketFeedback.count({ where: { estado: { in: ["NUEVO", "EN_REVISION"] } } }),
   ]);
 
   const fila = filas[0];

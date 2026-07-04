@@ -33,15 +33,11 @@ const ESTADO_VARIANT: Record<string, BadgeVariant> = {
 export default async function FeedbackPage() {
   const { userId } = await requireSesion();
 
-  // `.catch(() => [])`: pre-migración (SQL manual sin correr todavía) la
-  // tabla puede no existir aún — la página no debe romperse por eso.
-  const tickets = await prisma.ticketFeedback
-    .findMany({
-      where: { perfil_id: userId },
-      orderBy: { creado_en: "desc" },
-      take: 50,
-    })
-    .catch(() => []);
+  const tickets = await prisma.ticketFeedback.findMany({
+    where: { perfil_id: userId },
+    orderBy: { creado_en: "desc" },
+    take: 50,
+  });
 
   return (
     <section aria-labelledby="feedback-heading" className="space-y-7">

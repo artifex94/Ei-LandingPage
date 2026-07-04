@@ -7,23 +7,17 @@ import { ConciliacionMovimientosTable, type MovimientoRow } from "@/components/a
 export const metadata: Metadata = { title: "Conciliación bancaria" };
 
 export default async function ConciliacionBancariaPage() {
-  // .catch(() => []) por si el SQL manual (movimientos_bancarios) todavía no
-  // se aplicó en la DB — mismo patrón que candidatos_suspension en /cobros.
   const [movimientosSinConciliar, pagosPendientes] = await Promise.all([
-    prisma.movimientoBancario
-      .findMany({
-        where: { conciliado_en: null },
-        orderBy: { fecha: "desc" },
-        take: 200,
-      })
-      .catch(() => []),
-    prisma.pago
-      .findMany({
-        where: { estado: { in: ["PROCESANDO", "PENDIENTE"] } },
-        include: { cuenta: { include: { perfil: { select: { nombre: true } } } } },
-        take: 500,
-      })
-      .catch(() => []),
+    prisma.movimientoBancario.findMany({
+      where: { conciliado_en: null },
+      orderBy: { fecha: "desc" },
+      take: 200,
+    }),
+    prisma.pago.findMany({
+      where: { estado: { in: ["PROCESANDO", "PENDIENTE"] } },
+      include: { cuenta: { include: { perfil: { select: { nombre: true } } } } },
+      take: 500,
+    }),
   ]);
 
   const MESES = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
