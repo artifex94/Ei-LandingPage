@@ -10,7 +10,8 @@ import type {
   TipoGestionEvento,
   ResultadoGestion,
 } from "@/generated/prisma/client";
-import { clasificarCodigo, PRIORIDAD, type TipoDia } from "@/lib/eventos-clasificacion";
+import { type TipoDia } from "@/lib/eventos-clasificacion";
+import { componerHeatmap } from "@/lib/eventos-heatmap";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -44,26 +45,7 @@ export async function getEventosHeatmap(
     orderBy: { fecha_evento: "asc" },
   });
 
-  const byDia = new Map<string, { total: number; tipo: TipoDia }>();
-
-  for (const ev of rows) {
-    const fecha = ev.fecha_evento.toISOString().slice(0, 10);
-    const tipoEv = clasificarCodigo(ev.codigo);
-    const existing = byDia.get(fecha);
-
-    if (!existing) {
-      byDia.set(fecha, { total: 1, tipo: tipoEv });
-    } else {
-      existing.total += 1;
-      if (PRIORIDAD[tipoEv] > PRIORIDAD[existing.tipo]) {
-        existing.tipo = tipoEv;
-      }
-    }
-  }
-
-  return Array.from(byDia.entries())
-    .map(([fecha, { total, tipo }]) => ({ fecha, total, tipo }))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+  return componerHeatmap(rows);
 }
 
 // ── Mutación: actualizar estado de evento ──────────────────────────────────────
