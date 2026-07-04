@@ -2,38 +2,28 @@
 
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { siteConfig } from '@/config/site';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import Button from '@/components/ui/Button';
 
-// 1. Definimos el esquema de validación con Zod
-const formSchema = z.object({
-  nombre: z.string()
-    .min(2, 'El nombre es obligatorio')
-    .refine((val) => val.trim().split(/\s+/).length >= 2, {
-      message: 'Por favor, ingresa tu nombre y apellido',
-    }),
-  telefono: z.string()
-    .min(8, 'Ingresa un teléfono válido (mín. 8 dígitos)'),
-  servicio: z.string().min(1, 'Por favor selecciona un servicio'),
-  mensaje: z.string().optional(),
-});
-
-// 2. Inferimos la interfaz de TypeScript automáticamente desde el esquema
-type FormData = z.infer<typeof formSchema>;
+// Validación con las reglas nativas de react-hook-form (via register) en vez
+// de Zod + resolver: mismas reglas y mensajes, sin cargar ~266 kB de Zod en
+// el bundle público de la landing.
+interface FormData {
+  nombre: string;
+  telefono: string;
+  servicio: string;
+  mensaje?: string;
+}
 
 const WhatsAppForm: React.FC = () => {
-  // 3. Configuramos React Hook Form conectándolo con el resolver de Zod
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
     defaultValues: {
       nombre: '',
       telefono: '',
@@ -74,11 +64,16 @@ const WhatsAppForm: React.FC = () => {
         {/* Campo: Nombre */}
         <div className="space-y-2">
           <label htmlFor="nombre" className="text-sm font-bold text-slate-200">Nombre y apellido</label>
-          <Input 
-            id="nombre" 
-            placeholder="Juan Pérez" 
-            error={errors.nombre?.message} 
-            {...register('nombre')} 
+          <Input
+            id="nombre"
+            placeholder="Juan Pérez"
+            error={errors.nombre?.message}
+            {...register('nombre', {
+              required: 'El nombre es obligatorio',
+              minLength: { value: 2, message: 'El nombre es obligatorio' },
+              validate: (val) =>
+                val.trim().split(/\s+/).length >= 2 || 'Por favor, ingresa tu nombre y apellido',
+            })}
           />
         </div>
 
@@ -91,6 +86,8 @@ const WhatsAppForm: React.FC = () => {
             placeholder="11 1234 5678"
             error={errors.telefono?.message}
             {...register('telefono', {
+              required: 'Ingresa un teléfono válido (mín. 8 dígitos)',
+              minLength: { value: 8, message: 'Ingresa un teléfono válido (mín. 8 dígitos)' },
               onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                 e.target.value = e.target.value.replace(/[^0-9]/g, '');
               }
@@ -105,7 +102,7 @@ const WhatsAppForm: React.FC = () => {
         <Select
           id="servicio"
           error={errors.servicio?.message}
-          {...register('servicio')}
+          {...register('servicio', { required: 'Por favor selecciona un servicio' })}
         >
           <option value="" disabled>Selecciona una opción</option>
           <option value="Alarma para hogar">Alarma para hogar</option>
