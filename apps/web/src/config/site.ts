@@ -1,16 +1,10 @@
-import { z } from "zod";
+// Validación vanilla a propósito: este módulo lo importa media landing y medio
+// portal, y traer Zod acá arrastraba ~266 kB de JS al bundle de cada página
+// solo para chequear el largo de un string.
+const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5493436575372";
 
-// Validamos que las variables de entorno existan y tengan el formato correcto
-const envSchema = z.object({
-  NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().min(10, "El número de WhatsApp es inválido o muy corto"),
-});
-
-const env = envSchema.safeParse({
-  NEXT_PUBLIC_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "5493436575372",
-});
-
-if (!env.success) {
-  console.error("❌ Error en variables de entorno:\n", env.error.format());
+if (whatsappNumber.length < 10) {
+  console.error("❌ Error en variables de entorno: NEXT_PUBLIC_WHATSAPP_NUMBER es inválido o muy corto");
   throw new Error("Faltan variables de entorno requeridas para iniciar la aplicación.");
 }
 
@@ -38,7 +32,7 @@ export const siteConfig = {
     phoneDisplay: "+54 9 343 657-5372",
     phoneE164: "+5493436575372",
     phoneLocal: "343-657-5372",
-    whatsappNumber: env.data.NEXT_PUBLIC_WHATSAPP_NUMBER,
+    whatsappNumber,
     get whatsappLink() {
       return `https://wa.me/${this.whatsappNumber}`;
     },
