@@ -55,16 +55,23 @@ export default async function CobrosMorosidadPage() {
         orderBy: { dpd: "desc" },
       })
       .catch(() => []),
+    // Select fino: solo lo que la página y el botón de WhatsApp consumen
+    // (el include arrastraba la cuenta completa con proyección sg_* y notas).
     prisma.cuenta.findMany({
       where: {
         estado: { not: "BAJA_DEFINITIVA" },
         pagos: { some: filtroPagoVencido },
       },
-      include: {
+      select: {
+        id: true,
+        descripcion: true,
+        calle: true,
+        softguard_ref: true,
         perfil: { select: { id: true, nombre: true, telefono: true, email: true } },
         pagos: {
           where: filtroPagoVencido,
-          orderBy: [{ anio: "asc" }, { mes: "asc" }],
+          orderBy: [{ anio: "asc" as const }, { mes: "asc" as const }],
+          select: { id: true, mes: true, anio: true, importe: true, estado: true },
         },
       },
       orderBy: { descripcion: "asc" },

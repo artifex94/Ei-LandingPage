@@ -27,17 +27,25 @@ export default async function CobrosPagosPage({
   const mes = Math.min(12, Math.max(1, Number(sp.mes) || ahora.getMonth() + 1));
   const anio = Math.min(2100, Math.max(2020, Number(sp.anio) || ahora.getFullYear()));
 
+  // Select fino en vez de include: la página usa un puñado de campos y el
+  // include arrastraba la cuenta completa (proyección sg_*, notas, overrides).
+  const selectPago = {
+    id: true, mes: true, anio: true, importe: true, estado: true, metodo: true,
+    acreditado_en: true, updated_at: true, ref_externa: true,
+    cuenta: { select: { descripcion: true, perfil: { select: { nombre: true } } } },
+  } as const;
+
   const [transferenciasPendientes, pagos, cuentasSinPago] = await Promise.all([
     // Transferencias bancarias a verificar — siempre visibles, sin filtrar por mes.
     prisma.pago.findMany({
       where: { estado: "PROCESANDO", metodo: "TRANSFERENCIA_BANCARIA" },
-      include: { cuenta: { include: { perfil: { select: { nombre: true } } } } },
+      select: selectPago,
       orderBy: { updated_at: "desc" },
       take: 100,
     }),
     prisma.pago.findMany({
       where: { mes, anio },
-      include: { cuenta: { include: { perfil: { select: { nombre: true } } } } },
+      select: selectPago,
       orderBy: [{ estado: "asc" }, { cuenta: { descripcion: "asc" } }],
       take: 500,
     }),
