@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma/client";
+import { contarPendientesAdmin } from "@/lib/admin-counts";
 import { requireAdmin } from "@/lib/auth/session";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { RefreshButton } from "@/components/admin/RefreshButton";
@@ -21,62 +21,11 @@ export default async function AdminLayout({
 }) {
   const perfil = await requireAdmin();
 
-  const hace3dias = new Date();
-  hace3dias.setDate(hace3dias.getDate() - 3);
-
-  const ahora = new Date();
-  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-  const mesActual = ahora.getMonth() + 1;
-  const anioActual = ahora.getFullYear();
-  // Mismo criterio de mora que /admin/morosidad y /admin/mensajeria (VENCIDO o PENDIENTE
-  // de un mes anterior), para que el badge no subestime respecto del hub.
-  const filtroPagoVencido = {
-    OR: [
-      { estado: "VENCIDO" as const },
-      {
-        estado: "PENDIENTE" as const,
-        OR: [{ anio: { lt: anioActual } }, { anio: anioActual, mes: { lt: mesActual } }],
-      },
-    ],
-  };
-
-  const [
+  const {
     pendingSolicitudes, pendingMantenimiento, cuentasEnMora, otsPendientes,
-    altasUsuarioPendientes, eventosSinProcesar, perfilesEnMora, contactadosMes,
+    altasUsuarioPendientes, eventosSinProcesar, morososSinContactar,
     feedbackPendiente,
-  ] = await Promise.all([
-      prisma.solicitudCambioInfo.count({ where: { estado: "PENDIENTE" } }),
-      prisma.solicitudMantenimiento.count({ where: { estado: { not: "RESUELTA" } } }),
-      prisma.cuenta.count({ where: { pagos: { some: { estado: "VENCIDO" } } } }),
-      prisma.ordenTrabajo.count({
-        where: {
-          estado: { notIn: ["COMPLETADA", "CANCELADA"] },
-          OR: [
-            { fecha_visita: { lt: new Date() }, estado: { notIn: ["COMPLETADA", "CANCELADA", "EN_SITIO", "EN_RUTA"] } },
-            { estado: "SOLICITADA", created_at: { lt: hace3dias } },
-          ],
-        },
-      }),
-      prisma.altaUsuario.count({ where: { estado: "PENDIENTE" } }),
-      prisma.eventoAlarma.count({ where: { estado: "NUEVO" } }),
-      prisma.cuenta.findMany({
-        where: { estado: { not: "BAJA_DEFINITIVA" }, pagos: { some: filtroPagoVencido } },
-        select: { perfil_id: true },
-      }),
-      prisma.notificacionCliente.findMany({
-        where: { origen: "COBRANZA", canal: "WHATSAPP_WALINK", fecha_envio: { gte: inicioMes } },
-        select: { perfil_id: true },
-      }),
-      // `.catch(() => 0)`: pre-migración (SQL manual sin correr todavía) la
-      // tabla tickets_feedback puede no existir aún.
-      prisma.ticketFeedback.count({ where: { estado: { in: ["NUEVO", "EN_REVISION"] } } }).catch(() => 0),
-    ]);
-
-  // Morosos que todavía no fueron contactados por WhatsApp manual este mes.
-  const contactadosSet = new Set(contactadosMes.map((c) => c.perfil_id));
-  const morososSinContactar = new Set(
-    perfilesEnMora.map((c) => c.perfil_id).filter((id) => !contactadosSet.has(id)),
-  ).size;
+  } = await contarPendientesAdmin();
 
   return (
     <>
