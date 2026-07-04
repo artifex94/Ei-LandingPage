@@ -88,27 +88,34 @@ async function turnoDeHoyEmpleado(perfilId: string): Promise<{ franja: FranjaTur
 
 export default async function MonitoreoColaPage() {
   const { desde: desdeHoy, hasta: hastaHoy } = limitesHoyAR();
+
+  // Las queries de eventos no dependen de la sesión: se disparan antes del
+  // await para que corran en paralelo con getSesionReal() (solo turnoHoy
+  // necesita el perfil). Un hop menos en el TTFB de la cola.
+  const eventosPromise = prisma.eventoAlarma.findMany({
+    where: { estado: { in: PENDIENTES as unknown as EstadoEventoSync[] } },
+    include: {
+      cuenta: {
+        select: {
+          descripcion: true,
+          softguard_ref: true,
+          perfil: { select: { nombre: true } },
+        },
+      },
+    },
+    orderBy: { fecha_evento: "desc" },
+    take: 200,
+  });
+  const eventosHoyPromise = prisma.eventoAlarma.findMany({
+    where: { fecha_evento: { gte: desdeHoy, lt: hastaHoy } },
+    select: { estado: true, fecha_evento: true, tomado_en: true, resuelto_en: true },
+  });
+
   const sesion = await getSesionReal();
 
   const [eventos, eventosHoy, turnoHoy] = await Promise.all([
-    prisma.eventoAlarma.findMany({
-      where: { estado: { in: PENDIENTES as unknown as EstadoEventoSync[] } },
-      include: {
-        cuenta: {
-          select: {
-            descripcion: true,
-            softguard_ref: true,
-            perfil: { select: { nombre: true } },
-          },
-        },
-      },
-      orderBy: { fecha_evento: "desc" },
-      take: 200,
-    }),
-    prisma.eventoAlarma.findMany({
-      where: { fecha_evento: { gte: desdeHoy, lt: hastaHoy } },
-      select: { estado: true, fecha_evento: true, tomado_en: true, resuelto_en: true },
-    }),
+    eventosPromise,
+    eventosHoyPromise,
     sesion ? turnoDeHoyEmpleado(sesion.perfil.id) : Promise.resolve(null),
   ]);
 
