@@ -49,32 +49,45 @@ export default async function PagosAdminPage({
   const mes  = Math.min(12, Math.max(1, mesRaw));
   const anio = Math.min(2100, Math.max(2020, anioRaw));
 
-  const [transferenciasPendientes, pagos] = await Promise.all([
+  // Mismo patrón que /cobros/pagos (PRs #34/#35): select fino en vez de
+  // include con la fila completa de Cuenta (proyección sg_*, notas), y las
+  // tres queries en un solo hop a la BD.
+  const selectPago = {
+    id: true, mes: true, anio: true, importe: true, estado: true, metodo: true,
+    acreditado_en: true, updated_at: true, ref_externa: true, cuenta_id: true,
+    cuenta: { select: { descripcion: true, perfil: { select: { nombre: true } } } },
+  } as const;
+
+  const [transferenciasPendientes, pagos, cuentasSinPago] = await Promise.all([
     // Transferencias bancarias pendientes de confirmar — siempre visibles
     prisma.pago.findMany({
       where: { estado: "PROCESANDO", metodo: "TRANSFERENCIA_BANCARIA" },
-      include: { cuenta: { include: { perfil: { select: { nombre: true } } } } },
+      select: selectPago,
       orderBy: { updated_at: "desc" },
       take: 100,
     }),
     prisma.pago.findMany({
       where: { mes, anio },
-      include: { cuenta: { include: { perfil: { select: { nombre: true } } } } },
+      select: selectPago,
       orderBy: [{ estado: "asc" }, { cuenta: { descripcion: "asc" } }],
       take: 500,
     }),
+    // Cuentas sin pago del mes: `pagos: { none: ... }` resuelve en SQL lo que
+    // antes se computaba en JS con el resultado de la query anterior (y sin el
+    // borde del take: 500 truncando el set de exclusión).
+    prisma.cuenta.findMany({
+      where: {
+        estado: { in: ["ACTIVA", "SUSPENDIDA_PAGO"] },
+        pagos: { none: { mes, anio } },
+      },
+      select: {
+        id: true, descripcion: true, estado: true, costo_mensual: true,
+        perfil: { select: { nombre: true } },
+      },
+      orderBy: { descripcion: "asc" },
+      take: 500,
+    }),
   ]);
-
-  const cuentasConPago = new Set(pagos.map((p) => p.cuenta_id));
-  const cuentasSinPago = await prisma.cuenta.findMany({
-    where: {
-      estado: { in: ["ACTIVA", "SUSPENDIDA_PAGO"] },
-      id: { notIn: [...cuentasConPago] },
-    },
-    include: { perfil: { select: { nombre: true } } },
-    orderBy: { descripcion: "asc" },
-    take: 500,
-  });
 
   const totalCobrado = pagos
     .filter((p) => p.estado === "PAGADO")
