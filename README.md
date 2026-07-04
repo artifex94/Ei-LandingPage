@@ -15,7 +15,7 @@ Repositorio unificado: historial completo en un solo `.git`.
 │   └── deploy/         # Artefactos y config de despliegue (ZIPs ignorados por git)
 ├── docs/               # Planes (general/frontend/backend) e integración SoftGuard
 ├── recursos/           # Manuales SoftGuard, informes UX y referencias (PDFs ignorados)
-├── scripts/            # Scripts a nivel repo (ej. make_deploy_zip.py)
+├── scripts/            # Scripts a nivel repo (ej. make_source_zip.py)
 ├── .github/workflows/  # CI
 └── AGENTS.md           # Órdenes permanentes (cron mensual, etc.)
 ```
@@ -38,4 +38,5 @@ Variables de entorno en `apps/web/.env.local` (no versionado).
 
 ## Despliegue
 
-ZIP standalone manual al VPS de Hostinger. Ver `scripts/make_deploy_zip.py` e `infra/deploy/`.
+Build-on-server en Hostinger: se sube un ZIP del código fuente (`scripts/make_source_zip.py`)
+y el servidor compila. Detalle completo en `docs/DEPLOY-HOSTINGER.md`.
