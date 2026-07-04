@@ -24,7 +24,7 @@ export default async function AdminLayout({
   const {
     pendingSolicitudes, pendingMantenimiento, cuentasEnMora, otsPendientes,
     altasUsuarioPendientes, eventosSinProcesar, morososSinContactar,
-    feedbackPendiente,
+    feedbackPendiente, cambiosTurnoPendientes,
   } = await contarPendientesAdmin();
 
   return (
@@ -47,6 +47,7 @@ export default async function AdminLayout({
           eventosSinProcesar={eventosSinProcesar}
           morososSinContactar={morososSinContactar}
           feedbackPendiente={feedbackPendiente}
+          cambiosTurnoPendientes={cambiosTurnoPendientes}
         />
 
         <main

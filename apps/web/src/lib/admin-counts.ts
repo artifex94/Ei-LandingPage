@@ -10,6 +10,7 @@ export interface PendientesAdmin {
   eventosSinProcesar: number;
   morososSinContactar: number;
   feedbackPendiente: number;
+  cambiosTurnoPendientes: number;
 }
 
 interface FilaCounts {
@@ -20,6 +21,7 @@ interface FilaCounts {
   altas_pendientes: number;
   eventos_sin_procesar: number;
   morosos_sin_contactar: number;
+  cambios_turno_pendientes: number;
 }
 
 /**
@@ -60,6 +62,8 @@ export async function contarPendientesAdmin(): Promise<PendientesAdmin> {
           ))::int AS ots_pendientes,
         (SELECT count(*) FROM altas_usuario
           WHERE estado = 'PENDIENTE')::int AS altas_pendientes,
+        (SELECT count(*) FROM solicitudes_cambio_turno
+          WHERE estado = 'PENDIENTE')::int AS cambios_turno_pendientes,
         (SELECT count(*) FROM eventos_alarma
           WHERE estado = 'NUEVO')::int AS eventos_sin_procesar,
         (SELECT count(DISTINCT c.perfil_id) FROM cuentas c
@@ -93,5 +97,6 @@ export async function contarPendientesAdmin(): Promise<PendientesAdmin> {
     eventosSinProcesar: fila.eventos_sin_procesar,
     morososSinContactar: fila.morosos_sin_contactar,
     feedbackPendiente,
+    cambiosTurnoPendientes: fila.cambios_turno_pendientes,
   };
 }

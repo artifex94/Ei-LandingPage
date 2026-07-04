@@ -3,8 +3,10 @@ import { CalendarDays } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
 import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
+import { SolicitarCambioTurnoDialog } from "@/components/portal/SolicitarCambioTurnoDialog";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { puedeSolicitarCambio } from "@/lib/turnos-cambio";
 
 export const metadata = { title: "Mis turnos" };
 
@@ -41,14 +43,31 @@ export default async function MisTurnosPage() {
   hoy.setHours(0, 0, 0, 0);
   const en30 = addDays(hoy, 30);
 
-  const [empleado, turnos] = await Promise.all([
+  const [empleado, turnos, companeros] = await Promise.all([
     prisma.empleado.findUnique({ where: { perfil_id: userId }, select: { id: true } }),
     prisma.turno.findMany({
       where: { empleado: { perfil_id: userId }, fecha: { gte: hoy, lte: en30 } },
+      include: {
+        solicitudes_cambio: {
+          where: { estado: "PENDIENTE" },
+          select: { id: true },
+          take: 1,
+        },
+      },
       orderBy: [{ fecha: "asc" }, { franja: "asc" }],
+    }),
+    // Compañeros activos para proponer como reemplazo (el propio se filtra abajo).
+    prisma.empleado.findMany({
+      where: { activo: true },
+      select: { id: true, perfil: { select: { nombre: true } } },
+      orderBy: { created_at: "asc" },
     }),
   ]);
   if (!empleado) redirect("/portal/dashboard");
+
+  const companerosOpciones = companeros
+    .filter((c) => c.id !== empleado.id)
+    .map((c) => ({ id: c.id, nombre: c.perfil.nombre }));
 
   return (
     <div className="space-y-7">
@@ -81,9 +100,20 @@ export default async function MisTurnosPage() {
                     <p className="text-xs text-slate-400 mt-1">{t.notas}</p>
                   )}
                 </div>
-                <Badge variant={ESTADO_VARIANT[t.estado] ?? "neutral"} className="flex-shrink-0">
-                  {estadoLabel}
-                </Badge>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  {puedeSolicitarCambio(t).ok && (
+                    <SolicitarCambioTurnoDialog
+                      turnoId={t.id}
+                      fechaLabel={fechaLabel}
+                      franjaLabel={FRANJA_LABEL[t.franja] ?? t.franja}
+                      companeros={companerosOpciones}
+                      solicitudPendienteId={t.solicitudes_cambio[0]?.id}
+                    />
+                  )}
+                  <Badge variant={ESTADO_VARIANT[t.estado] ?? "neutral"}>
+                    {estadoLabel}
+                  </Badge>
+                </div>
               </li>
             );
           })}

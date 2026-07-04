@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma/client";
 import { CalendarioTurnos } from "@/components/admin/turnos/CalendarioTurnos";
 import { AutoAsignarButton } from "@/components/admin/turnos/AutoAsignarButton";
+import { SolicitudesCambioPanel } from "@/components/admin/turnos/SolicitudesCambioPanel";
 import { TutorialContextual } from "@/components/admin/TutorialContextual";
 
 const TUTORIAL_TURNOS = [
@@ -60,7 +61,7 @@ export default async function TurnosPage({
   const semanaAnterior  = addDays(lunes, -7).toISOString().slice(0, 10);
   const semanaSiguiente = addDays(lunes,  7).toISOString().slice(0, 10);
 
-  const [empleados, turnos] = await Promise.all([
+  const [empleados, turnos, solicitudesCambio] = await Promise.all([
     prisma.empleado.findMany({
       where: { activo: true, puede_monitorear: true },
       include: { perfil: { select: { id: true, nombre: true } } },
@@ -71,7 +72,27 @@ export default async function TurnosPage({
       include: { empleado: { include: { perfil: { select: { id: true, nombre: true } } } } },
       orderBy: [{ fecha: "asc" }, { franja: "asc" }],
     }),
+    prisma.solicitudCambioTurno.findMany({
+      where: { estado: "PENDIENTE" },
+      include: {
+        solicitante: { select: { perfil: { select: { nombre: true } } } },
+        reemplazo: { select: { id: true, perfil: { select: { nombre: true } } } },
+        turno: { select: { fecha: true, franja: true } },
+      },
+      orderBy: { created_at: "asc" },
+    }),
   ]);
+
+  const FRANJA_LABEL: Record<string, string> = { MANANA: "Mañana", TARDE: "Tarde", NOCHE: "Noche" };
+  const filasSolicitudes = solicitudesCambio.map((s) => ({
+    id: s.id,
+    solicitanteNombre: s.solicitante.perfil.nombre,
+    fechaLabel: s.turno.fecha.toLocaleDateString("es-AR", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }),
+    franjaLabel: FRANJA_LABEL[s.turno.franja] ?? s.turno.franja,
+    motivo: s.motivo,
+    reemplazoPropuestoId: s.reemplazo?.id ?? null,
+    reemplazoPropuestoNombre: s.reemplazo?.perfil.nombre ?? null,
+  }));
 
   const lunesLabel   = lunes.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
   const domingoLabel = domingo.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
@@ -129,6 +150,11 @@ export default async function TurnosPage({
           </div>
         </div>
       </div>
+
+      <SolicitudesCambioPanel
+        solicitudes={filasSolicitudes}
+        monitores={empleados.map((e) => ({ id: e.id, nombre: e.perfil.nombre }))}
+      />
 
       {empleados.length === 0 ? (
         <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-12 text-center">
