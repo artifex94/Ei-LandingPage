@@ -84,6 +84,22 @@ La plantilla canónica es **`apps/web/.env.example`**. Dos categorías:
 > son dinámicas (ver §6), así que el build no se conecta a Postgres. Verificado: el build
 > completa sin `DATABASE_URL`. Sí es obligatoria en runtime.
 
+### Pool de conexiones: NO tocar el `max` del adapter
+
+`DATABASE_URL` apunta al **Transaction Pooler de Supabase (Supavisor, puerto 6543)** y el
+adapter `@prisma/adapter-pg` usa el default de `pg` (`max: 10` conexiones locales).
+
+Medido (2026-07-04, carga real del dashboard: 18 queries paralelas contra la BD de
+producción): con `max: 10` la mediana fue 214 ms y con `max: 20` también 214 ms. **Agrandar
+el pool local no mejora nada** — Supavisor multiplexa del lado del servidor y el costo
+dominante es el RTT a `sa-east-1`, no la cola local. No agregar `connection_limit` a la URL
+ni `max` al adapter sin volver a medir; más conexiones locales solo consumen cupo del pooler
+compartido.
+
+La palanca real para reducir roundtrips es consolidar queries (ver
+`src/lib/admin-counts.ts`) o streamear secciones con `<Suspense>` (ver
+`src/app/admin/dashboard/page.tsx`).
+
 ---
 
 ## 5. Por qué el build funciona aunque el host omita devDependencies
