@@ -1,129 +1,117 @@
 # Integración SoftGuard ↔ Portal EI
 
+> **Arquitectura vigente: Web API REST de la suite SoftGuard (puerto 8080).**
+> El diseño original por SQL Server directo (puerto 1433, usuario `EI_PORTAL_RO`,
+> vistas `vw_ei_*`, paquete `mssql`) se construyó, se probó contra el servidor real
+> y **se retiró el 2026-06-11** (commit `78264ac`): el puerto 1433 está filtrado por
+> el firewall (MikroTik) del lado SoftGuard y no hay necesidad funcional que la API
+> no cubra. No reconstruir el camino SQL — cualquier dato faltante se resuelve
+> agregando un adaptador nuevo al ACL de la API (ver "Cómo agregar un endpoint").
+
 ## Arquitectura general
 
 ```
-┌─────────────────────────────────────────────┐
-│  Portal Next.js (Hostinger / Vercel)        │
-│                                             │
-│  src/lib/softguard/                         │
-│  ├── client.ts   ← pool mssql              │
-│  ├── schema.ts   ← tipos TypeScript        │
-│  └── queries.ts  ← funciones de lectura    │
-└────────────────────┬────────────────────────┘
-                     │ SQL Server (puerto 1433)
-                     │ usuario: EI_PORTAL_RO (read-only)
-                     │ via VPN / LAN
-                     ▼
-┌─────────────────────────────────────────────┐
-│  Servidor SoftGuard — Rawson 255, Victoria  │
-│  SQL Server (BD SoftGuard)                  │
-│                                             │
-│  Vistas expuestas al portal:                │
-│  ├── vw_ei_cuentas_resumen                  │
-│  ├── vw_ei_eventos_recientes                │
-│  └── vw_ei_ot_estado                        │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│  Portal Next.js (Hostinger)                      │
+│                                                  │
+│  src/lib/softguard/                              │
+│  ├── api/            ← ACL sobre la Web API      │
+│  │   ├── core.ts     ← login OAuth + restGet     │
+│  │   ├── monitoreo.ts, crm.ts, sertec.ts,        │
+│  │   │   sistema.ts  ← un adaptador por módulo   │
+│  │   └── index.ts    ← único punto de import     │
+│  ├── sync.ts         ← los 3 jobs de sync        │
+│  └── fallo-sostenido.ts ← lógica pura TST/AC     │
+└──────────────┬───────────────────────────────────┘
+               │ HTTPS :8080 (cookie OAuth_Token, ~30 min,
+               │ cacheada ~25 min, retry con login fresco)
+┌──────────────▼───────────────────────────────────┐
+│  Suite web SoftGuard (servidor de la central)    │
+└──────────────────────────────────────────────────┘
 ```
 
-El portal **solo lee**. Nunca modifica tablas internas de SoftGuard directamente. Las operaciones de escritura controlada (ej. crear OT, imputar pago) pasan por `src/lib/softguard/writes.ts` (Fase 3) con confirmación explícita de admin.
+**Regla de producto: SOLO LECTURA.** Ningún adaptador escribe contra SoftGuard; el
+procesamiento de eventos y la gestión se hacen en la suite hasta nuevo aviso
+(documentado también en el header de `core.ts`).
 
----
+## Endpoints integrados (validados con datos reales)
 
-## Configuración inicial (Ramiro hace esto en el servidor)
-
-### 1. Crear el usuario SQL read-only
-
-Conectarse con `sa` o usuario `dbo` en SQL Server Management Studio y ejecutar:
-
-```sql
-CREATE LOGIN EI_PORTAL_RO WITH PASSWORD = '<password_fuerte_aqui>';
-USE [NombreBaseSoftGuard];  -- reemplazar con el nombre real de la BD
-CREATE USER EI_PORTAL_RO FOR LOGIN EI_PORTAL_RO;
-ALTER ROLE db_datareader ADD MEMBER EI_PORTAL_RO;
-GRANT SELECT ON SCHEMA::dbo TO EI_PORTAL_RO;
-```
-
-### 2. Crear las vistas
-
-Ejecutar el script completo en:
-```
-apps/web/scripts/seed-vista-cuentas.sql
-```
-
-> **Antes de ejecutar:** verificar que los nombres de tabla y columna en el script coincidan con el schema real de SoftGuard. Los nombres en el script son estimaciones basadas en los manuales TEC223 y TEC218. Solicitar al soporte de SoftGuard el schema de tablas si es necesario.
-
-### 3. Habilitar acceso de red
-
-- Confirmar que el puerto 1433 de SQL Server está habilitado (SQL Server Configuration Manager → SQL Server Network Configuration → Protocols → TCP/IP → Enable).
-- Agregar regla de firewall de Windows que permita tráfico entrante en puerto 1433 desde la IP pública del portal (o desde el rango de la VPN).
-- Si la conexión es por VPN (recomendado): confirmar que el portal puede resolver `SOFTGUARD_DB_HOST` dentro de la red VPN.
-
-### 4. Configurar variables de entorno en el portal
-
-Agregar a `.env.local` (nunca commitear):
-
-```env
-SOFTGUARD_DB_HOST=192.168.x.x     # IP del servidor SoftGuard en la red
-SOFTGUARD_DB_PORT=1433
-SOFTGUARD_DB_USER=EI_PORTAL_RO
-SOFTGUARD_DB_PASS=<password_del_paso_1>
-SOFTGUARD_DB_NAME=<nombre_de_la_BD>
-SOFTGUARD_EMBED_SECRET=<string_aleatorio_32_chars_para_HMAC>
-
-# IP del servidor DSS (para Content-Security-Policy del /embed/*)
-SOFTGUARD_DSS_HOST=192.168.x.x
-```
-
-Para producción (Hostinger/Vercel): agregar las mismas variables en el panel de entorno del hosting.
-
-### 5. Verificar
-
-Reiniciar el portal (`npm run dev`) y navegar a `/admin/sync-softguard`. Hacer click en **"Probar conexión"**. Debe mostrar:
-- Modo: Real
-- Cuentas en vista: N (número de cuentas encontradas)
-- Latencia: < 500 ms (si la VPN es local)
-
----
-
-## Variables de entorno de referencia
-
-| Variable | Descripción | Requerida |
+| Endpoint SoftGuard | Adaptador | Uso |
 |---|---|---|
-| `SOFTGUARD_DB_HOST` | IP o hostname del servidor SQL Server | Sí |
-| `SOFTGUARD_DB_PORT` | Puerto TCP (default 1433) | No |
-| `SOFTGUARD_DB_USER` | Usuario read-only (EI_PORTAL_RO) | Sí |
-| `SOFTGUARD_DB_PASS` | Password del usuario | Sí |
-| `SOFTGUARD_DB_NAME` | Nombre de la base de datos | Sí |
-| `SOFTGUARD_EMBED_SECRET` | Secreto HMAC para firmar tokens del iframe (Fase 4) | Sí (Fase 4) |
-| `SOFTGUARD_DSS_HOST` | IP del DSS para CSP `frame-ancestors` (Fase 4) | No (Fase 4) |
-| `SOFTGUARD_MOCK` | `true` para forzar modo mock | No |
+| `GET /rest/token/IsValid` | `sistema.ts` | Salud de sesión (`pingWebApi`) |
+| `GET /Rest/Search/DesktopModules` | `sistema.ts` | Catálogo de módulos de la suite |
+| `GET /rest/search/codigosalarmas` | `monitoreo.ts` | Catálogo código→descripción/prioridad |
+| `GET /Rest/Search/ReporteHistoricoMM` | `monitoreo.ts` | Últimos eventos recibidos |
+| `GET /Rest/search/EventosPendientes` | `monitoreo.ts` | Cola sin atender |
+| `GET /Rest/Search/CuentaByDealer` | `crm.ts` | Cuentas + estado del panel (TST/AC) |
+| `GET /Rest/Search/Telefonos` | `crm.ts` | Contactos de aviso de una cuenta |
+| `GET /Rest/search/ServTec` | `sertec.ts` | Órdenes de servicio (cierre de OTs) |
 
----
+Sin explorar: detalle ampliado de cuenta del CRM (zonas/usuarios), Video,
+SmartPanics, TrackGuard, MapGuardWeb, VigiControl, Control de Acceso.
 
-## Modo mock
+## Sincronización
 
-Si `SOFTGUARD_MOCK=true` o si faltan `SOFTGUARD_DB_HOST` / `SOFTGUARD_DB_PASS`, la capa de integración devuelve datos ficticios predefinidos en `src/lib/softguard/queries.ts`. Esto permite:
+`POST /api/cron/softguard` (Bearer `CRON_SECRET`) corre en secuencia, cada ~5 min
+(cron externo — hPanel de Hostinger o cron-job.org; ver
+`docs/RUNBOOK-DEPLOY-2026-07-04.md`):
 
-- Desarrollar sin acceso al servidor real.
-- Correr CI/Playwright sin credenciales.
+1. **`syncCuentasWebApi`** — dirección + proyección `sg_*` en `Cuenta` + solicitudes
+   de mantenimiento `[AUTO]` por fallo sostenido TST/AC (umbral
+   `SOFTGUARD_FALLO_SOSTENIDO_HORAS`, default 24 h, dedupe con cooldown 48 h).
+2. **`syncEventosWebApi`** — upsert de `EventoAlarma` (no pisa estados ya
+   gestionados) + backfill de `Cuenta.iid_softguard` (necesario para Telefonos).
+3. **`syncEstadoOTWebApi`** — cierra `OrdenTrabajo` cuando SerTec la marcó cerrada.
 
-El banner amarillo en `/admin/sync-softguard` indica cuando el modo mock está activo.
+Cada corrida queda registrada en `CronRun` (panel en `/admin/sync-softguard`).
+Si la API no está configurada (`softguardWebApiConfigured() === false`), los syncs
+devuelven `configured: false` y el endpoint responde 503 — **modo degradado**: el
+portal sigue operando con su propia BD y el feed en vivo cae a la proyección local.
 
----
+## Variables de entorno
+
+```bash
+SOFTGUARD_API_BASE=            # p.ej. http://<host-central>:8080
+SOFTGUARD_API_USER=
+SOFTGUARD_API_PASS=
+SOFTGUARD_API_CLIENT_ID=
+SOFTGUARD_API_TIMEOUT_MS=10000
+SOFTGUARD_FALLO_SOSTENIDO_HORAS=24
+
+# Embed para el URL Launcher de DSS (/embed/cuenta/<ref>)
+SOFTGUARD_DSS_HOST=            # [BUILD] se hornea en el CSP (next.config.ts)
+SOFTGUARD_DSS_ORIGIN=
+SOFTGUARD_EMBED_SECRET=        # HMAC del token de un solo uso (5 min)
+```
+
+Las variables `SOFTGUARD_DB_*` y `SOFTGUARD_MOCK` del diseño SQL retirado ya no se
+leen en ningún lado: se pueden borrar de `.env.local` y de los secretos de producción.
+
+## Panel de estado
+
+`/admin/sync-softguard`: salud de sesión + sondas funcionales con latencia por
+endpoint (vía `/api/admin/softguard-status`), salud de los crons del portal,
+estado de las env vars y contador de eventos sin procesar.
+
+## Gotchas de datos (aprendidas con datos reales)
+
+- Mayúsculas inconsistentes entre `ReporteHistoricoMM` y `EventosPendientes`; los
+  adaptadores normalizan.
+- Padding de espacios en varios campos → `trim()` en el ACL.
+- Fechas en formato US o ISO según endpoint; el sentinel `1/1/1900` significa "sin
+  fecha". Además la central manda hora local AR sin offset: parsear siempre con
+  `parseFechaSoftguard` (`src/lib/fecha-ar.ts`).
 
 ## Rotación de credenciales
 
-- **Cada 90 días:** cambiar el password de `EI_PORTAL_RO` en SQL Server → actualizar `SOFTGUARD_DB_PASS` en el hosting → reiniciar el portal.
-- **`SOFTGUARD_EMBED_SECRET`:** rotable desde `/admin/configuracion` (Fase 4) sin necesidad de re-deploy.
+Cambiar la contraseña del usuario de la API en la suite → actualizar
+`SOFTGUARD_API_PASS` en el panel del hosting → reiniciar la app. Si la sesión
+cacheada quedó inválida, `invalidateWebApiSession()` (o esperar ~25 min).
 
----
+## Cómo agregar un endpoint nuevo
 
-## Próximas vistas a agregar (por fase)
-
-| Vista | Fase | Manual de referencia |
-|---|---|---|
-| `vw_ei_solicitudes_modificacion` | F3 | TEC216 AWCC |
-| `vw_ei_camaras` | F6 | TEC240 Video |
-| `vw_ei_notificaciones_emitidas` | F6 | TEC166 Reportes Notificaciones |
-| `vw_ei_cercos` | F6 (condicional) | TEC300 Admin Cercos |
+1. Capturar el request real desde la suite (DevTools → pestaña Network).
+2. Crear el adaptador en `src/lib/softguard/api/<modulo>.ts` usando `restGet` de
+   `core.ts` (hereda login, retry y timeout) y normalizar el payload ahí.
+3. Exportarlo desde `index.ts`, agregar fixture + test (`fixtures.ts`, `*.test.ts`).
+4. Consumirlo solo desde server code (los adaptadores son `server-only`).
