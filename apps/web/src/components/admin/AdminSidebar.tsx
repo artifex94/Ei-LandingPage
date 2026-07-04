@@ -18,7 +18,7 @@ import { LogoutButton } from "@/components/ui/LogoutButton";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
-type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes" | "altasUsuarioPendientes" | "eventosSinProcesar" | "morososSinContactar" | "feedbackPendiente";
+type BadgeKey = "pendingSolicitudes" | "pendingMantenimiento" | "cuentasEnMora" | "otsPendientes" | "altasUsuarioPendientes" | "eventosSinProcesar" | "morososSinContactar" | "feedbackPendiente" | "cambiosTurnoPendientes";
 
 interface NavItem {
   href: string;
@@ -61,7 +61,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/admin/monitoreo", label: "En vivo",           icon: Activity },
       { href: "/admin/ot",        label: "Órdenes de trabajo", icon: ClipboardList, badge: "otsPendientes" },
       { href: "/admin/agenda",    label: "Agenda técnica",     icon: CalendarCheck },
-      { href: "/admin/turnos",    label: "Turnos",             icon: CalendarDays },
+      { href: "/admin/turnos",    label: "Turnos",             icon: CalendarDays,  badge: "cambiosTurnoPendientes" },
       { href: "/admin/ausencias", label: "Ausencias",          icon: UmbrellaOff },
     ],
   },
@@ -109,6 +109,7 @@ const BADGE_COLOR: Record<BadgeKey, string> = {
   eventosSinProcesar:      "bg-red-600",
   morososSinContactar:     "bg-green-500",
   feedbackPendiente:       "bg-cyan-500",
+  cambiosTurnoPendientes:  "bg-violet-500",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -416,6 +417,7 @@ export function AdminSidebar({
   eventosSinProcesar = 0,
   morososSinContactar = 0,
   feedbackPendiente = 0,
+  cambiosTurnoPendientes = 0,
 }: {
   nombreAdmin: string;
   pendingSolicitudes?: number;
@@ -426,6 +428,7 @@ export function AdminSidebar({
   eventosSinProcesar?: number;
   morososSinContactar?: number;
   feedbackPendiente?: number;
+  cambiosTurnoPendientes?: number;
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -489,9 +492,10 @@ export function AdminSidebar({
     eventosSinProcesar,
     morososSinContactar,
     feedbackPendiente,
+    cambiosTurnoPendientes,
   };
 
-  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes + altasUsuarioPendientes + eventosSinProcesar + morososSinContactar + feedbackPendiente;
+  const totalAlertas = pendingSolicitudes + pendingMantenimiento + cuentasEnMora + otsPendientes + altasUsuarioPendientes + eventosSinProcesar + morososSinContactar + feedbackPendiente + cambiosTurnoPendientes;
 
   return (
     <>
