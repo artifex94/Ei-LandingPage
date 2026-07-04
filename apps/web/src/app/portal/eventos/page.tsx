@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ShieldCheck } from "lucide-react";
 import { requireSesion } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma/client";
-import { getEventosHeatmap } from "@/lib/actions/eventos";
+import { componerHeatmap } from "@/lib/eventos-heatmap";
 import { EventosHeatmap } from "@/components/portal/EventosHeatmap";
 import { PortalPageHeader } from "@/components/portal/PortalPageHeader";
 import { PortalSection } from "@/components/portal/PortalSection";
@@ -51,17 +51,19 @@ export default async function EventosPortalPage({
   const anio = Number(sp.anio) || anioActual;
   const page = Math.max(1, Number(sp.page) || 1);
 
-  const cuentas = await prisma.cuenta.findMany({
+  const cuentasPromise = prisma.cuenta.findMany({
     where: { perfil_id: userId, estado: { not: "BAJA_DEFINITIVA" } },
     select: { id: true, descripcion: true },
     orderBy: { descripcion: "asc" },
   });
 
-  // Filtro por cuenta (solo válido si pertenece al usuario)
-  const cuentaFiltro = cuentas.find((c) => c.id === sp.cuenta)?.id;
-  const cuentasVisibles = cuentaFiltro
-    ? cuentas.filter((c) => c.id === cuentaFiltro)
-    : cuentas;
+  // Filtro por cuenta (solo válido si pertenece al usuario). Solo cuando hay
+  // ?cuenta= hace falta esperar la lista antes de armar el where; en el caso
+  // común (sin filtro) las queries de eventos arrancan en paralelo con la de
+  // cuentas — un hop menos a la BD.
+  const cuentaFiltro = sp.cuenta
+    ? (await cuentasPromise).find((c) => c.id === sp.cuenta)?.id
+    : undefined;
 
   const whereEventos = {
     cuenta: {
@@ -71,7 +73,8 @@ export default async function EventosPortalPage({
     },
   };
 
-  const [eventos, totalEventos, primerEvento, heatmaps] = await Promise.all([
+  const [cuentas, eventos, totalEventos, primerEvento, eventosDelAnio] = await Promise.all([
+    cuentasPromise,
     prisma.eventoAlarma.findMany({
       where: whereEventos,
       include: { cuenta: { select: { descripcion: true } } },
@@ -84,10 +87,29 @@ export default async function EventosPortalPage({
       where: whereEventos,
       _min: { fecha_evento: true },
     }),
-    Promise.all(
-      cuentasVisibles.map((c) => getEventosHeatmap(c.id, anio).catch(() => []))
-    ),
+    // Una sola query para TODOS los heatmaps (antes era una por cuenta,
+    // encadenada tras la lista de cuentas): trae los eventos del año del
+    // usuario y se particiona por cuenta en JS con `componerHeatmap`.
+    prisma.eventoAlarma.findMany({
+      where: {
+        ...whereEventos,
+        fecha_evento: {
+          gte: new Date(anio, 0, 1),
+          lte: new Date(anio, 11, 31, 23, 59, 59),
+        },
+      },
+      select: { fecha_evento: true, codigo: true, cuenta_id: true },
+      orderBy: { fecha_evento: "asc" },
+    }),
   ]);
+
+  const cuentasVisibles = cuentaFiltro
+    ? cuentas.filter((c) => c.id === cuentaFiltro)
+    : cuentas;
+
+  const heatmaps = cuentasVisibles.map((c) =>
+    componerHeatmap(eventosDelAnio.filter((ev) => ev.cuenta_id === c.id))
+  );
 
   const pageCount = Math.ceil(totalEventos / PAGE_SIZE);
 
