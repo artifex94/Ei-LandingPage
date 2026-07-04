@@ -3,9 +3,10 @@
  *
  * Contactos a notificar de una cuenta, para el módulo de notificación P1 vía wa.me.
  *
- * Fuente preferida: detalle del CRM de SoftGuard (fetchContactosCuenta, SOLO LECTURA).
- * Mientras el endpoint real no esté capturado (ver crm.ts / Fase 0), o si la central
- * no responde, degrada al único teléfono del portal (Perfil.telefono) como "Titular".
+ * Fuente preferida: detalle del CRM de SoftGuard (fetchContactosCuenta, SOLO LECTURA —
+ * endpoint Telefonos ya capturado e integrado en crm.ts). Si la central no responde o
+ * la cuenta no tiene contactos cargados, degrada al único teléfono del portal
+ * (Perfil.telefono) como "Titular".
  *
  * Autenticación: ADMIN o empleado con capacidad `puede_monitorear` — mismo
  * criterio que /api/admin/patron-evento. Lo consume `MonitorOperadores`, que
